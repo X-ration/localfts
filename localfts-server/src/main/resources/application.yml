@@ -1,0 +1,17 @@
+server:
+  port: 80
+  servlet:
+    context-path: /localfts
+  error:
+    whitelabel:
+      enabled: true
+spring:
+  thymeleaf:
+    cache: false
+  mvc:
+    static-path-pattern: /**
+  web:
+    resources:
+      static-locations: classpath:/resources
+localfts:
+  root_path: D:\Users\Adam\Documents

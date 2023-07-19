@@ -1,0 +1,42 @@
+package com.adam.localfts.webserver;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.util.Assert;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+@Controller
+@RequestMapping("")
+public class WebController {
+
+    @Autowired
+    private FtsService ftsService;
+
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    @GetMapping("")
+    public String index(Model model, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
+        return "redirect:/list?path=/";
+    }
+
+    @GetMapping("/list")
+    public String list(Model model, @RequestParam(name = "path") String relativePath, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
+        FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
+        model.addAttribute("ftsPage", ftsPageModel);
+        return "page";
+    }
+
+    @GetMapping("/downloadFile")
+    public void downloadFile(@RequestParam String fileName, HttpServletResponse response) throws IOException {
+        Assert.isTrue(null != fileName & !"".equals(fileName), "Invalid parameter!");
+        ftsService.downloadFile(fileName, response);
+    }
+}
