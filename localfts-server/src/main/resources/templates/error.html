@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head lang="cn">
+    <meta charset="UTF-8">
+    <title>局域网文件传输服务器</title>
+</head>
+<body>
+    <h1>局域网文件传输服务器</h1> <a href="/localfts">返回首页</a>
+    <hr>
+    <span style="color:red; font-size: 2em;"><b th:text="${status} + ' ' + ${error}">Error Message</b></span><br>
+    Path:<span th:text="${path}">path</span><br>
+    Timestamp:<span th:text="${timestamp}">0</span><br><br>
+    <b>Details</b><br>
+    <span th:if="!(${exception} or ${errors} or ${message} or ${trace})">No details available<br></span>
+    <span th:if=${exception}>Exception:<span th:text="${exception}">Exception</span><br></span>
+    <span th:if="${errors}">Errors:<span th:text="${errors}">Errors</span><br></span>
+    <span th:if="${message}">Message:<span th:text="${message}">Message</span><br></span>
+    <span th:if="${trace}">Trace:<span th:text="${trace}">Trace</span><br></span>
+</body>

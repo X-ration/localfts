@@ -3,8 +3,10 @@ server:
   servlet:
     context-path: /localfts
   error:
+    includeException: true
+    includeStackTrace: ALWAYS
     whitelabel:
-      enabled: true
+      enabled: false
 spring:
   thymeleaf:
     cache: false
