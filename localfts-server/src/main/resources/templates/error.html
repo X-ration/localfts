@@ -15,5 +15,12 @@
     <span th:if=${exception}>Exception:<span th:text="${exception}">Exception</span><br></span>
     <span th:if="${errors}">Errors:<span th:text="${errors}">Errors</span><br></span>
     <span th:if="${message}">Message:<span th:text="${message}">Message</span><br></span>
-    <span th:if="${trace}">Trace:<span th:text="${trace}">Trace</span><br></span>
+    <span th:if="${trace}">Trace:<span id="traceText" th:text="${trace}">Trace</span><br></span>
+
+    <script type="text/javascript">
+        var traceText = document.getElementById("traceText");
+        if(traceText) {
+            traceText.setHTML(traceText.textContent.replaceAll("\r\n","<br>").replaceAll("\n","<br>"));
+        }
+    </script>
 </body>
