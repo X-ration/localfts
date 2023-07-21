@@ -4,10 +4,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.net.URLEncoder;
+import java.net.*;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.LinkedList;
 import java.util.List;
 
 @Service
@@ -15,6 +18,8 @@ public class FtsService {
 
     @Value("${localfts.root_path}")
     private String rootPath;
+
+    private FtsServerIpInfoModel serverIpInfoModel;
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "Error parameter!");
@@ -84,6 +89,68 @@ public class FtsService {
             }
             outputStream.flush();
         }
+    }
+
+    @PostConstruct
+    public void initializeAndPrintServerIpInfo() {
+        getServerIpInfoModel();
+        StringBuilder stringBuilder = new StringBuilder("Server Ip Infos").append(System.lineSeparator());
+        for(FtsServerIpInfoModel.IpInfoItem ipInfoItem: serverIpInfoModel.getItems()) {
+            stringBuilder.append(ipInfoItem.getDisplayName()).append(",").append(ipInfoItem.getName()).append(",[");
+            for(int i=0;i<ipInfoItem.getAddresses().length;i++) {
+                stringBuilder.append(ipInfoItem.getAddresses()[i]);
+                if(i!=ipInfoItem.getAddresses().length-1) {
+                    stringBuilder.append(",");
+                }
+            }
+            stringBuilder.append("]").append(System.lineSeparator());
+        }
+        System.out.print(stringBuilder);
+    }
+
+    public FtsServerIpInfoModel getServerIpInfoModel() {
+        if(serverIpInfoModel == null) {
+            serverIpInfoModel = getServerIpInfoModelImpl();
+        }
+        return serverIpInfoModel;
+    }
+
+    private FtsServerIpInfoModel getServerIpInfoModelImpl() {
+        FtsServerIpInfoModel model = new FtsServerIpInfoModel();
+        try {
+            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+            List<FtsServerIpInfoModel.IpInfoItem> ipInfoItemList = new LinkedList<>();
+            while(networkInterfaces.hasMoreElements()) {
+                FtsServerIpInfoModel.IpInfoItem ipInfoItem = null;
+                List<String> ipAddressList = null;
+                NetworkInterface networkInterface = networkInterfaces.nextElement();
+                Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
+                int addressCount = 0;
+                while (inetAddresses.hasMoreElements()) {
+                    InetAddress inetAddress = inetAddresses.nextElement();
+                    if (!(inetAddress instanceof Inet4Address) || inetAddress.isLoopbackAddress()) {
+                        continue;
+                    }
+                    if (addressCount++ == 0) {
+                        ipInfoItem = model.new IpInfoItem();
+                        ipInfoItem.setDisplayName(networkInterface.getDisplayName());
+                        ipInfoItem.setName(networkInterface.getName());
+                        ipInfoItemList.add(ipInfoItem);
+                        ipAddressList = new LinkedList<>();
+                    }
+                    ipAddressList.add(inetAddress.getHostAddress());
+                }
+                if(addressCount > 0) {
+                    ipInfoItem.setAddresses(ipAddressList.toArray(new String[0]));
+                }
+            }
+            model.setItems(ipInfoItemList.toArray(new FtsServerIpInfoModel.IpInfoItem[0]));
+        } catch (SocketException e) {
+            System.err.println("Error getting server ips: " + e.getMessage());
+            e.printStackTrace();
+            model.setItems(new FtsServerIpInfoModel.IpInfoItem[0]);
+        }
+        return model;
     }
 
 }

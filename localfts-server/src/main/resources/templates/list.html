@@ -3,36 +3,77 @@
 <head lang="cn">
     <meta charset="UTF-8">
     <title>局域网文件传输服务器</title>
+    <style>
+        .hidden {
+            display:none;
+        }
+        .show {
+           position:fixed;width:60%;margin-left:20%;margin-right:20%;height:60%;
+           background-color:white;
+           border-style:solid;border-width:0.05em;
+        }
+        table,th,td {
+            border-style:solid;
+            border-collapse:collapse;
+            border-color:black;
+        }
+        table {
+            border-width:0.1em;
+        }
+        th,td {
+            border-width:0.05em;
+        }
+    </style>
 </head>
 <body>
-    <h1>局域网文件传输服务器</h1> <a href="/localfts">返回首页</a>
+    <h1>局域网文件传输服务器</h1><button onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>
     <hr>
-    <br>当前路径：<span name="page-path" th:text="${ftsPage.path}">path</span><br><br>
-    <table style="text-align: left">
+    <br>当前路径：<span name="page-path" th:text="${ftsPage.path}">path</span><a style="margin-left:2em" href="/localfts">返回首页</a><br><br>
+    <div id="serverIpInfo" class="hidden">
+        <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
+        <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
+            <tr>
+                <th style="padding-left:2em;padding-right:2em">网卡显示名称</th>
+                <th style="padding-left:2em;padding-right:2em">网卡名称</th>
+                <th style="padding-left:2em;padding-right:2em">Ipv4地址</th>
+            </tr>
+            <tbody th:each="item:${serverIpInfo.items}">
+            <tr>
+                <td th:text="${item.displayName}">displayName</td>
+                <td th:text="${item.name}">name</td>
+                <td th:text="${{item.addresses}}">addresses</td>
+            </tr>
+            </tbody>
+        </table>
+        <div style="padding-bottom:1em;padding-top:1em;"><button onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
+    </div>
+    <table style="text-align:left;border-style:solid;width:80%">
         <tr>
-            <th>文件名</th>
-            <th>类型</th>
-            <th>大小</th>
-            <th>操作</th>
+            <th style="width:70%">文件名</th>
+            <th style="width:10%">类型</th>
+            <th style="width:10%">大小</th>
+            <th style="width:10%">操作</th>
         </tr>
         <tr>
             <td><a name="up-path">..</a></td>
-            <td></td>
-            <td></td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
         </tr>
-        <div th:each="item:${ftsPage.fileList}">
+        <tbody th:each="item:${ftsPage.fileList}">
             <tr th:if="${item.directory}">
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
                 <td>文件夹</td>
+                <td>-</td>
                 <td>-</td>
             </tr>
             <tr th:if="!${item.directory}">
                 <td th:text="${item.fileName}">fileName</td>
                 <td>文件</td>
-                <td th:text="${item.fileSize}"></td>
+                <td th:text="${item.fileSize}">0</td>
                 <td><a name="download-file" th:href="${item.fileName}">下载</a></td>
             </tr>
-        </div>
+        </tbody>
     </table>
     <br>
 

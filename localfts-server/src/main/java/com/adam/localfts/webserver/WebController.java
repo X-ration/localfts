@@ -31,6 +31,8 @@ public class WebController {
     public String list(Model model, @RequestParam(name = "path") String relativePath, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
         FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
         model.addAttribute("ftsPage", ftsPageModel);
+        FtsServerIpInfoModel serverIpInfoModel = ftsService.getServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
         return "list";
     }
 
