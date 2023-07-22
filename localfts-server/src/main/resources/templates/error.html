@@ -20,7 +20,17 @@
     <script type="text/javascript">
         var traceText = document.getElementById("traceText");
         if(traceText) {
-            traceText.setHTML(traceText.textContent.replaceAll("\r\n","<br>").replaceAll("\n","<br>"));
+            var replacedText;
+            if(traceText.textContent.replaceAll != null) {
+                replacedText = traceText.textContent.replaceAll("\r\n","<br>").replaceAll("\n","<br>");
+            } else {
+                replacedText = traceText.textContent.replace(new RegExp("\r\n","g"),"<br>").replace(new RegExp("\n","g"),"<br>");
+            }
+            if(traceText.setHTML != null) {
+                traceText.setHTML(replacedText);
+            } else {
+                traceText.innerHTML = replacedText;
+            }
         }
     </script>
 </body>

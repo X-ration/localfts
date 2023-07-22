@@ -8,7 +8,7 @@
             display:none;
         }
         .show {
-           position:fixed;width:60%;margin-left:20%;margin-right:20%;height:60%;
+           width:70%;height:auto;margin:5em 15% auto 15%;
            background-color:white;
            border-style:solid;border-width:0.05em;
         }
@@ -26,10 +26,10 @@
     </style>
 </head>
 <body>
-    <h1>局域网文件传输服务器</h1><button onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>
+    <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>
     <hr>
-    <br>当前路径：<span name="page-path" th:text="${ftsPage.path}">path</span><a style="margin-left:2em" href="/localfts">返回首页</a><br><br>
-    <div id="serverIpInfo" class="hidden">
+    <br>当前路径：<span id="page-path" th:text="${ftsPage.path}">path</span><a style="margin-left:2em" href="/localfts">返回首页</a><br><br>
+    <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
         <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
         <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
             <tr>
@@ -45,7 +45,7 @@
             </tr>
             </tbody>
         </table>
-        <div style="padding-bottom:1em;padding-top:1em;"><button onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
+        <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
     <table style="text-align:left;border-style:solid;width:80%">
         <tr>
@@ -55,7 +55,7 @@
             <th style="width:10%">操作</th>
         </tr>
         <tr>
-            <td><a name="up-path">..</a></td>
+            <td><a id="up-path">..</a></td>
             <td>-</td>
             <td>-</td>
             <td>-</td>
@@ -71,27 +71,27 @@
                 <td th:text="${item.fileName}">fileName</td>
                 <td>文件</td>
                 <td th:text="${item.fileSize}">0</td>
-                <td><a name="download-file" th:href="${item.fileName}">下载</a></td>
+                <td><a name="download-file" th:text="${item.fileName}">下载</a></td>
             </tr>
         </tbody>
     </table>
     <br>
 
     <p>
-        第<span name="current-page" th:text="${ftsPage.currentPage}">page no</span>页 <span name="current-size" th:text="${ftsPage.currentSize}">page size</span>条
-        总<span name="total-page" th:text="${ftsPage.totalPage}">total page</span>页 <span name="total-size" th:text="${ftsPage.totalSize}">total size</span>条
+        第<span id="current-page" th:text="${ftsPage.currentPage}">page no</span>页 <span id="current-size" th:text="${ftsPage.currentSize}">page size</span>条
+        总<span id="total-page" th:text="${ftsPage.totalPage}">total page</span>页 <span id="total-size" th:text="${ftsPage.totalSize}">total size</span>条
     </p>
 
-    <a name="first-page">首页</a>
-    <a name="previous-page">上一页</a>
-    <a name="next-page">下一页</a>
-    <a name="last-page">尾页</a>
+    <a id="first-page">首页</a>
+    <a id="previous-page">上一页</a>
+    <a id="next-page">下一页</a>
+    <a id="last-page">尾页</a>
 
     <form th:action="@{'/list'}" enctype="application/x-www-form-urlencoded">
-        <input type="hidden" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
+        <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
         <input type="hidden" name="path" th:value="${ftsPage.path}">
-        <input type="text" size="2" name="pageNo" th:value="${ftsPage.currentPage}">
-        <select name="pageSize">
+        <input type="text" size="2" id="page-no" name="pageNo" th:value="${ftsPage.currentPage}">
+        <select name="pageSize" id="page-size-select">
             <option value="10">10</option>
             <option value="20">20</option>
             <option value="50">50</option>
@@ -99,20 +99,27 @@
         <input type="submit" value="跳转">
     </form>
     <script type="text/javascript">
-        const URL_LIST = "/localfts/list";
-        const URL_DOWNLOAD = "/localfts/downloadFile";
+        var URL_LIST = "/localfts/list";
+        var URL_DOWNLOAD = "/localfts/downloadFile";
 
         main();
 
         function main()
         {
-            const ftsPagePath = document.getElementsByName("page-path")[0].textContent;
-            const ftsPageNo = Number.parseInt(document.getElementsByName("pageNo")[0].value);
-            const ftsPageSize = Number.parseInt(document.getElementsByName("page-size")[0].value);
-            const ftsPageCurrentPage = Number.parseInt(document.getElementsByName("current-page")[0].textContent);
-            const ftsPageCurrentSize = Number.parseInt(document.getElementsByName("current-size")[0].textContent);
-            const ftsPageTotalPage = Number.parseInt(document.getElementsByName("total-page")[0].textContent);
-            const ftsPageTotalSize = Number.parseInt(document.getElementsByName("total-size")[0].textContent);
+            var ftsPagePath = document.getElementById("page-path").innerText;
+            var ftsPageNo = Number(document.getElementById("page-no").value);
+            var ftsPageSize = Number(document.getElementById("page-size").value);
+            var ftsPageCurrentPage = Number(document.getElementById("current-page").innerText);
+            var ftsPageCurrentSize = Number(document.getElementById("current-size").innerText);
+            var ftsPageTotalPage = Number(document.getElementById("total-page").innerText);
+            var ftsPageTotalSize = Number(document.getElementById("total-size").innerText);
+
+            //deal with serverIpInfo in IE
+            if(!document.getElementById('serverIpInfo').getAttribute("class")) {
+                document.getElementById('serverIpInfoShowButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','show')};
+                document.getElementById('serverIpInfoHideButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','hidden')};
+            }
+
 
             //deal with up-path
             //   /->/   ;   /a->/   ;   /a/b->/a
@@ -124,36 +131,43 @@
                 upPath = upPath.substring(0, lastIdxOfSlash);
             }
             upPath = concatUrlList(upPath, 1, ftsPageSize);
-            document.getElementsByName("up-path")[0].setAttribute("href", upPath);
+            document.getElementById("up-path").setAttribute("href", upPath);
 
             //deal with directory-path
             var directoryPaths = document.getElementsByName("directory-path");
+            if(!directoryPaths) {
+                directoryPaths = getElementsByName("directory-path");
+            }
             for(var i=0;i<directoryPaths.length;i++) {
-                directoryPaths[i].setAttribute("href", concatUrlList(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + directoryPaths[i].textContent, 1, ftsPageSize));
+                directoryPaths[i].setAttribute("href", concatUrlList(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + directoryPaths[i].innerText, 1, ftsPageSize));
             }
 
             //deal with download-file
             var downloadFiles = document.getElementsByName("download-file");
+            if(!downloadFiles) {
+                downloadFiles = getElementsByName("download-file");
+            }
             for(var i=0;i<downloadFiles.length;i++) {
-                downloadFiles[i].setAttribute("href", concatUrlDownload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + downloadFiles[i].getAttribute("href")));
+                downloadFiles[i].setAttribute("href", concatUrlDownload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + downloadFiles[i].innerText));
+                downloadFiles[i].innerText = "下载";
             }
 
             //deal with first-page,previous-page,next-page,last-page
-            const firstPageNo = 1;
-            const lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
-            const previousPageNo = (ftsPageCurrentPage > 1) ? (ftsPageCurrentPage - 1) : 1;
-            const nextPageNo = (ftsPageCurrentPage < lastPageNo) ? (ftsPageCurrentPage + 1) : lastPageNo;
-            const firstPageUrl = concatUrlList(ftsPagePath, firstPageNo, ftsPageSize);
-            const lastPageUrl = concatUrlList(ftsPagePath, lastPageNo, ftsPageSize);
-            const previousPageUrl = concatUrlList(ftsPagePath, previousPageNo, ftsPageSize);
-            const nextPageUrl = concatUrlList(ftsPagePath, nextPageNo, ftsPageSize);
-            document.getElementsByName("first-page")[0].setAttribute("href", firstPageUrl);
-            document.getElementsByName("last-page")[0].setAttribute("href", lastPageUrl);
-            document.getElementsByName("previous-page")[0].setAttribute("href", previousPageUrl);
-            document.getElementsByName("next-page")[0].setAttribute("href", nextPageUrl);
+            var firstPageNo = 1;
+            var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
+            var previousPageNo = (ftsPageCurrentPage > 1) ? (ftsPageCurrentPage - 1) : 1;
+            var nextPageNo = (ftsPageCurrentPage < lastPageNo) ? (ftsPageCurrentPage + 1) : lastPageNo;
+            var firstPageUrl = concatUrlList(ftsPagePath, firstPageNo, ftsPageSize);
+            var lastPageUrl = concatUrlList(ftsPagePath, lastPageNo, ftsPageSize);
+            var previousPageUrl = concatUrlList(ftsPagePath, previousPageNo, ftsPageSize);
+            var nextPageUrl = concatUrlList(ftsPagePath, nextPageNo, ftsPageSize);
+            document.getElementById("first-page").setAttribute("href", firstPageUrl);
+            document.getElementById("last-page").setAttribute("href", lastPageUrl);
+            document.getElementById("previous-page").setAttribute("href", previousPageUrl);
+            document.getElementById("next-page").setAttribute("href", nextPageUrl);
 
-            //deal with page-size
-            var tagSelectOptions = document.getElementsByName("pageSize")[0].children;
+            //deal with page-size-select
+            var tagSelectOptions = document.getElementById("page-size-select").children;
             var foundOption = false;
             for(var i=0;i<tagSelectOptions.length;i++) {
                 if(tagSelectOptions[i].value == ftsPageSize) {
@@ -173,6 +187,20 @@
         }
         function concatUrlDownload(fileName) {
             return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
+        }
+        //for IE, not supporting document.getElementsByName
+        function getElementsByName(tagName, name) {
+            var collection = document.getElementsByTagName(tagName);
+            var result = [];
+            if(!collection) {
+                var children = collection.children;
+                for(var i=0;i<children.length;i++) {
+                    if(children[i].getAttribute("name") == name) {
+                        result[result.length] = children[i];
+                    }
+                }
+            }
+            return result;
         }
     </script>
 </body>
