@@ -74,6 +74,8 @@ public class FtsService {
         String actualFileName = rootPath + fileName;
         File file = new File(actualFileName);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "Invalid file!");
+        System.out.println("开始传输文件：【" + file.getAbsolutePath() + "】");
+        long start = System.currentTimeMillis();
         try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file));
              OutputStream outputStream = new BufferedOutputStream(response.getOutputStream())
         ) {
@@ -89,6 +91,7 @@ public class FtsService {
             }
             outputStream.flush();
         }
+        System.out.println("传输文件完成：【" + file.getAbsolutePath() + "】,用时" + (System.currentTimeMillis() - start) + "毫秒");
     }
 
     @PostConstruct
