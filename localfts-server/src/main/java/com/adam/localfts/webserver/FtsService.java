@@ -63,6 +63,7 @@ public class FtsService {
                 } else {
                     fileModel.setFileSize(item.length());
                 }
+                fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
                 fileModels.add(fileModel);
             }
         }

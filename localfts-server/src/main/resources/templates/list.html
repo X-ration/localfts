@@ -55,7 +55,7 @@
             <th style="width:10%">操作</th>
         </tr>
         <tr>
-            <td><a id="up-path">..</a></td>
+            <td><a id="up-path">返回上一级</a></td>
             <td>-</td>
             <td>-</td>
             <td>-</td>
@@ -65,13 +65,13 @@
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
                 <td>文件夹</td>
                 <td>-</td>
-                <td>-</td>
+                <td><a name="upload-file" th:text="${item.fileName}">上传文件</a></td>
             </tr>
             <tr th:if="!${item.directory}">
                 <td th:text="${item.fileName}">fileName</td>
                 <td>文件</td>
-                <td th:text="${item.fileSize}">0</td>
-                <td><a name="download-file" th:text="${item.fileName}">下载</a></td>
+                <td th:text="${item.fileSizeStr}">0</td>
+                <td><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
             </tr>
         </tbody>
     </table>
@@ -101,6 +101,7 @@
     <script type="text/javascript">
         var URL_LIST = "/localfts/list";
         var URL_DOWNLOAD = "/localfts/downloadFile";
+        var URL_UPLOAD = "/localfts/uploadFile";
 
         main();
 
@@ -149,7 +150,17 @@
             }
             for(var i=0;i<downloadFiles.length;i++) {
                 downloadFiles[i].setAttribute("href", concatUrlDownload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + downloadFiles[i].innerText));
-                downloadFiles[i].innerText = "下载";
+                downloadFiles[i].innerText = "下载文件";
+            }
+
+            //deal with upload-file
+            var uploadFiles = document.getElementsByName("upload-file");
+            if(!uploadFiles) {
+                uploadFiles = getElementsByName("upload-file");
+            }
+            for(var i=0;i<uploadFiles.length;i++) {
+                uploadFiles[i].setAttribute("href", concatUrlUpload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + uploadFiles[i].innerText));
+                uploadFiles[i].innerText = "上传文件";
             }
 
             //deal with first-page,previous-page,next-page,last-page
@@ -187,6 +198,9 @@
         }
         function concatUrlDownload(fileName) {
             return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
+        }
+        function concatUrlUpload(dirName) {
+            return URL_UPLOAD + "?dirName=" + encodeURIComponent(dirName);
         }
         //for IE, not supporting document.getElementsByName
         function getElementsByName(tagName, name) {

@@ -71,6 +71,7 @@ public class FtsPageModel {
         private String fileName;
         private boolean isDirectory;
         private long fileSize;
+        private String fileSizeStr;
 
         public String getFileName() {
             return fileName;
@@ -86,6 +87,14 @@ public class FtsPageModel {
 
         public void setFileSize(long fileSize) {
             this.fileSize = fileSize;
+        }
+
+        public String getFileSizeStr() {
+            return fileSizeStr;
+        }
+
+        public void setFileSizeStr(String fileSizeStr) {
+            this.fileSizeStr = fileSizeStr;
         }
 
         public boolean isDirectory() {
