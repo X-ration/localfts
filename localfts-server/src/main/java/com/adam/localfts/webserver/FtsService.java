@@ -127,7 +127,6 @@ public class FtsService {
             return returnObject;
         }
         String fileName = file.getOriginalFilename() == null ? "未知文件" : file.getOriginalFilename();
-        LOGGER.info("开始上传文件{}到路径{}", fileName, dirName);
 //        if(file.getSize() > uploadFileLimit) {
 //            returnObject.setSuccess(false);
 //            returnObject.setMessage("待上传的文件大小超过系统限制");
@@ -135,11 +134,19 @@ public class FtsService {
 //        }
 
         File actualFile = new File(directory, fileName);
+        if(actualFile.exists()) {
+            returnObject.setSuccess(false);
+            returnObject.setMessage("请求路径下已存在同名文件");
+            return returnObject;
+        }
+        LOGGER.info("开始上传文件{}到路径{}", fileName, dirName);
+        long start = System.currentTimeMillis();
         try {
             file.transferTo(actualFile);
             returnObject.setSuccess(true);
             returnObject.setMessage(fileName + "上传成功！");
-            LOGGER.info("上传文件{}到路径{}成功!", fileName, dirName);
+            long seconds = (System.currentTimeMillis() - start) / 1000;
+            LOGGER.info("上传文件{}到路径{}成功!耗时{}秒", fileName, dirName, seconds);
         } catch (IOException e) {
             LOGGER.error("上传文件{}到路径{}时出错", fileName, dirName, e);
             returnObject.setSuccess(false);

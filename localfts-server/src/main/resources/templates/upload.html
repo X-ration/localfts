@@ -40,7 +40,7 @@
     <h4 th:text="${uploadMessage}"></h4>
 </div>
 <div th:if="${uploadStatus != null && !uploadStatus}">
-    上传失败，报错信息：<h4 th:text="${uploadMessage}"></h4>
+    <h4 th:text="|上传失败，报错信息：${uploadMessage}|"></h4>
 </div>
 <form th:action="@{'/uploadFileTransfer'}" enctype="multipart/form-data" method="post">
     <input type="file" name="file">
