@@ -41,4 +41,11 @@ public class WebController {
         Assert.isTrue(null != fileName & !"".equals(fileName), "Invalid parameter!");
         ftsService.downloadFile(fileName, response);
     }
+
+    @GetMapping("/uploadFile")
+    public String uploadFile(@RequestParam String dirName) {
+        Assert.isTrue(null != dirName & !"".equals(dirName), "Invalid parameter!");
+        ftsService.ensureDirectoryExists(dirName);
+        return "upload";
+    }
 }

@@ -12,14 +12,25 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class FtsService {
 
     @Value("${localfts.root_path}")
     private String rootPath;
+    @Value("${server.port}")
+    private String serverPort;
+    @Value("${server.servlet.context-path}")
+    private String contextPath;
 
     private FtsServerIpInfoModel serverIpInfoModel;
+
+    public void ensureDirectoryExists(String relativePath) {
+        Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "Error parameter!");
+        File directory = new File(rootPath + relativePath);
+        Assert.isTrue(directory.exists() && directory.isDirectory(), "Invalid path!");
+    }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "Error parameter!");
@@ -98,17 +109,32 @@ public class FtsService {
     @PostConstruct
     public void initializeAndPrintServerIpInfo() {
         getServerIpInfoModel();
-        StringBuilder stringBuilder = new StringBuilder("Server Ip Infos").append(System.lineSeparator());
-        for(FtsServerIpInfoModel.IpInfoItem ipInfoItem: serverIpInfoModel.getItems()) {
-            stringBuilder.append(ipInfoItem.getDisplayName()).append(",").append(ipInfoItem.getName()).append(",[");
+        StringBuilder stringBuilder = new StringBuilder("[Server Ip Info]").append(System.lineSeparator());
+        List<String> serverIpList = new LinkedList<>();
+//        for(FtsServerIpInfoModel.IpInfoItem ipInfoItem: serverIpInfoModel.getItems()) {
+        for(int seq=0;seq<serverIpInfoModel.getItems().length;seq++) {
+            FtsServerIpInfoModel.IpInfoItem ipInfoItem = serverIpInfoModel.getItems()[seq];
+            stringBuilder.append(seq).append(". ").append(ipInfoItem.getDisplayName()).append(",").append(ipInfoItem.getName()).append(",[");
             for(int i=0;i<ipInfoItem.getAddresses().length;i++) {
                 stringBuilder.append(ipInfoItem.getAddresses()[i]);
+                serverIpList.add(ipInfoItem.getAddresses()[i]);
                 if(i!=ipInfoItem.getAddresses().length-1) {
                     stringBuilder.append(",");
                 }
             }
             stringBuilder.append("]").append(System.lineSeparator());
         }
+        stringBuilder.append("[Server Port]").append(serverPort).append(System.lineSeparator());
+        stringBuilder.append("[Server Context Path]").append(contextPath).append(System.lineSeparator());
+        stringBuilder.append("[All Possible Root Urls]");
+        List<String> urlList = serverIpList.stream().map(ip -> "http://" + ip + ":" + serverPort + contextPath).collect(Collectors.toList());
+        for(int i=0;i<urlList.size();i++) {
+            stringBuilder.append(urlList.get(i)).append(", ");
+        }
+        if(!urlList.isEmpty()) {
+            stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+        }
+        stringBuilder.append(System.lineSeparator());
         System.out.print(stringBuilder);
     }
 
