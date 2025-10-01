@@ -36,13 +36,11 @@
     </table>
     <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
 </div>
-<div th:if="!${clearMessage}">
-    <div th:if="${uploadStatus}">
-        <h4 th:text="${uploadMessage}"></h4>
-    </div>
-    <div th:if="!${uploadStatus}">
-        上传失败，报错信息：<h4 th:text="${uploadMessage}"></h4>
-    </div>
+<div th:if="${uploadStatus != null && uploadStatus}">
+    <h4 th:text="${uploadMessage}"></h4>
+</div>
+<div th:if="${uploadStatus != null && !uploadStatus}">
+    上传失败，报错信息：<h4 th:text="${uploadMessage}"></h4>
 </div>
 <form th:action="@{'/uploadFileTransfer'}" enctype="multipart/form-data" method="post">
     <input type="file" name="file">
