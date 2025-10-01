@@ -1,8 +1,11 @@
 package com.adam.localfts.webserver;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletResponse;
@@ -12,20 +15,34 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class FtsService {
 
     @Value("${localfts.root_path}")
     private String rootPath;
+    @Value("${server.port}")
+    private String serverPort;
+    @Value("${server.servlet.context-path}")
+    private String contextPath;
+    @Value("${localfts.upload_file_limit}")
+    private long uploadFileLimit;
 
     private FtsServerIpInfoModel serverIpInfoModel;
+    private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
+
+    public void ensureDirectoryExists(String relativePath) {
+        Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
+        File directory = new File(rootPath + relativePath);
+        Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
+    }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
-        Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "Error parameter!");
+        Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String actualPath = rootPath + relativePath;
         File directory = new File(actualPath);
-        Assert.isTrue(directory.exists() && directory.isDirectory(), "Invalid path!");
+        Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
         FtsPageModel model = new FtsPageModel();
         model.setPath(relativePath);
         model.setCurrentPage(pageNo);
@@ -63,6 +80,7 @@ public class FtsService {
                 } else {
                     fileModel.setFileSize(item.length());
                 }
+                fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
                 fileModels.add(fileModel);
             }
         }
@@ -73,8 +91,8 @@ public class FtsService {
     public void downloadFile(String fileName, HttpServletResponse response) throws IOException {
         String actualFileName = rootPath + fileName;
         File file = new File(actualFileName);
-        Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "Invalid file!");
-        System.out.println("开始传输文件：【" + file.getAbsolutePath() + "】");
+        Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
+        LOGGER.info("开始下载文件：【{}】", file.getAbsolutePath());
         long start = System.currentTimeMillis();
         try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file));
              OutputStream outputStream = new BufferedOutputStream(response.getOutputStream())
@@ -91,24 +109,83 @@ public class FtsService {
             }
             outputStream.flush();
         }
-        System.out.println("传输文件完成：【" + file.getAbsolutePath() + "】,用时" + (System.currentTimeMillis() - start) + "毫秒");
+        LOGGER.info("下载文件完成：【{}】,用时{}毫秒", file.getAbsolutePath(), (System.currentTimeMillis() - start));
+    }
+
+    public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
+        Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
+        File directory = new File(rootPath + dirName);
+        ReturnObject<Void> returnObject = new ReturnObject<>();
+        if(!directory.exists()) {
+            returnObject.setSuccess(false);
+            returnObject.setMessage("请求路径不存在");
+            return returnObject;
+        }
+        if(!directory.isDirectory()) {
+            returnObject.setSuccess(false);
+            returnObject.setMessage("请求路径不是文件夹");
+            return returnObject;
+        }
+        String fileName = file.getOriginalFilename() == null ? "未知文件" : file.getOriginalFilename();
+//        if(file.getSize() > uploadFileLimit) {
+//            returnObject.setSuccess(false);
+//            returnObject.setMessage("待上传的文件大小超过系统限制");
+//            return returnObject;
+//        }
+
+        File actualFile = new File(directory, fileName);
+        if(actualFile.exists()) {
+            returnObject.setSuccess(false);
+            returnObject.setMessage("请求路径下已存在同名文件");
+            return returnObject;
+        }
+        LOGGER.info("开始上传文件{}到路径{}", fileName, dirName);
+        long start = System.currentTimeMillis();
+        try {
+            file.transferTo(actualFile);
+            returnObject.setSuccess(true);
+            returnObject.setMessage(fileName + "上传成功！");
+            long seconds = (System.currentTimeMillis() - start) / 1000;
+            LOGGER.info("上传文件{}到路径{}成功!耗时{}秒", fileName, dirName, seconds);
+        } catch (IOException e) {
+            LOGGER.error("上传文件{}到路径{}时出错", fileName, dirName, e);
+            returnObject.setSuccess(false);
+            returnObject.setMessage(e.getMessage());
+        }
+        return returnObject;
     }
 
     @PostConstruct
     public void initializeAndPrintServerIpInfo() {
         getServerIpInfoModel();
-        StringBuilder stringBuilder = new StringBuilder("Server Ip Infos").append(System.lineSeparator());
-        for(FtsServerIpInfoModel.IpInfoItem ipInfoItem: serverIpInfoModel.getItems()) {
-            stringBuilder.append(ipInfoItem.getDisplayName()).append(",").append(ipInfoItem.getName()).append(",[");
+        StringBuilder stringBuilder = new StringBuilder("[Server Ip Info]").append(System.lineSeparator());
+        List<String> serverIpList = new LinkedList<>();
+//        for(FtsServerIpInfoModel.IpInfoItem ipInfoItem: serverIpInfoModel.getItems()) {
+        for(int seq=0;seq<serverIpInfoModel.getItems().length;seq++) {
+            FtsServerIpInfoModel.IpInfoItem ipInfoItem = serverIpInfoModel.getItems()[seq];
+            stringBuilder.append(seq).append(". ").append(ipInfoItem.getDisplayName()).append(",").append(ipInfoItem.getName()).append(",[");
             for(int i=0;i<ipInfoItem.getAddresses().length;i++) {
                 stringBuilder.append(ipInfoItem.getAddresses()[i]);
+                serverIpList.add(ipInfoItem.getAddresses()[i]);
                 if(i!=ipInfoItem.getAddresses().length-1) {
                     stringBuilder.append(",");
                 }
             }
             stringBuilder.append("]").append(System.lineSeparator());
         }
-        System.out.print(stringBuilder);
+        stringBuilder.append("[Server Port]").append(serverPort).append(System.lineSeparator());
+        stringBuilder.append("[Server Context Path]").append(contextPath).append(System.lineSeparator());
+        stringBuilder.append("[All Possible Root Urls]");
+        List<String> urlList = serverIpList.stream().map(ip -> "http://" + ip + ":" + serverPort + contextPath).collect(Collectors.toList());
+        for(int i=0;i<urlList.size();i++) {
+            stringBuilder.append(urlList.get(i)).append(", ");
+        }
+        if(!urlList.isEmpty()) {
+            stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+            stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+        }
+        stringBuilder.append(System.lineSeparator());
+        LOGGER.info(stringBuilder.toString());
     }
 
     public FtsServerIpInfoModel getServerIpInfoModel() {

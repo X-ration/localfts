@@ -15,5 +15,12 @@ spring:
   web:
     resources:
       static-locations: classpath:/resources
+  servlet:
+    multipart:
+      max-file-size: 2GB
+      max-request-size: 2GB
+      #resolve-lazily: true
+      #file-size-threshold: 0
 localfts:
   root_path: D:\Users\Adam\Documents
+  upload_file_limit: 2147483648 #10GiB
