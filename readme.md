@@ -5,3 +5,5 @@
 使用java作为服务器、跨平台客户端开发语言。
 
 启动项目，在局域网环境浏览器中，打开[ip]/localfts即可查看计算机文件。根路径配置位于application.yml中localfts.root_path。
+
+[详细介绍](localfts-server/readme.md)
