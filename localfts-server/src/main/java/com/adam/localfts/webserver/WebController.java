@@ -16,6 +16,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -71,11 +73,11 @@ public class WebController {
      * @return
      */
     @PostMapping("/uploadFileTransfer")
-    public String uploadFileTransfer(MultipartFile file, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
+    public String uploadFileTransfer(MultipartFile file, @RequestParam String dirName, RedirectAttributes redirectAttributes) throws UnsupportedEncodingException {
         Assert.isTrue(file != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
         ReturnObject<Void> returnObject = ftsService.uploadFile(dirName, file);
         redirectAttributes.addFlashAttribute("uploadStatus", returnObject.isSuccess());
         redirectAttributes.addFlashAttribute("uploadMessage", returnObject.getMessage());
-        return "redirect:/uploadFile?dirName=" + dirName;
+        return "redirect:/uploadFile?dirName=" + URLEncoder.encode(dirName, "UTF-8");
     }
 }
