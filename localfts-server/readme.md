@@ -9,6 +9,9 @@
 - win7 ie
 - winxp ie
 
+运行release版本时可以通过命令行参数覆盖application.yml配置，如：
+java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam
+
 ## v1.0.3 功能更新：
 - 增加上传文件功能
 
