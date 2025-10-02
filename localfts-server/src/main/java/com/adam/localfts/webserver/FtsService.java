@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletResponse;
@@ -88,10 +89,11 @@ public class FtsService {
         return model;
     }
 
-    public void downloadFile(String fileName, HttpServletResponse response) throws IOException {
-        String actualFileName = rootPath + fileName;
-        File file = new File(actualFileName);
+    public void downloadFile(String filePath, HttpServletResponse response) throws IOException {
+        String actualFilePath = rootPath + filePath;
+        File file = new File(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
+        String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
         LOGGER.info("开始下载文件：【{}】", file.getAbsolutePath());
         long start = System.currentTimeMillis();
         try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file));
@@ -99,7 +101,7 @@ public class FtsService {
         ) {
             response.reset();
             response.setCharacterEncoding("UTF-8");
-            response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileName.substring(fileName.lastIndexOf("/")+1), "UTF-8"));
+            response.addHeader("Content-Disposition", "attachment;filename=" + UriUtils.encode(fileName, "UTF-8"));
             response.addHeader("Content-Length", "" + file.length());
             response.setContentType("application/octet-stream");
             byte[] buffer = new byte[1024];

@@ -3,7 +3,6 @@ package com.adam.localfts.webserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.Assert;
@@ -13,13 +12,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriUtils;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.Map;
 
 @Controller
 @RequestMapping("")
@@ -78,6 +75,6 @@ public class WebController {
         ReturnObject<Void> returnObject = ftsService.uploadFile(dirName, file);
         redirectAttributes.addFlashAttribute("uploadStatus", returnObject.isSuccess());
         redirectAttributes.addFlashAttribute("uploadMessage", returnObject.getMessage());
-        return "redirect:/uploadFile?dirName=" + URLEncoder.encode(dirName, "UTF-8");
+        return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
     }
 }
