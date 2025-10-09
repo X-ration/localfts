@@ -5,6 +5,25 @@ import java.util.Stack;
 
 public class Util {
 
+    public static String getOsName() {
+        return System.getProperty("os.name");
+    }
+
+    public static boolean isSystemWindows() {
+        String osName = getOsName().toLowerCase();
+        return osName.startsWith("windows");
+    }
+
+    public static boolean isSystemLinux() {
+        String osName = getOsName().toLowerCase();
+        return osName.startsWith("linux");
+    }
+
+    public static boolean isSystemMacOS() {
+        String osName = getOsName().toLowerCase();
+        return osName.startsWith("mac");
+    }
+
     /**
      * 从long型字节数转换为带单位的字符串表示
      * @param lengthInBytes

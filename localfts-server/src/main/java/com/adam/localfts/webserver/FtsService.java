@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +31,10 @@ public class FtsService {
     private String contextPath;
     @Value("${localfts.upload_file_limit}")
     private long uploadFileLimit;
+    @Value("${spring.servlet.multipart.max-file-size}")
+    private DataSize maxFileSize;
+    @Value("${spring.servlet.multipart.max-request-size}")
+    private DataSize maxRequestSize;
 
     private FtsServerIpInfoModel serverIpInfoModel;
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
@@ -158,8 +164,47 @@ public class FtsService {
     }
 
     @PostConstruct
-    public void initializeAndPrintServerIpInfo() {
+    public void checkAndPrintServerIpInfo() {
+        checkOptionsAndPrint();
         getServerIpInfoModel();
+        printServerIpInfo();
+    }
+
+    public FtsServerIpInfoModel getServerIpInfoModel() {
+        if(serverIpInfoModel == null) {
+            serverIpInfoModel = getServerIpInfoModelImpl();
+        }
+        return serverIpInfoModel;
+    }
+
+    private void checkOptionsAndPrint() {
+        com.adam.localfts.webserver.Assert.isTrue(rootPath != null, "Root path is null!", LocalFtsStartupException.class);
+        boolean isMatch;
+        if(Util.isSystemWindows()) {
+            Pattern rootPathPattern = Pattern.compile("[A-Z]:(\\\\[^\\\\]+)*?");
+            isMatch = rootPathPattern.matcher(rootPath).matches();
+        } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
+            Pattern rootPathPattern = Pattern.compile("/|(/[^/]+)+?");
+            isMatch = rootPathPattern.matcher(rootPath).matches();
+        } else {
+            throw new LocalFtsStartupException("Unknown system!");
+        }
+        com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid root path!", LocalFtsStartupException.class);
+        File file = new File(rootPath);
+        com.adam.localfts.webserver.Assert.isTrue(file.exists() && file.isDirectory(), "Root path\"" + rootPath + "\" does not exist or is not a directory!", LocalFtsStartupException.class);
+
+        StringBuilder stringBuilder = new StringBuilder("[Server Options & Info]").append(System.lineSeparator())
+                .append("root path=").append(rootPath).append(System.lineSeparator())
+                .append("total space=").append(Util.fileLengthToStringNew(file.getTotalSpace())).append(System.lineSeparator())
+                .append("usable space=").append(Util.fileLengthToStringNew(file.getUsableSpace())).append(System.lineSeparator())
+                .append("free space=").append(Util.fileLengthToStringNew(file.getFreeSpace())).append(System.lineSeparator())
+                .append("max file size=").append(Util.fileLengthToStringNew(maxFileSize.toBytes())).append(System.lineSeparator())
+                .append("max request size=").append(Util.fileLengthToStringNew(maxRequestSize.toBytes())).append(System.lineSeparator());
+
+        LOGGER.info(stringBuilder.toString());
+    }
+
+    private void printServerIpInfo() {
         StringBuilder stringBuilder = new StringBuilder("[Server Ip Info]").append(System.lineSeparator());
         List<String> serverIpList = new LinkedList<>();
 //        for(FtsServerIpInfoModel.IpInfoItem ipInfoItem: serverIpInfoModel.getItems()) {
@@ -188,13 +233,6 @@ public class FtsService {
         }
         stringBuilder.append(System.lineSeparator());
         LOGGER.info(stringBuilder.toString());
-    }
-
-    public FtsServerIpInfoModel getServerIpInfoModel() {
-        if(serverIpInfoModel == null) {
-            serverIpInfoModel = getServerIpInfoModelImpl();
-        }
-        return serverIpInfoModel;
     }
 
     private FtsServerIpInfoModel getServerIpInfoModelImpl() {
