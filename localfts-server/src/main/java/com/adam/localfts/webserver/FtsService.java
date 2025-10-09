@@ -140,6 +140,11 @@ public class FtsService {
 //            returnObject.setMessage("待上传的文件大小超过系统限制");
 //            return returnObject;
 //        }
+        if(fileName.contains("\\")) {
+            fileName = fileName.substring(fileName.lastIndexOf('\\') + 1);
+        } else if(fileName.contains("/")) {
+            fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+        }
 
         File actualFile = new File(directory, fileName);
         if(actualFile.exists()) {

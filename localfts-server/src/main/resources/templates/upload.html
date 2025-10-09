@@ -12,6 +12,17 @@
            background-color:white;
            border-style:solid;border-width:0.05em;
         }
+        table,th,td {
+            border-style:solid;
+            border-collapse:collapse;
+            border-color:black;
+        }
+        table {
+            border-width:0.1em;
+        }
+        th,td {
+            border-width:0.05em;
+        }
     </style>
 </head>
 <body>
@@ -48,4 +59,11 @@
     <input type="submit" value="上传">
 </form>
 </body>
+<script type="text/javascript">
+    //deal with serverIpInfo in IE
+    if(!document.getElementById('serverIpInfo').getAttribute("class")) {
+        document.getElementById('serverIpInfoShowButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','show')};
+        document.getElementById('serverIpInfoHideButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','hidden')};
+    }
+</script>
 </html>
