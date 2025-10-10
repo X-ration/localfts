@@ -17,4 +17,17 @@ public class FileTest {
         System.out.println("空闲空间：" + Util.fileLengthToStringNew(file.getFreeSpace()));
     }
 
+    @Test
+    public void testDirectoryWithWhitespace() {
+        File file = new File("D:\\Users\\Adam\\Documents\\Copy of desktop");
+        Assert.assertTrue(file.exists() && file.isDirectory());
+    }
+
+    @Test
+    public void test1() {
+        String path = "D:\\Users\\Adam".replaceAll("\\\\", "/");
+        File file = new File(path);
+        Assert.assertTrue(file.exists() && file.isDirectory());
+    }
+
 }

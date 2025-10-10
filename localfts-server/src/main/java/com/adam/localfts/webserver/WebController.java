@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriUtils;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -42,9 +43,9 @@ public class WebController {
     }
 
     @GetMapping("/downloadFile")
-    public void downloadFile(@RequestParam String fileName, HttpServletResponse response) throws IOException {
+    public void downloadFile(@RequestParam String fileName, HttpServletRequest request, HttpServletResponse response) throws IOException {
         Assert.isTrue(null != fileName & !"".equals(fileName), "非法请求参数");
-        ftsService.downloadFile(fileName, response);
+        ftsService.downloadFile(fileName, request, response);
     }
 
     @GetMapping("/uploadFile")

@@ -8,22 +8,52 @@ import java.util.regex.Pattern;
 public class RegexTest {
 
     @Test
-    public void checkWindowsRootPathRegex() {
-        Assert.assertTrue(checkWindowsRootPathRegex("D:"));
-        Assert.assertTrue(checkWindowsRootPathRegex("D:\\Users"));
-        Assert.assertTrue(checkWindowsRootPathRegex("D:\\Users\\Adam"));
+    public void checkReplace() {
+        String path = "D:\\Users\\Adam".replaceAll("\\\\", "/");
+        Assert.assertEquals("D:/Users/Adam", path);
+    }
+
+    @Test
+    public void checkRelativePathRegex() {
+        Assert.assertTrue(checkWindowsRelativePathRegex("log"));
+        Assert.assertTrue(checkWindowsRelativePathRegex("."));
+        Assert.assertTrue(checkWindowsRelativePathRegex("log\\log"));
+        Assert.assertTrue(checkWindowsRelativePathRegex(".\\log"));
+//        Assert.assertTrue(checkWindowsRelativePathRegex("\\log"));
+//        Assert.assertTrue(checkWindowsRelativePathRegex("log\\"));
+        Assert.assertTrue(checkLinuxMacOSRelativePathRegex("log"));
+        Assert.assertTrue(checkLinuxMacOSRelativePathRegex("."));
+        Assert.assertTrue(checkLinuxMacOSRelativePathRegex("log/log"));
+        Assert.assertTrue(checkLinuxMacOSRelativePathRegex("./log"));
+//        Assert.assertTrue(checkLinuxMacOSRelativePathRegex("/log"));
+//        Assert.assertTrue(checkLinuxMacOSRelativePathRegex("log/"));
+    }
+
+    @Test
+    public void checkAbsolutePathRegex() {
+        Assert.assertTrue(checkWindowsAbsolutePathRegex("D:"));
+        Assert.assertTrue(checkWindowsAbsolutePathRegex("D:\\Users"));
+        Assert.assertTrue(checkWindowsAbsolutePathRegex("D:\\Users\\Adam"));
 //        Assert.assertTrue(checkWindowsRootPathRegex("D:\\Users\\Adam\\"));
-        Assert.assertTrue(checkLinuxMacOSRootPathRegex("/"));
-        Assert.assertTrue(checkLinuxMacOSRootPathRegex("/home"));
-        Assert.assertTrue(checkLinuxMacOSRootPathRegex("/home/adam"));
+        Assert.assertTrue(checkLinuxMacOSAbsolutePathRegex("/"));
+        Assert.assertTrue(checkLinuxMacOSAbsolutePathRegex("/home"));
+        Assert.assertTrue(checkLinuxMacOSAbsolutePathRegex("/home/adam"));
 //        Assert.assertTrue(checkLinuxMacOSRootPathRegex("/home/adam/"));
     }
 
-    private boolean checkLinuxMacOSRootPathRegex(String rootPath) {
+    private boolean checkWindowsRelativePathRegex(String path) {
+        return checkRegex("[^\\\\]+(\\\\[^\\\\]+)*?", path);
+    }
+
+    private boolean checkLinuxMacOSRelativePathRegex(String path) {
+        return checkRegex("[^/]+(/[^/]+)*?", path);
+    }
+
+    private boolean checkLinuxMacOSAbsolutePathRegex(String rootPath) {
         return checkRegex("/|(/[^/]+)+?", rootPath);
     }
 
-    private boolean checkWindowsRootPathRegex(String rootPath) {
+    private boolean checkWindowsAbsolutePathRegex(String rootPath) {
         return checkRegex("[A-Z]:(\\\\[^\\\\]+)*?", rootPath);
     }
 

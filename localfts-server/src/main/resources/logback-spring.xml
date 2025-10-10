@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+    <springProperty scope="context" name="rootLevel" source="localfts.log.level.root"/>
+    <springProperty scope="context" name="logBase" source="localfts.log.file_path"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"> 　　　　　　　　　　　　　　
+            <fileNamePattern>${logBase}/logFile.%d{yyyy-MM-dd}.log</fileNamePattern> 　　　　　　　　　　　　　　
+            <maxHistory>30</maxHistory> 　　　　　　　　　　　　
+        </rollingPolicy> 　
+        <!--日志文件最大的大小-->
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>10MB</MaxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.hibernate" level="INFO"/>
+    <logger name="org.apache" level="INFO"/>
+    <logger name="org.thymeleaf" level="INFO"/>
+
+    <root level="${rootLevel}">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="ROLLING_FILE"/>
+    </root>
+</configuration>

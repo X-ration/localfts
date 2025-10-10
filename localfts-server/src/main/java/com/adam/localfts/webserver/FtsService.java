@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver;
 
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,13 +11,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
 import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -31,6 +30,10 @@ public class FtsService {
     private String contextPath;
     @Value("${localfts.upload_file_limit}")
     private long uploadFileLimit;
+    @Value("${localfts.log.level.root}")
+    private String logLevelRoot;
+    @Value("${localfts.log.file_path}")
+    private String logFilePath;
     @Value("${spring.servlet.multipart.max-file-size}")
     private DataSize maxFileSize;
     @Value("${spring.servlet.multipart.max-request-size}")
@@ -38,17 +41,22 @@ public class FtsService {
 
     private FtsServerIpInfoModel serverIpInfoModel;
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
+    private static final String[] ALLOWED_LOG_LEVELS = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR"};
+    private static final Pattern PATTERN_PATH_WINDOWS_ABSOLUTE = Pattern.compile("[A-Z]:(\\\\[^\\\\]+)*?");
+    private static final Pattern PATTERN_PATH_LINUX_MACOS_ABSOLUTE = Pattern.compile("/|(/[^/]+)+?");
+    private static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\]+)*?");
+    private static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
 
     public void ensureDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
-        File directory = new File(rootPath + relativePath);
+        File directory = Util.getFileSlashed(rootPath + relativePath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
     }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String actualPath = rootPath + relativePath;
-        File directory = new File(actualPath);
+        File directory = Util.getFileSlashed(actualPath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
         FtsPageModel model = new FtsPageModel();
         model.setPath(relativePath);
@@ -95,16 +103,20 @@ public class FtsService {
         return model;
     }
 
-    public void downloadFile(String filePath, HttpServletResponse response) throws IOException {
+    public void downloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Util.debugPrintRequestHeaders(request, LOGGER);
         String actualFilePath = rootPath + filePath;
-        File file = new File(actualFilePath);
+        File file = Util.getFileSlashed(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
         String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
         LOGGER.info("开始下载文件：【{}】", file.getAbsolutePath());
         long start = System.currentTimeMillis();
-        try (InputStream inputStream = new BufferedInputStream(new FileInputStream(file));
-             OutputStream outputStream = new BufferedOutputStream(response.getOutputStream())
-        ) {
+
+        InputStream inputStream = null;
+        OutputStream outputStream = null;
+        try {
+            inputStream = new BufferedInputStream(new FileInputStream(file));
+            outputStream = new BufferedOutputStream(response.getOutputStream());
             response.reset();
             response.setCharacterEncoding("UTF-8");
             response.addHeader("Content-Disposition", "attachment;filename=" + UriUtils.encode(fileName, "UTF-8"));
@@ -116,13 +128,26 @@ public class FtsService {
                 outputStream.write(buffer, 0, readBytes);
             }
             outputStream.flush();
+            LOGGER.info("下载文件完成：【{}】,用时{}毫秒", file.getAbsolutePath(), (System.currentTimeMillis() - start));
+        } catch (IOException e) {
+            String cause = null;
+            if(e instanceof ClientAbortException) {
+                cause = "远程主机关闭连接";
+            }
+            if(cause != null) {
+                LOGGER.error("下载文件【{}】时发生异常，原因：{}", fileName, cause);
+            } else {
+                LOGGER.error("下载文件【{}】时发生异常", fileName, e);
+            }
+        } finally {
+            Util.closeStream(inputStream);
+            Util.closeStream(outputStream);
         }
-        LOGGER.info("下载文件完成：【{}】,用时{}毫秒", file.getAbsolutePath(), (System.currentTimeMillis() - start));
     }
 
     public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
         Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
-        File directory = new File(rootPath + dirName);
+        File directory = Util.getFileSlashed(rootPath + dirName);
         ReturnObject<Void> returnObject = new ReturnObject<>();
         if(!directory.exists()) {
             returnObject.setSuccess(false);
@@ -186,17 +211,28 @@ public class FtsService {
         com.adam.localfts.webserver.Assert.isTrue(rootPath != null, "Root path is null!", LocalFtsStartupException.class);
         boolean isMatch;
         if(Util.isSystemWindows()) {
-            Pattern rootPathPattern = Pattern.compile("[A-Z]:(\\\\[^\\\\]+)*?");
-            isMatch = rootPathPattern.matcher(rootPath).matches();
+            isMatch = PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(rootPath).matches();
         } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
-            Pattern rootPathPattern = Pattern.compile("/|(/[^/]+)+?");
-            isMatch = rootPathPattern.matcher(rootPath).matches();
+            isMatch = PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(rootPath).matches();
         } else {
-            throw new LocalFtsStartupException("Unknown system!");
+            throw new LocalFtsStartupException("Unknown system:" + Util.getOsName());
         }
-        com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid root path!", LocalFtsStartupException.class);
-        File file = new File(rootPath);
+        com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid root path:" + rootPath, LocalFtsStartupException.class);
+        File file = Util.getFileSlashed(rootPath);
         com.adam.localfts.webserver.Assert.isTrue(file.exists() && file.isDirectory(), "Root path\"" + rootPath + "\" does not exist or is not a directory!", LocalFtsStartupException.class);
+
+        com.adam.localfts.webserver.Assert.isTrue(logFilePath != null, "Log file path is null!", LocalFtsStartupException.class);
+        if(Util.isSystemWindows()) {
+            isMatch = PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(logFilePath).matches() || PATTERN_PATH_WINDOWS_RELATIVE.matcher(logFilePath).matches();
+        } else {
+            //Linux or MacOS
+            isMatch = PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(logFilePath).matches() || PATTERN_PATH_LINUX_MACOS_RELATIVE.matcher(logFilePath).matches();
+        }
+        com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid log file path:" + logFilePath, LocalFtsStartupException.class);
+
+        com.adam.localfts.webserver.Assert.isTrue(logLevelRoot != null, "Root log level is null!", LocalFtsStartupException.class);
+        List<String> allowedLogLevelList = Arrays.asList(ALLOWED_LOG_LEVELS);
+        com.adam.localfts.webserver.Assert.isTrue(allowedLogLevelList.contains(logLevelRoot), "Invalid root log level:" + logLevelRoot, LocalFtsStartupException.class);
 
         StringBuilder stringBuilder = new StringBuilder("[Server Options & Info]").append(System.lineSeparator())
                 .append("root path=").append(rootPath).append(System.lineSeparator())
@@ -204,7 +240,9 @@ public class FtsService {
                 .append("usable space=").append(Util.fileLengthToStringNew(file.getUsableSpace())).append(System.lineSeparator())
                 .append("free space=").append(Util.fileLengthToStringNew(file.getFreeSpace())).append(System.lineSeparator())
                 .append("max file size=").append(Util.fileLengthToStringNew(maxFileSize.toBytes())).append(System.lineSeparator())
-                .append("max request size=").append(Util.fileLengthToStringNew(maxRequestSize.toBytes())).append(System.lineSeparator());
+                .append("max request size=").append(Util.fileLengthToStringNew(maxRequestSize.toBytes())).append(System.lineSeparator())
+                .append("log file path=").append(logFilePath).append(System.lineSeparator())
+                .append("log root level=").append(logLevelRoot).append(System.lineSeparator());
 
         LOGGER.info(stringBuilder.toString());
     }

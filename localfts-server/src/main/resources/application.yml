@@ -23,4 +23,8 @@ spring:
       #file-size-threshold: 0
 localfts:
   root_path: D:\Users\Adam\Documents
+  log:
+    file_path: log
+    level:
+      root: DEBUG
   upload_file_limit: 2147483648 #2GiB
