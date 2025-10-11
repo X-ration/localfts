@@ -4,6 +4,7 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.unit.DataSize;
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -46,17 +48,18 @@ public class FtsService {
     private static final Pattern PATTERN_PATH_LINUX_MACOS_ABSOLUTE = Pattern.compile("/|(/[^/]+)+?");
     private static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\]+)*?");
     private static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
+    private static final Pattern PATTERN_HTTP_HEADER_RANGE = Pattern.compile("bytes=([0-9]+)-([0-9]+)?");
 
     public void ensureDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
-        File directory = Util.getFileSlashed(rootPath + relativePath);
+        File directory = IOUtil.getFileSlashed(rootPath + relativePath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
     }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String actualPath = rootPath + relativePath;
-        File directory = Util.getFileSlashed(actualPath);
+        File directory = IOUtil.getFileSlashed(actualPath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
         FtsPageModel model = new FtsPageModel();
         model.setPath(relativePath);
@@ -103,51 +106,110 @@ public class FtsService {
         return model;
     }
 
-    public void downloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Util.debugPrintRequestHeaders(request, LOGGER);
+    public void headDownloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        IOUtil.debugPrintRequestHeaders(request, LOGGER, "headDownloadFile");
         String actualFilePath = rootPath + filePath;
-        File file = Util.getFileSlashed(actualFilePath);
+        File file = IOUtil.getFileSlashed(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
         String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
-        LOGGER.info("开始下载文件：【{}】", file.getAbsolutePath());
+        response.reset();
+        response.setCharacterEncoding("UTF-8");
+        response.addHeader("Content-Disposition", "attachment;filename=" + UriUtils.encode(fileName, "UTF-8"));
+        response.setContentType("application/octet-stream");
+        response.addHeader("Accept-Ranges", "bytes");
+        response.addHeader("Content-Length", String.valueOf(file.length()));
+    }
+
+    public void downloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        IOUtil.debugPrintRequestHeaders(request, LOGGER, "downloadFile");
+        String actualFilePath = rootPath + filePath;
+        File file = IOUtil.getFileSlashed(actualFilePath);
+        Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
+        String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
         long start = System.currentTimeMillis();
+
+        String rangeHeader = IOUtil.getHeaderIgnoreCase(request, "Range");
+        long lowerRange = 0, upperRange = 0;
+        boolean upperRangeNull = false;
+        if(rangeHeader != null) {
+            Matcher rangeHeaderMatcher = PATTERN_HTTP_HEADER_RANGE.matcher(rangeHeader);
+            if(!rangeHeaderMatcher.matches()) {
+                LOGGER.warn("Range头数据不符合格式：{}", rangeHeader);
+                return;
+            }
+            String lowerString = rangeHeaderMatcher.group(1), upperString = rangeHeaderMatcher.group(2);
+            lowerRange = Long.parseLong(lowerString);
+            if(upperString != null) {
+                upperRange = Long.parseLong(upperString);
+            } else {
+                upperRangeNull = true;
+                upperRange = file.length() - 1;
+            }
+            boolean isValidRangeHeader = lowerRange >= 0 && upperRange >= lowerRange && lowerRange < file.length();
+            if(!isValidRangeHeader) {
+                LOGGER.warn("Range头数据不满足条件：{},{},{}", lowerRange, upperRange, file.length());
+                response.setStatus(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE.value());
+                return;
+            }
+            LOGGER.info("开始下载文件(分段)：【{}】[{}][{}-{}]", file.getAbsolutePath(), file.length(), lowerRange, upperRange);
+        } else {
+            LOGGER.info("开始下载文件：【{}】[{}]", file.getAbsolutePath(), file.length());
+        }
+
+        String userAgentHeader = IOUtil.getHeaderIgnoreCase(request, "user-agent");
 
         InputStream inputStream = null;
         OutputStream outputStream = null;
+        RandomAccessFile randomAccessFile = null;
         try {
-            inputStream = new BufferedInputStream(new FileInputStream(file));
-            outputStream = new BufferedOutputStream(response.getOutputStream());
+            String encodedFileName = UriUtils.encode(fileName, "UTF-8");
+//            if(userAgentHeader != null && userAgentHeader.contains("MSIE")) {
+//                encodedFileName = UriUtils.encode(fileName.replaceAll("：", " "), "UTF-8");
+//            }
             response.reset();
             response.setCharacterEncoding("UTF-8");
-            response.addHeader("Content-Disposition", "attachment;filename=" + UriUtils.encode(fileName, "UTF-8"));
-            response.addHeader("Content-Length", "" + file.length());
+            response.addHeader("Content-Disposition", "attachment;filename=\"" + encodedFileName + "\";filename*=UTF-8''" + encodedFileName);
+            response.addHeader("Accept-Ranges", "bytes");
             response.setContentType("application/octet-stream");
-            byte[] buffer = new byte[1024];
-            int readBytes = 0;
-            while((readBytes = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, readBytes);
+
+            if(rangeHeader == null) {
+                response.addHeader("Content-Length", "" + file.length());
+                inputStream = new BufferedInputStream(new FileInputStream(file));
+                outputStream = new BufferedOutputStream(response.getOutputStream());
+                IOUtil.transfer(inputStream, outputStream);
+                LOGGER.info("下载文件完成：【{}】[{}],用时{}毫秒", file.getAbsolutePath(), file.length(), (System.currentTimeMillis() - start));
+            } else {
+                response.setStatus(HttpStatus.PARTIAL_CONTENT.value());
+                response.addHeader("Content-Range", "bytes " + lowerRange + "-" + (upperRangeNull ? "" : upperRange )+ "/" + file.length());
+                response.addHeader("Content-Length", String.valueOf(upperRange - lowerRange + 1));
+                randomAccessFile = new RandomAccessFile(file, "r");
+                outputStream = new BufferedOutputStream(response.getOutputStream());
+                IOUtil.transfer(randomAccessFile, outputStream, lowerRange, upperRange);
+
+                LOGGER.info("分段下载文件完成：【{}】[{}][{}-{}],用时{}毫秒", file.getAbsolutePath(), file.length(),
+                        lowerRange, upperRange, (System.currentTimeMillis() - start));
             }
-            outputStream.flush();
-            LOGGER.info("下载文件完成：【{}】,用时{}毫秒", file.getAbsolutePath(), (System.currentTimeMillis() - start));
         } catch (IOException e) {
             String cause = null;
             if(e instanceof ClientAbortException) {
                 cause = "远程主机关闭连接";
             }
+            String rangeMessage = rangeHeader == null ? "" : "(分段)";
             if(cause != null) {
-                LOGGER.error("下载文件【{}】时发生异常，原因：{}", fileName, cause);
+                LOGGER.error("{}下载文件【{}】时发生异常，原因：{}", rangeMessage, filePath, cause);
             } else {
-                LOGGER.error("下载文件【{}】时发生异常", fileName, e);
+                LOGGER.error("{}下载文件【{}】时发生异常", rangeMessage, filePath, e);
             }
         } finally {
-            Util.closeStream(inputStream);
-            Util.closeStream(outputStream);
+            IOUtil.closeStream(inputStream);
+            IOUtil.closeStream(outputStream);
+            IOUtil.closeRandomAccessFile(randomAccessFile);
         }
     }
 
     public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
         Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
-        File directory = Util.getFileSlashed(rootPath + dirName);
+        File directory = IOUtil.getFileSlashed(rootPath + dirName);
         ReturnObject<Void> returnObject = new ReturnObject<>();
         if(!directory.exists()) {
             returnObject.setSuccess(false);
@@ -218,7 +280,7 @@ public class FtsService {
             throw new LocalFtsStartupException("Unknown system:" + Util.getOsName());
         }
         com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid root path:" + rootPath, LocalFtsStartupException.class);
-        File file = Util.getFileSlashed(rootPath);
+        File file = IOUtil.getFileSlashed(rootPath);
         com.adam.localfts.webserver.Assert.isTrue(file.exists() && file.isDirectory(), "Root path\"" + rootPath + "\" does not exist or is not a directory!", LocalFtsStartupException.class);
 
         com.adam.localfts.webserver.Assert.isTrue(logFilePath != null, "Log file path is null!", LocalFtsStartupException.class);

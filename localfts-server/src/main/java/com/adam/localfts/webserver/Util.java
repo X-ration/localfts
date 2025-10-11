@@ -13,39 +13,6 @@ import java.util.Stack;
 
 public class Util {
 
-    public static void debugPrintRequestHeaders(HttpServletRequest request, Logger logger) {
-        Enumeration<String> headerNames = request.getHeaderNames();
-        logger.debug("******Debug print request header start******");
-        while(headerNames.hasMoreElements()) {
-            String headerName = headerNames.nextElement();
-            String headerValue = request.getHeader(headerName);
-            logger.debug("{}: {}", headerName, headerValue);
-        }
-        logger.debug("******Debug print request header end******");
-    }
-
-    public static void closeStream(InputStream inputStream) {
-        if(inputStream != null) {
-            try {
-                inputStream.close();
-            } catch (IOException e) {
-            }
-        }
-    }
-
-    public static void closeStream(OutputStream outputStream) {
-        if(outputStream != null) {
-            try {
-                outputStream.close();
-            } catch (IOException e) {
-            }
-        }
-    }
-
-    public static File getFileSlashed(String path) {
-        return new File(path.replaceAll("\\\\", "/"));
-    }
-
     public static String getOsName() {
         return System.getProperty("os.name");
     }

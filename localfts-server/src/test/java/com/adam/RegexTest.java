@@ -3,9 +3,30 @@ package com.adam;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RegexTest {
+
+    @Test
+    public void checkExtractHttpRangeHeader() {
+        String headerValue = "bytes=739505227-760047038";
+        Pattern pattern = Pattern.compile("bytes=([0-9]+)-([0-9]+)");
+        Matcher matcher = pattern.matcher(headerValue);
+        Assert.assertTrue(matcher.matches());
+        String lower = matcher.group(1), upper = matcher.group(2);
+        System.out.println(lower + upper);
+    }
+
+    @Test
+    public void checkExtractHttpRangeHeader2() {
+        String headerValue = "bytes=739505227-";
+        Pattern pattern = Pattern.compile("bytes=([0-9]+)-([0-9]+)?");
+        Matcher matcher = pattern.matcher(headerValue);
+        Assert.assertTrue(matcher.matches());
+        String lower = matcher.group(1), upper = matcher.group(2);
+        System.out.println(lower + upper);
+    }
 
     @Test
     public void checkReplace() {

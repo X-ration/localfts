@@ -3,21 +3,23 @@
 ----------
 适用于网页版客户端的文件传输服务器。
 适用浏览器：
+- win11 Edge
+- win11 Chrome
 - win10 Edge
 - win10 Chrome
 - ubuntu Mozilla firefox
-- win7 ie
-- winxp ie
+- win7 ie、qq浏览器
+- winxp ie、qq浏览器、360安全浏览器
 
 运行release版本时可以通过命令行参数覆盖application.yml配置，如：
 java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam
 
-## v1.0.4 问题修复：
+## v1.0.4 问题修复 & 功能更新：
 - 修复下载文件时文件名由空格变为加号的问题
 - 修复中文文件夹上传文件后文件上传成功但是页面报错的问题
-
-功能更新：
 - 检查启动选项并输出相关信息
+- 支持根路径带空格
+- 支持浏览器多线程下载、断点续传
 
 ## v1.0.3 功能更新：
 - 增加上传文件功能
