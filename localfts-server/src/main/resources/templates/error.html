@@ -21,6 +21,7 @@
         var traceText = document.getElementById("traceText");
         if(traceText) {
             var replacedText;
+            var traceTextContent = traceText.textContent || traceText.innerText;
             if(traceText.textContent.replaceAll != null) {
                 replacedText = traceText.textContent.replaceAll("\r\n","<br>").replaceAll("\n","<br>");
             } else {

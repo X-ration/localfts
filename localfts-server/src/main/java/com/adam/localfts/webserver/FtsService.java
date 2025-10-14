@@ -213,7 +213,7 @@ public class FtsService {
                     IOUtil.transfer(randomAccessFile, outputStream, lowerRange, upperRange, true);
 
                     LOGGER.info("分段下载文件完成：【{}】[{}][{}],用时{}毫秒", file.getAbsolutePath(), fileLength,
-                            httpRangeObject.toSimplifiedString(), (System.currentTimeMillis() - start));
+                            httpRangeObject.getOriginalString(), (System.currentTimeMillis() - start));
                 } else {
                     String boundary = UUID.randomUUID().toString();
                     response.setContentType("multipart/byteranges; boundary=" + boundary);
@@ -238,7 +238,7 @@ public class FtsService {
                     outputStream.flush();
 
                     LOGGER.info("多分段下载文件完成：【{}】[{}][{}],用时{}毫秒", file.getAbsolutePath(), fileLength,
-                            httpRangeObject.toSimplifiedString(), (System.currentTimeMillis() - start));
+                            httpRangeObject.getOriginalString(), (System.currentTimeMillis() - start));
                 }
             }
         } catch (IOException e) {
