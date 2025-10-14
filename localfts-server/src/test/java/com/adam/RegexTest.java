@@ -1,8 +1,11 @@
 package com.adam;
 
+import com.adam.localfts.webserver.HttpRangeObject;
+import com.adam.localfts.webserver.Util;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,6 +29,42 @@ public class RegexTest {
         Assert.assertTrue(matcher.matches());
         String lower = matcher.group(1), upper = matcher.group(2);
         System.out.println(lower + upper);
+    }
+
+    /**
+     *  请求头Range 请求实体的一个或者多个子范围
+     * 	表示头500个字节：bytes=0-499
+     * 	表示第二个500字节：bytes=500-999
+     * 	表示最后500个字节：bytes=-500
+     * 	表示500字节以后的范围：bytes=500-
+     * 	第一个和最后一个字节：bytes=0-0,-1
+     *  同时指定几个范围：bytes=500-600,601-999
+     */
+    @Test
+    public void checkExtractHttpRangeHeader3() {
+        assertExtractHttpRangeHeader("bytes=739505227-760047038", 739505227L, 760047038L);
+        assertExtractHttpRangeHeader("bytes=739505227-760047038,0-0,0-,-10", 739505227L, 760047038L, 0L, 0L, 0L, null, -10L);
+    }
+
+    private void assertExtractHttpRangeHeader(String headerValue, Long... boundValues) {
+        HttpRangeObject httpRangeObject = Util.resolveHttpRangeHeader(headerValue, 0L);
+        List<HttpRangeObject.Range> rangeList = httpRangeObject.getRangeList();
+        int totalBoundSize = 0;
+        for(int i=0;i<rangeList.size();i++) {
+            HttpRangeObject.Range range = rangeList.get(i);
+            totalBoundSize += (range.isLastN() ? 1 : 2);
+        }
+        Assert.assertEquals(totalBoundSize, boundValues.length);
+        int j = 0;
+        for(int i=0;i<rangeList.size();i++) {
+            HttpRangeObject.Range range = rangeList.get(i);
+            if(range.isLastN()) {
+                Assert.assertEquals(range.getLastN(), boundValues[j++]);
+            } else {
+                Assert.assertEquals(range.getLower(), boundValues[j++]);
+                Assert.assertEquals(range.getUpper(), boundValues[j++]);
+            }
+        }
     }
 
     @Test

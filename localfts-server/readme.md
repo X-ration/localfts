@@ -11,6 +11,8 @@
 - win7 ie、qq浏览器
 - winxp ie、qq浏览器、360安全浏览器
 
+下载文件支持迅雷下载、多范围下载。
+
 运行release版本时可以通过命令行参数覆盖application.yml配置，如：
 java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam
 

@@ -15,11 +15,16 @@ import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.net.*;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static com.adam.localfts.webserver.Util.CRLF;
 
 @Service
 public class FtsService {
@@ -49,6 +54,7 @@ public class FtsService {
     private static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\]+)*?");
     private static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
     private static final Pattern PATTERN_HTTP_HEADER_RANGE = Pattern.compile("bytes=([0-9]+)-([0-9]+)?");
+
 
     public void ensureDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
@@ -107,7 +113,7 @@ public class FtsService {
     }
 
     public void headDownloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        IOUtil.debugPrintRequestHeaders(request, LOGGER, "headDownloadFile");
+        IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "headDownloadFile");
         String actualFilePath = rootPath + filePath;
         File file = IOUtil.getFileSlashed(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
@@ -121,42 +127,53 @@ public class FtsService {
     }
 
     public void downloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        IOUtil.debugPrintRequestHeaders(request, LOGGER, "downloadFile");
+        long start = System.currentTimeMillis();
+        IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "downloadFile");
         String actualFilePath = rootPath + filePath;
         File file = IOUtil.getFileSlashed(actualFilePath);
-        Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
+        Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径:" + actualFilePath);
         String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
-        long start = System.currentTimeMillis();
+        long fileLength = file.length();
+        long fileLastModified = file.lastModified();
 
-        String rangeHeader = IOUtil.getHeaderIgnoreCase(request, "Range");
-        long lowerRange = 0, upperRange = 0;
-        boolean upperRangeNull = false;
-        if(rangeHeader != null) {
-            Matcher rangeHeaderMatcher = PATTERN_HTTP_HEADER_RANGE.matcher(rangeHeader);
-            if(!rangeHeaderMatcher.matches()) {
-                LOGGER.warn("Range头数据不符合格式：{}", rangeHeader);
-                return;
+        boolean isSendCompleteFile = false;
+        Long ifRangeHeaderLong = null;
+        try {
+            ifRangeHeaderLong = IOUtil.getDateHeaderIgnoreCase(request, "If-Range");
+            if(ifRangeHeaderLong != null) {
+                isSendCompleteFile = fileLastModified / 1000 != ifRangeHeaderLong / 1000;
             }
-            String lowerString = rangeHeaderMatcher.group(1), upperString = rangeHeaderMatcher.group(2);
-            lowerRange = Long.parseLong(lowerString);
-            if(upperString != null) {
-                upperRange = Long.parseLong(upperString);
+        } catch (IllegalArgumentException e) {
+            //忽略If-Range头
+        }
+        HttpRangeObject httpRangeObject = null;
+        if(!isSendCompleteFile) {
+            String rangeHeader = IOUtil.getHeaderIgnoreCase(request, "Range");
+            if (rangeHeader != null) {
+                try {
+                    httpRangeObject = Util.resolveHttpRangeHeader(rangeHeader, fileLength);
+                } catch (IllegalArgumentException e) {
+                    LOGGER.warn("解析Http Range头时出错:{}", e.getMessage());
+                    response.setStatus(HttpStatus.BAD_REQUEST.value());
+                    return;
+                } catch (InvalidRangeException e) {
+                    LOGGER.warn("Range头数据不满足条件：{}", e.getMessage());
+                    response.setStatus(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE.value());
+                    response.addHeader("Content-Range", "bytes */" + fileLength);
+                    return;
+                }
             } else {
-                upperRangeNull = true;
-                upperRange = file.length() - 1;
+                isSendCompleteFile = true;
             }
-            boolean isValidRangeHeader = lowerRange >= 0 && upperRange >= lowerRange && lowerRange < file.length();
-            if(!isValidRangeHeader) {
-                LOGGER.warn("Range头数据不满足条件：{},{},{}", lowerRange, upperRange, file.length());
-                response.setStatus(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE.value());
-                return;
-            }
-            LOGGER.info("开始下载文件(分段)：【{}】[{}][{}-{}]", file.getAbsolutePath(), file.length(), lowerRange, upperRange);
+        }
+        if(!isSendCompleteFile) {
+            LOGGER.info("开始下载文件{}：【{}】[{}][{}]", httpRangeObject.isMultipleRange() ? "(多分段)" : "(分段)",
+                    file.getAbsolutePath(), fileLength, httpRangeObject.getOriginalString());
         } else {
-            LOGGER.info("开始下载文件：【{}】[{}]", file.getAbsolutePath(), file.length());
+            LOGGER.info("开始下载文件：【{}】[{}]", file.getAbsolutePath(), fileLength);
         }
 
-        String userAgentHeader = IOUtil.getHeaderIgnoreCase(request, "user-agent");
+//        String userAgentHeader = IOUtil.getHeaderIgnoreCase(request, "user-agent");
 
         InputStream inputStream = null;
         OutputStream outputStream = null;
@@ -167,34 +184,69 @@ public class FtsService {
 //                encodedFileName = UriUtils.encode(fileName.replaceAll("：", " "), "UTF-8");
 //            }
             response.reset();
-            response.setCharacterEncoding("UTF-8");
+            //response.setCharacterEncoding("UTF-8");
             response.addHeader("Content-Disposition", "attachment;filename=\"" + encodedFileName + "\";filename*=UTF-8''" + encodedFileName);
             response.addHeader("Accept-Ranges", "bytes");
-            response.setContentType("application/octet-stream");
+//            response.setDateHeader("Date", new Date().getTime());
+            response.setDateHeader("Last-Modified", file.lastModified());
 
-            if(rangeHeader == null) {
-                response.addHeader("Content-Length", "" + file.length());
+            if(isSendCompleteFile) {
+                response.setStatus(HttpStatus.OK.value());
+                response.addHeader("Content-Length", "" + fileLength);
+                response.setContentType("application/octet-stream");
                 inputStream = new BufferedInputStream(new FileInputStream(file));
                 outputStream = new BufferedOutputStream(response.getOutputStream());
                 IOUtil.transfer(inputStream, outputStream);
-                LOGGER.info("下载文件完成：【{}】[{}],用时{}毫秒", file.getAbsolutePath(), file.length(), (System.currentTimeMillis() - start));
+                LOGGER.info("下载文件完成：【{}】[{}],用时{}毫秒", file.getAbsolutePath(), fileLength, (System.currentTimeMillis() - start));
             } else {
                 response.setStatus(HttpStatus.PARTIAL_CONTENT.value());
-                response.addHeader("Content-Range", "bytes " + lowerRange + "-" + (upperRangeNull ? "" : upperRange )+ "/" + file.length());
-                response.addHeader("Content-Length", String.valueOf(upperRange - lowerRange + 1));
-                randomAccessFile = new RandomAccessFile(file, "r");
-                outputStream = new BufferedOutputStream(response.getOutputStream());
-                IOUtil.transfer(randomAccessFile, outputStream, lowerRange, upperRange);
+                if (!httpRangeObject.isMultipleRange()) {
+                    response.setContentType("application/octet-stream");
 
-                LOGGER.info("分段下载文件完成：【{}】[{}][{}-{}],用时{}毫秒", file.getAbsolutePath(), file.length(),
-                        lowerRange, upperRange, (System.currentTimeMillis() - start));
+                    HttpRangeObject.Range singleRange = httpRangeObject.get(0);
+                    long lowerRange = singleRange.getActualLower(),
+                            upperRange = singleRange.getActualUpper();
+                    response.addHeader("Content-Range", "bytes " + lowerRange + "-" + upperRange + "/" + fileLength);
+                    response.addHeader("Content-Length", String.valueOf(upperRange - lowerRange + 1));
+                    randomAccessFile = new RandomAccessFile(file, "r");
+                    outputStream = new BufferedOutputStream(response.getOutputStream());
+                    IOUtil.transfer(randomAccessFile, outputStream, lowerRange, upperRange, true);
+
+                    LOGGER.info("分段下载文件完成：【{}】[{}][{}],用时{}毫秒", file.getAbsolutePath(), fileLength,
+                            httpRangeObject.toSimplifiedString(), (System.currentTimeMillis() - start));
+                } else {
+                    String boundary = UUID.randomUUID().toString();
+                    response.setContentType("multipart/byteranges; boundary=" + boundary);
+                    response.addHeader("Content-Length", String.valueOf(Util.
+                            calcMultipleRangeResponseContentLength(httpRangeObject, fileLength, boundary)));
+                    randomAccessFile = new RandomAccessFile(file, "r");
+                    outputStream = new BufferedOutputStream(response.getOutputStream());
+                    for(HttpRangeObject.Range range: httpRangeObject.getRangeList()) {
+                        long lowerRange = range.getActualLower(), upperRange = range.getActualUpper();
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.append("--").append(boundary).append(CRLF)
+                                .append("Content-Type: application/octet-stream").append(CRLF)
+                                .append("Content-Range: bytes ").append(lowerRange).append("-").append(upperRange).append("/").append(fileLength).append(CRLF)
+                                .append(CRLF);
+                        outputStream.write(stringBuilder.toString().getBytes(StandardCharsets.UTF_8));
+                        IOUtil.transfer(randomAccessFile, outputStream, lowerRange, upperRange, false);
+                        outputStream.write(CRLF.getBytes(StandardCharsets.UTF_8));
+                    }
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.append("--").append(boundary).append("--").append(CRLF);
+                    outputStream.write(stringBuilder.toString().getBytes(StandardCharsets.UTF_8));
+                    outputStream.flush();
+
+                    LOGGER.info("多分段下载文件完成：【{}】[{}][{}],用时{}毫秒", file.getAbsolutePath(), fileLength,
+                            httpRangeObject.toSimplifiedString(), (System.currentTimeMillis() - start));
+                }
             }
         } catch (IOException e) {
             String cause = null;
             if(e instanceof ClientAbortException) {
                 cause = "远程主机关闭连接";
             }
-            String rangeMessage = rangeHeader == null ? "" : "(分段)";
+            String rangeMessage = isSendCompleteFile ? "" : (httpRangeObject.isMultipleRange() ? "(多分段)" : "(分段)");
             if(cause != null) {
                 LOGGER.error("{}下载文件【{}】时发生异常，原因：{}", rangeMessage, filePath, cause);
             } else {

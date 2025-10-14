@@ -10,6 +10,7 @@ import java.util.Enumeration;
 public class IOUtil {
 
     private static final int BUFFER_SIZE = 1024;
+    private static final String[] SELECTED_HTTP_REQUEST_HEADERS = new String[]{"range", "if-range", "user-agent"};
 
     /**
      * @param randomAccessFile
@@ -19,7 +20,7 @@ public class IOUtil {
      * @return
      * @throws IOException
      */
-    public static void transfer(RandomAccessFile randomAccessFile, OutputStream outputStream, long startPosition, long endPosition)
+    public static void transfer(RandomAccessFile randomAccessFile, OutputStream outputStream, long startPosition, long endPosition, boolean flush)
             throws IOException {
         Assert.notNull(randomAccessFile, "randomAccessFile is null");
         Assert.notNull(outputStream, "outputStream is null");
@@ -40,7 +41,9 @@ public class IOUtil {
             }
             remaining -= readBytes;
         }
-        outputStream.flush();
+        if(flush) {
+            outputStream.flush();
+        }
     }
 
     public static void transfer(InputStream inputStream, OutputStream outputStream) throws IOException{
@@ -67,15 +70,39 @@ public class IOUtil {
         return null;
     }
 
+    public static Long getDateHeaderIgnoreCase(HttpServletRequest request, String headerName) {
+        Assert.notNull(request, "request is null");
+        Assert.notNull(headerName, "headerName is null");
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while(headerNames.hasMoreElements()) {
+            String enumHeaderName = headerNames.nextElement();
+            if(headerName.equalsIgnoreCase(enumHeaderName)) {
+                return request.getDateHeader(enumHeaderName);
+            }
+        }
+        return null;
+    }
+
     public static void debugPrintRequestHeaders(HttpServletRequest request, Logger logger, String methodName) {
         Enumeration<String> headerNames = request.getHeaderNames();
-        logger.debug("******[{}] Debug print request header start******", methodName);
+        logger.debug("******[{}] Debug print all request headers start******", methodName);
         while(headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
             String headerValue = request.getHeader(headerName);
             logger.debug("{}: {}", headerName, headerValue);
         }
-        logger.debug("******[{}] Debug print request header end******", methodName);
+        logger.debug("******[{}] Debug print all request headers end******", methodName);
+    }
+
+    public static void debugPrintSelectedRequestHeaders(HttpServletRequest request, Logger logger, String methodName) {
+        StringBuilder stringBuilder = new StringBuilder();
+        for(String headerName: SELECTED_HTTP_REQUEST_HEADERS) {
+            stringBuilder.append(headerName).append("=").append(getHeaderIgnoreCase(request, headerName)).append(",");
+        }
+        if(SELECTED_HTTP_REQUEST_HEADERS.length > 0) {
+            stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+        }
+        logger.debug("******[{}] Debug print selected request headers: {}******", methodName, stringBuilder);
     }
 
     public static void closeRandomAccessFile(RandomAccessFile randomAccessFile) {
