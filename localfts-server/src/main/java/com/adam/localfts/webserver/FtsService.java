@@ -56,7 +56,6 @@ public class FtsService {
     private static final Pattern PATTERN_PATH_LINUX_MACOS_ABSOLUTE = Pattern.compile("/|(/[^/]+)+?");
     private static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\]+)*?");
     private static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
-    private static final String DATE_FORMAT_FILE_STANDARD = "yyyy-MM-dd HH:mm:ss";
 
     public void ensureDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
@@ -107,7 +106,7 @@ public class FtsService {
                     fileModel.setFileSize(item.length());
                 }
                 fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(Util.DATE_FORMAT_FILE_STANDARD);
                 fileModel.setLastModified(simpleDateFormat.format(new Date(item.lastModified())));
                 fileModels.add(fileModel);
             }
@@ -308,13 +307,6 @@ public class FtsService {
             returnObject.setMessage(e.getMessage());
         }
         return returnObject;
-    }
-
-    public String getServerTimeFormattedString() {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
-        String timeString = simpleDateFormat.format(new Date());
-        TimeZone timeZone = TimeZone.getDefault();
-        return timeString + " " + timeZone.getDisplayName(Locale.SIMPLIFIED_CHINESE);
     }
 
     @PostConstruct

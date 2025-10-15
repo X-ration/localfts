@@ -3,7 +3,11 @@ package com.adam.localfts.webserver;
 import org.springframework.util.Assert;
 
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Stack;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,6 +18,18 @@ public class Util {
     private static final Pattern PATTERN_HTTP_HEADER_RANGE_LAST_N = Pattern.compile("-[0-9]+");
 
     public static final String CRLF = "\r\n";
+    public static final String DATE_FORMAT_FILE_STANDARD = "yyyy-MM-dd HH:mm:ss";
+
+    public static String getServerTimeFormattedString() {
+        return getServerTimeFormattedString(Locale.SIMPLIFIED_CHINESE);
+    }
+
+    public static String getServerTimeFormattedString(Locale locale) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+        String timeString = simpleDateFormat.format(new Date());
+        TimeZone timeZone = TimeZone.getDefault();
+        return timeString + " " + timeZone.getDisplayName(locale);
+    }
 
     public static long calcMultipleRangeResponseContentLength(HttpRangeObject httpRangeObject, long fileLength, String boundary) {
         long total = httpRangeObject.totalRangeLength();

@@ -42,12 +42,12 @@ public class RegexTest {
      */
     @Test
     public void checkExtractHttpRangeHeader3() {
-        assertExtractHttpRangeHeader("bytes=739505227-760047038", 739505227L, 760047038L);
-        assertExtractHttpRangeHeader("bytes=739505227-760047038,0-0,0-,-10", 739505227L, 760047038L, 0L, 0L, 0L, null, -10L);
+        assertExtractHttpRangeHeader("bytes=739505227-760047038", 800000000L, 739505227L, 760047038L);
+        assertExtractHttpRangeHeader("bytes=739505227-760047038,0-0,0-,-10", 800000000L, 739505227L, 760047038L, 0L, 0L, 0L, null, -10L);
     }
 
-    private void assertExtractHttpRangeHeader(String headerValue, Long... boundValues) {
-        HttpRangeObject httpRangeObject = Util.resolveHttpRangeHeader(headerValue, 0L);
+    private void assertExtractHttpRangeHeader(String headerValue, long fileLength, Long... boundValues) {
+        HttpRangeObject httpRangeObject = Util.resolveHttpRangeHeader(headerValue, fileLength);
         List<HttpRangeObject.Range> rangeList = httpRangeObject.getRangeList();
         int totalBoundSize = 0;
         for(int i=0;i<rangeList.size();i++) {

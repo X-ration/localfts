@@ -1,11 +1,9 @@
 package com.adam.localfts.webserver;
 
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
-import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletPath;
 import org.springframework.boot.autoconfigure.web.servlet.error.ErrorViewResolver;
 import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
@@ -22,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -65,6 +64,7 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
                 isIncludeStackTrace(request, MediaType.TEXT_HTML));
         modifiableModel.put("status", realStatus.value());
         modifiableModel.put("error", realStatus.getReasonPhrase());
+        modifiableModel.put("timestamp", Util.getServerTimeFormattedString(Locale.US));
         Map<String, Object> model = Collections.unmodifiableMap(modifiableModel);
         ModelAndView modelAndView = resolveErrorView(request, response, status, model);
         return (modelAndView != null) ? modelAndView : new ModelAndView("error", model);

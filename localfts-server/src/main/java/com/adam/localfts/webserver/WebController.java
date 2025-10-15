@@ -36,7 +36,7 @@ public class WebController {
         model.addAttribute("ftsPage", ftsPageModel);
         FtsServerIpInfoModel serverIpInfoModel = ftsService.getServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
-        String serverTime = ftsService.getServerTimeFormattedString();
+        String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
         return "list";
     }
@@ -65,7 +65,7 @@ public class WebController {
             model.addAttribute("uploadStatus", uploadStatus);
             model.addAttribute("uploadMessage", uploadMessage);
         }
-        String serverTime = ftsService.getServerTimeFormattedString();
+        String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
         return "upload";
     }
