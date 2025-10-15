@@ -250,11 +250,11 @@ public class FtsService {
                 cause = "远程主机关闭连接";
             }
             String rangeMessage = isSendCompleteFile ? "" : (httpRangeObject.isMultipleRange() ? "(多分段)" : "(分段)");
-            String rangeOriginalString = isSendCompleteFile ? "" : httpRangeObject.getOriginalString();
+            String rangeOriginalString = isSendCompleteFile ? "" : "[" + httpRangeObject.getOriginalString() + "]";
             if(cause != null) {
-                LOGGER.error("异常：{}下载文件【{}】[{}]时发生异常，原因：{}", rangeMessage, filePath, rangeOriginalString, cause);
+                LOGGER.error("异常：{}下载文件【{}】{}时发生异常，原因：{}", rangeMessage, filePath, rangeOriginalString, cause);
             } else {
-                LOGGER.error("异常：{}下载文件【{}】[{}]时发生异常", rangeMessage, filePath, rangeOriginalString, e);
+                LOGGER.error("异常：{}下载文件【{}】{}时发生异常", rangeMessage, filePath, rangeOriginalString, e);
             }
         } finally {
             IOUtil.closeStream(inputStream);
