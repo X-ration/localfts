@@ -26,9 +26,9 @@
     </style>
 </head>
 <body>
-<h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>
+<h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
 <hr>
-<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:2em" href="/localfts">返回首页</a><br><br>
+<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" href="/localfts">返回首页</a><br><br>
 <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
     <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
     <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">

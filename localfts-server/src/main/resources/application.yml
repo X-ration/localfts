@@ -28,3 +28,5 @@ localfts:
     level:
       root: DEBUG
   upload_file_limit: 2147483648 #2GiB
+  test_language:
+    Simplified_Chinese: true

@@ -23,16 +23,18 @@ java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam
 - 检查启动选项并输出相关信息
 - 支持根路径带空格
 - 支持浏览器多线程下载、断点续传
+- 展示服务器时间、文件修改时间
+  ![localfts-server-1.0.4-add-time-file-last-modified.png](readme/localfts-server-1.0.4-add-time-file-last-modified.png)
 
 ## v1.0.3 功能更新：
 - 增加上传文件功能
 
 ## v1.0.1 功能更新：
 - 点击服务器网络信息按钮查看服务器网卡信息。
-  ![](readme/localfts-server-1.0.1-server-ip-info.png)
+  ![localfts-server-1.0.1-server-ip-info.png](readme/localfts-server-1.0.1-server-ip-info.png)
 - 添加自定义错误页面。
-  ![](readme/localfts-server-1.0.1-custom-error-page.png)
+  ![localfts-server-1.0.1-custom-error-page.png](readme/localfts-server-1.0.1-custom-error-page.png)
 
 ## v1.0
 提供Web服务展示根路径下的文件列表，提供文件下载功能。
-![](readme/localfts-server-1.0.png)
+![localfts-server-1.0.png](readme/localfts-server-1.0.png)

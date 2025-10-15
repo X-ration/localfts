@@ -20,6 +20,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,6 +42,8 @@ public class FtsService {
     private String logLevelRoot;
     @Value("${localfts.log.file_path}")
     private String logFilePath;
+    @Value("${localfts.test_language.Simplified_Chinese}")
+    private boolean testLanguageSC;
     @Value("${spring.servlet.multipart.max-file-size}")
     private DataSize maxFileSize;
     @Value("${spring.servlet.multipart.max-request-size}")
@@ -53,8 +56,7 @@ public class FtsService {
     private static final Pattern PATTERN_PATH_LINUX_MACOS_ABSOLUTE = Pattern.compile("/|(/[^/]+)+?");
     private static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\]+)*?");
     private static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
-    private static final Pattern PATTERN_HTTP_HEADER_RANGE = Pattern.compile("bytes=([0-9]+)-([0-9]+)?");
-
+    private static final String DATE_FORMAT_FILE_STANDARD = "yyyy-MM-dd HH:mm:ss";
 
     public void ensureDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
@@ -105,6 +107,8 @@ public class FtsService {
                     fileModel.setFileSize(item.length());
                 }
                 fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+                fileModel.setLastModified(simpleDateFormat.format(new Date(item.lastModified())));
                 fileModels.add(fileModel);
             }
         }
@@ -260,6 +264,7 @@ public class FtsService {
     }
 
     public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
+        long start = System.currentTimeMillis();
         Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
         File directory = IOUtil.getFileSlashed(rootPath + dirName);
         ReturnObject<Void> returnObject = new ReturnObject<>();
@@ -292,19 +297,24 @@ public class FtsService {
             return returnObject;
         }
         LOGGER.info("开始上传文件{}到路径{}", fileName, dirName);
-        long start = System.currentTimeMillis();
         try {
             file.transferTo(actualFile);
             returnObject.setSuccess(true);
             returnObject.setMessage(fileName + "上传成功！");
-            long seconds = (System.currentTimeMillis() - start) / 1000;
-            LOGGER.info("上传文件{}到路径{}成功!耗时{}秒", fileName, dirName, seconds);
+            LOGGER.info("上传文件{}到路径{}成功!耗时{}毫秒", fileName, dirName, (System.currentTimeMillis() - start));
         } catch (IOException e) {
             LOGGER.error("上传文件{}到路径{}时出错", fileName, dirName, e);
             returnObject.setSuccess(false);
             returnObject.setMessage(e.getMessage());
         }
         return returnObject;
+    }
+
+    public String getServerTimeFormattedString() {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+        String timeString = simpleDateFormat.format(new Date());
+        TimeZone timeZone = TimeZone.getDefault();
+        return timeString + " " + timeZone.getDisplayName(Locale.SIMPLIFIED_CHINESE);
     }
 
     @PostConstruct
@@ -357,6 +367,9 @@ public class FtsService {
                 .append("max request size=").append(Util.fileLengthToStringNew(maxRequestSize.toBytes())).append(System.lineSeparator())
                 .append("log file path=").append(logFilePath).append(System.lineSeparator())
                 .append("log root level=").append(logLevelRoot).append(System.lineSeparator());
+        if(testLanguageSC) {
+            stringBuilder.append("test language [Simplified Chinese]:").append(TestLanguageText.Simplified_Chinese.getText()).append(System.lineSeparator());
+        }
 
         LOGGER.info(stringBuilder.toString());
     }
