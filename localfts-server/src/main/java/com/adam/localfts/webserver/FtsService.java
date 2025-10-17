@@ -52,21 +52,21 @@ public class FtsService {
     private FtsServerIpInfoModel serverIpInfoModel;
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
     private static final String[] ALLOWED_LOG_LEVELS = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR"};
-    private static final Pattern PATTERN_PATH_WINDOWS_ABSOLUTE = Pattern.compile("[A-Z]:(\\\\[^\\\\]+)*?");
+    private static final Pattern PATTERN_PATH_WINDOWS_ABSOLUTE = Pattern.compile("[A-Z]:(\\\\[^\\\\/:*?\"<>|]+)*?");
     private static final Pattern PATTERN_PATH_LINUX_MACOS_ABSOLUTE = Pattern.compile("/|(/[^/]+)+?");
-    private static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\]+)*?");
+    private static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\/:*?\"<>|]+)*?");
     private static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
 
     public void ensureDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
-        File directory = IOUtil.getFileSlashed(rootPath + relativePath);
+        File directory = IOUtil.getFile(rootPath + relativePath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
     }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String actualPath = rootPath + relativePath;
-        File directory = IOUtil.getFileSlashed(actualPath);
+        File directory = IOUtil.getFile(actualPath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
         FtsPageModel model = new FtsPageModel();
         model.setPath(relativePath);
@@ -118,7 +118,7 @@ public class FtsService {
     public void headDownloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
         IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "headDownloadFile");
         String actualFilePath = rootPath + filePath;
-        File file = IOUtil.getFileSlashed(actualFilePath);
+        File file = IOUtil.getFile(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
         String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
         response.reset();
@@ -133,7 +133,7 @@ public class FtsService {
         long start = System.currentTimeMillis();
         IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "downloadFile");
         String actualFilePath = rootPath + filePath;
-        File file = IOUtil.getFileSlashed(actualFilePath);
+        File file = IOUtil.getFile(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径:" + actualFilePath);
         String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
         long fileLength = file.length();
@@ -266,7 +266,7 @@ public class FtsService {
     public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
         long start = System.currentTimeMillis();
         Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
-        File directory = IOUtil.getFileSlashed(rootPath + dirName);
+        File directory = IOUtil.getFile(rootPath + dirName);
         ReturnObject<Void> returnObject = new ReturnObject<>();
         if(!directory.exists()) {
             returnObject.setSuccess(false);
@@ -334,9 +334,20 @@ public class FtsService {
         } else {
             throw new LocalFtsStartupException("Unknown system:" + Util.getOsName());
         }
-        com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid root path:" + rootPath, LocalFtsStartupException.class);
-        File file = IOUtil.getFileSlashed(rootPath);
-        com.adam.localfts.webserver.Assert.isTrue(file.exists() && file.isDirectory(), "Root path\"" + rootPath + "\" does not exist or is not a directory!", LocalFtsStartupException.class);
+//        com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid root path:" + rootPath, LocalFtsStartupException.class);
+        boolean changeRootPathToDefault = false;
+        if(!isMatch) {
+            String oldRootPath = changeRootPathToDefault();
+            changeRootPathToDefault = true;
+            LOGGER.warn("Root path '{}' does not match rules, changing root path to default '{}'", oldRootPath, rootPath);
+        }
+        File file = IOUtil.getFile(rootPath);
+//        com.adam.localfts.webserver.Assert.isTrue(file.exists() && file.isDirectory(), "Root path\"" + rootPath + "\" does not exist or is not a directory!", LocalFtsStartupException.class);
+        if(!file.exists() || !file.isDirectory()) {
+            com.adam.localfts.webserver.Assert.isTrue(!changeRootPathToDefault, "Default root path does not work", LocalFtsStartupException.class);
+            String oldRootPath = changeRootPathToDefault();
+            LOGGER.warn("Root path '{}' does not exist or is not a directory, changing root path to default '{}'", oldRootPath, rootPath);
+        }
 
         com.adam.localfts.webserver.Assert.isTrue(logFilePath != null, "Log file path is null!", LocalFtsStartupException.class);
         if(Util.isSystemWindows()) {
@@ -365,6 +376,16 @@ public class FtsService {
         }
 
         LOGGER.info(stringBuilder.toString());
+    }
+
+    private String changeRootPathToDefault() {
+        String oldRootPath = rootPath;
+        if(Util.isSystemWindows()) {
+            rootPath = "C:";
+        } else {
+            rootPath = "/home";
+        }
+        return oldRootPath;
     }
 
     private void printServerIpInfo() {

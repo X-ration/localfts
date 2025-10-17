@@ -132,8 +132,8 @@ public class IOUtil {
         }
     }
 
-    public static File getFileSlashed(String path) {
-        return new File(path.replaceAll("\\\\", "/"));
+    public static File getFile(String path) {
+        return new File(path);
     }
 
 }
