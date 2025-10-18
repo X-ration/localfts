@@ -42,9 +42,9 @@ public class WebController {
     }
 
     @GetMapping("/downloadFile")
-    public void downloadFile(@RequestParam String fileName, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Assert.isTrue(null != fileName & !"".equals(fileName), "非法请求参数");
-        ftsService.downloadFile(fileName, request, response);
+    public void downloadFile(@RequestParam(value = "fileName") String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Assert.isTrue(null != filePath & !"".equals(filePath), "非法请求参数");
+        ftsService.downloadFile(filePath, request, response);
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/downloadFile")

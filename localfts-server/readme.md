@@ -10,6 +10,7 @@
 - ubuntu Mozilla firefox
 - win7 ie、qq浏览器
 - winxp ie、qq浏览器、360安全浏览器
+- 安卓/iPadOS浏览器
 
 下载文件支持迅雷下载、多范围下载。
 
