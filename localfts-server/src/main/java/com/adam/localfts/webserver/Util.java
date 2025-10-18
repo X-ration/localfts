@@ -1,9 +1,116 @@
 package com.adam.localfts.webserver;
 
+import org.springframework.util.Assert;
+
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Stack;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class Util {
+
+    private static final Pattern PATTERN_HTTP_HEADER_RANGE_COMMON = Pattern.compile("(-?[0-9]+)-(-?[0-9]+)?");
+    private static final Pattern PATTERN_HTTP_HEADER_RANGE_LAST_N = Pattern.compile("-[0-9]+");
+
+    public static final String CRLF = "\r\n";
+    public static final String DATE_FORMAT_FILE_STANDARD = "yyyy-MM-dd HH:mm:ss";
+
+    public static String getServerTimeFormattedString() {
+        return getServerTimeFormattedString(Locale.SIMPLIFIED_CHINESE);
+    }
+
+    public static String getServerTimeFormattedString(Locale locale) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+        String timeString = simpleDateFormat.format(new Date());
+        TimeZone timeZone = TimeZone.getDefault();
+        return timeString + " " + timeZone.getDisplayName(locale);
+    }
+
+    public static long calcMultipleRangeResponseContentLength(HttpRangeObject httpRangeObject, long fileLength, String boundary) {
+        long total = httpRangeObject.totalRangeLength();
+        StringBuilder stringBuilder = new StringBuilder();
+        for(HttpRangeObject.Range range: httpRangeObject.getRangeList()) {
+            long lowerRange = range.getActualLower(), upperRange = range.getActualUpper();
+            stringBuilder.append("--").append(boundary).append(CRLF)
+                    .append("Content-Type: application/octet-stream").append(CRLF)
+                    .append("Content-Range: bytes ").append(lowerRange).append("-").append(upperRange).append("/").append(fileLength).append(CRLF)
+                    .append(CRLF).append(CRLF);
+        }
+        stringBuilder.append("--").append(boundary).append("--").append(CRLF);
+        total += stringBuilder.toString().getBytes(StandardCharsets.UTF_8).length;
+        return total;
+    }
+
+    /**
+     *  @param headerValue
+     *  请求头Range 请求实体的一个或者多个子范围
+     * 	表示头500个字节：bytes=0-499
+     * 	表示第二个500字节：bytes=500-999
+     * 	表示最后500个字节：bytes=-500
+     * 	表示500字节以后的范围：bytes=500-
+     * 	第一个和最后一个字节：bytes=0-0,-1
+     *  同时指定几个范围：bytes=500-600,601-999
+     */
+    public static HttpRangeObject resolveHttpRangeHeader(String headerValue, long fileLength) {
+        Assert.isTrue(headerValue.length() >= 6, "Range header invalid length:" + headerValue);
+        String[] splits = headerValue.substring(6).split(",");
+        boolean[] isLastNs = new boolean[splits.length];
+        for(int i=0;i<splits.length;i++) {
+            Matcher matcher = PATTERN_HTTP_HEADER_RANGE_COMMON.matcher(splits[i]);
+            if(matcher.matches()) {
+                Assert.isTrue(matcher.groupCount() == 2, "Range header part '" + splits[i] + "' invalid group count:" + matcher.groupCount() + "!");
+                isLastNs[i] = false;
+            } else {
+                matcher = PATTERN_HTTP_HEADER_RANGE_LAST_N.matcher(splits[i]);
+                Assert.isTrue(matcher.matches(), "Range header part '" + splits[i] + "' not match!");
+                isLastNs[i] = true;
+            }
+        }
+        HttpRangeObject httpRangeObject = new HttpRangeObject(headerValue.substring(6), fileLength);
+        for(int i=0;i<splits.length;i++) {
+            if(!isLastNs[i]) {
+                Matcher matcher = PATTERN_HTTP_HEADER_RANGE_COMMON.matcher(splits[i]);
+                boolean isMatch = matcher.matches();
+                String lowerString = matcher.group(1), upperString = matcher.group(2);
+                Long lower = Long.parseLong(lowerString);
+                Long upper;
+                if (upperString != null) {
+                    upper = Long.parseLong(upperString);
+                } else {
+                    upper = null;
+                }
+                httpRangeObject.addRangeCommon(splits[i], lower, upper);
+            } else {
+                Long lastN = Long.parseLong(splits[i]);
+                httpRangeObject.addRangeLastN(splits[i], lastN);
+            }
+        }
+        return httpRangeObject;
+    }
+
+    public static String getOsName() {
+        return System.getProperty("os.name");
+    }
+
+    public static boolean isSystemWindows() {
+        String osName = getOsName().toLowerCase();
+        return osName.startsWith("windows");
+    }
+
+    public static boolean isSystemLinux() {
+        String osName = getOsName().toLowerCase();
+        return osName.startsWith("linux");
+    }
+
+    public static boolean isSystemMacOS() {
+        String osName = getOsName().toLowerCase();
+        return osName.startsWith("mac");
+    }
 
     /**
      * 从long型字节数转换为带单位的字符串表示

@@ -1,5 +1,8 @@
 package com.adam.localfts.webserver;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 
 public class FtsPageModel {
@@ -67,42 +70,13 @@ public class FtsPageModel {
         this.fileList = fileList;
     }
 
+    @Getter
+    @Setter
     public class FtsPageFileModel {
         private String fileName;
         private boolean isDirectory;
         private long fileSize;
+        private String lastModified;
         private String fileSizeStr;
-
-        public String getFileName() {
-            return fileName;
-        }
-
-        public void setFileName(String fileName) {
-            this.fileName = fileName;
-        }
-
-        public long getFileSize() {
-            return fileSize;
-        }
-
-        public void setFileSize(long fileSize) {
-            this.fileSize = fileSize;
-        }
-
-        public String getFileSizeStr() {
-            return fileSizeStr;
-        }
-
-        public void setFileSizeStr(String fileSizeStr) {
-            this.fileSizeStr = fileSizeStr;
-        }
-
-        public boolean isDirectory() {
-            return isDirectory;
-        }
-
-        public void setDirectory(boolean directory) {
-            isDirectory = directory;
-        }
     }
 }

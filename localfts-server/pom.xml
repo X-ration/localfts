@@ -6,7 +6,7 @@
 
   <groupId>com.adam</groupId>
   <artifactId>localfts-server</artifactId>
-  <version>1.0.3</version>
+  <version>1.0.4</version>
 
   <parent>
     <groupId>org.springframework.boot</groupId>
@@ -32,6 +32,29 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.ua-parser</groupId>
+      <artifactId>uap-java</artifactId>
+      <version>1.6.1</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.yaml</groupId>
+          <artifactId>snakeyaml</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.33</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
     </dependency>
 
     <dependency>
