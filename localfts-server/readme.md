@@ -15,7 +15,7 @@
 下载文件支持迅雷下载、多范围下载。
 
 运行release版本时可以通过命令行参数覆盖application.yml配置，如：
-java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam
+`java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam`
 
 ## v1.0.4 问题修复 & 功能更新：
 - 修复下载文件时文件名由空格变为加号的问题
