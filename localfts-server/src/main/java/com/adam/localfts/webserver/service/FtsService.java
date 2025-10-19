@@ -1,5 +1,14 @@
-package com.adam.localfts.webserver;
+package com.adam.localfts.webserver.service;
 
+import com.adam.localfts.webserver.common.FtsPageModel;
+import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
+import com.adam.localfts.webserver.common.HttpRangeObject;
+import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.constant.TestLanguageText;
+import com.adam.localfts.webserver.exception.InvalidRangeException;
+import com.adam.localfts.webserver.exception.LocalFtsStartupException;
+import com.adam.localfts.webserver.util.IOUtil;
+import com.adam.localfts.webserver.util.Util;
 import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +34,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.adam.localfts.webserver.Util.CRLF;
+import static com.adam.localfts.webserver.util.Util.CRLF;
 
 @Service
 public class FtsService {
@@ -325,7 +334,7 @@ public class FtsService {
     }
 
     private void checkOptionsAndPrint() {
-        com.adam.localfts.webserver.Assert.isTrue(rootPath != null, "Root path is null!", LocalFtsStartupException.class);
+        com.adam.localfts.webserver.util.Assert.isTrue(rootPath != null, "Root path is null!", LocalFtsStartupException.class);
         boolean isMatch;
         if(Util.isSystemWindows()) {
             isMatch = PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(rootPath).matches();
@@ -334,7 +343,7 @@ public class FtsService {
         } else {
             throw new LocalFtsStartupException("Unknown system:" + Util.getOsName());
         }
-//        com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid root path:" + rootPath, LocalFtsStartupException.class);
+//        com.adam.localfts.webserver.util.Assert.isTrue(isMatch, "Invalid root path:" + rootPath, LocalFtsStartupException.class);
         boolean changeRootPathToDefault = false;
         if(!isMatch) {
             String oldRootPath = changeRootPathToDefault();
@@ -342,25 +351,25 @@ public class FtsService {
             LOGGER.warn("Root path '{}' does not match rules, changing root path to default '{}'", oldRootPath, rootPath);
         }
         File file = IOUtil.getFile(rootPath);
-//        com.adam.localfts.webserver.Assert.isTrue(file.exists() && file.isDirectory(), "Root path\"" + rootPath + "\" does not exist or is not a directory!", LocalFtsStartupException.class);
+//        com.adam.localfts.webserver.util.Assert.isTrue(file.exists() && file.isDirectory(), "Root path\"" + rootPath + "\" does not exist or is not a directory!", LocalFtsStartupException.class);
         if(!file.exists() || !file.isDirectory()) {
-            com.adam.localfts.webserver.Assert.isTrue(!changeRootPathToDefault, "Default root path does not work", LocalFtsStartupException.class);
+            com.adam.localfts.webserver.util.Assert.isTrue(!changeRootPathToDefault, "Default root path does not work", LocalFtsStartupException.class);
             String oldRootPath = changeRootPathToDefault();
             LOGGER.warn("Root path '{}' does not exist or is not a directory, changing root path to default '{}'", oldRootPath, rootPath);
         }
 
-        com.adam.localfts.webserver.Assert.isTrue(logFilePath != null, "Log file path is null!", LocalFtsStartupException.class);
+        com.adam.localfts.webserver.util.Assert.isTrue(logFilePath != null, "Log file path is null!", LocalFtsStartupException.class);
         if(Util.isSystemWindows()) {
             isMatch = PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(logFilePath).matches() || PATTERN_PATH_WINDOWS_RELATIVE.matcher(logFilePath).matches();
         } else {
             //Linux or MacOS
             isMatch = PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(logFilePath).matches() || PATTERN_PATH_LINUX_MACOS_RELATIVE.matcher(logFilePath).matches();
         }
-        com.adam.localfts.webserver.Assert.isTrue(isMatch, "Invalid log file path:" + logFilePath, LocalFtsStartupException.class);
+        com.adam.localfts.webserver.util.Assert.isTrue(isMatch, "Invalid log file path:" + logFilePath, LocalFtsStartupException.class);
 
-        com.adam.localfts.webserver.Assert.isTrue(logLevelRoot != null, "Root log level is null!", LocalFtsStartupException.class);
+        com.adam.localfts.webserver.util.Assert.isTrue(logLevelRoot != null, "Root log level is null!", LocalFtsStartupException.class);
         List<String> allowedLogLevelList = Arrays.asList(ALLOWED_LOG_LEVELS);
-        com.adam.localfts.webserver.Assert.isTrue(allowedLogLevelList.contains(logLevelRoot), "Invalid root log level:" + logLevelRoot, LocalFtsStartupException.class);
+        com.adam.localfts.webserver.util.Assert.isTrue(allowedLogLevelList.contains(logLevelRoot), "Invalid root log level:" + logLevelRoot, LocalFtsStartupException.class);
 
         StringBuilder stringBuilder = new StringBuilder("[Server Options & Info]").append(System.lineSeparator())
                 .append("root path=").append(rootPath).append(System.lineSeparator())

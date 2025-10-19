@@ -1,7 +1,7 @@
 package com.adam;
 
-import com.adam.localfts.webserver.HttpRangeObject;
-import com.adam.localfts.webserver.Util;
+import com.adam.localfts.webserver.common.HttpRangeObject;
+import com.adam.localfts.webserver.util.Util;
 import org.junit.Assert;
 import org.junit.Test;
 

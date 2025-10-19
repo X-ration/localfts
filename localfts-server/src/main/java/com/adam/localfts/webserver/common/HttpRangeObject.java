@@ -1,5 +1,7 @@
-package com.adam.localfts.webserver;
+package com.adam.localfts.webserver.common;
 
+import com.adam.localfts.webserver.exception.InvalidRangeException;
+import com.adam.localfts.webserver.util.Assert;
 import lombok.*;
 
 import java.util.LinkedList;

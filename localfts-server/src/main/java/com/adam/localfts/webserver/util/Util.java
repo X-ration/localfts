@@ -1,5 +1,6 @@
-package com.adam.localfts.webserver;
+package com.adam.localfts.webserver.util;
 
+import com.adam.localfts.webserver.common.HttpRangeObject;
 import org.springframework.util.Assert;
 
 import java.nio.charset.StandardCharsets;
