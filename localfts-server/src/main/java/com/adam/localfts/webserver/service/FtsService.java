@@ -1,79 +1,52 @@
 package com.adam.localfts.webserver.service;
 
-import com.adam.localfts.webserver.common.FtsPageModel;
-import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
-import com.adam.localfts.webserver.common.HttpRangeObject;
-import com.adam.localfts.webserver.common.ReturnObject;
-import com.adam.localfts.webserver.constant.TestLanguageText;
+import com.adam.localfts.webserver.common.*;
+import com.adam.localfts.webserver.config.server.LocalFtsServerConfig;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
-import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
-import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
-import static com.adam.localfts.webserver.util.Util.CRLF;
+import static com.adam.localfts.webserver.common.Constants.CRLF;
+import static com.adam.localfts.webserver.common.Constants.DATE_FORMAT_FILE_STANDARD;
 
 @Service
 public class FtsService {
 
-    @Value("${localfts.root_path}")
-    private String rootPath;
-    @Value("${server.port}")
-    private String serverPort;
-    @Value("${server.servlet.context-path}")
-    private String contextPath;
-    @Value("${localfts.upload_file_limit}")
-    private long uploadFileLimit;
-    @Value("${localfts.log.level.root}")
-    private String logLevelRoot;
-    @Value("${localfts.log.file_path}")
-    private String logFilePath;
-    @Value("${localfts.test_language.Simplified_Chinese}")
-    private boolean testLanguageSC;
-    @Value("${spring.servlet.multipart.max-file-size}")
-    private DataSize maxFileSize;
-    @Value("${spring.servlet.multipart.max-request-size}")
-    private DataSize maxRequestSize;
+    @Autowired
+    private LocalFtsServerConfig localFtsServerConfig;
 
     private FtsServerIpInfoModel serverIpInfoModel;
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
-    private static final String[] ALLOWED_LOG_LEVELS = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR"};
-    private static final Pattern PATTERN_PATH_WINDOWS_ABSOLUTE = Pattern.compile("[A-Z]:(\\\\[^\\\\/:*?\"<>|]+)*?");
-    private static final Pattern PATTERN_PATH_LINUX_MACOS_ABSOLUTE = Pattern.compile("/|(/[^/]+)+?");
-    private static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\/:*?\"<>|]+)*?");
-    private static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
 
     public void ensureDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
+        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
         File directory = IOUtil.getFile(rootPath + relativePath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
     }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
+        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
         String actualPath = rootPath + relativePath;
         File directory = IOUtil.getFile(actualPath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
@@ -115,7 +88,7 @@ public class FtsService {
                     fileModel.setFileSize(item.length());
                 }
                 fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(Util.DATE_FORMAT_FILE_STANDARD);
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
                 fileModel.setLastModified(simpleDateFormat.format(new Date(item.lastModified())));
                 fileModels.add(fileModel);
             }
@@ -126,6 +99,7 @@ public class FtsService {
 
     public void headDownloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
         IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "headDownloadFile");
+        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
         String actualFilePath = rootPath + filePath;
         File file = IOUtil.getFile(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
@@ -141,6 +115,7 @@ public class FtsService {
     public void downloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
         long start = System.currentTimeMillis();
         IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "downloadFile");
+        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
         String actualFilePath = rootPath + filePath;
         File file = IOUtil.getFile(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径:" + actualFilePath);
@@ -275,6 +250,7 @@ public class FtsService {
     public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
         long start = System.currentTimeMillis();
         Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
+        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
         File directory = IOUtil.getFile(rootPath + dirName);
         ReturnObject<Void> returnObject = new ReturnObject<>();
         if(!directory.exists()) {
@@ -317,153 +293,6 @@ public class FtsService {
             returnObject.setMessage(e.getMessage());
         }
         return returnObject;
-    }
-
-    @PostConstruct
-    public void checkAndPrintServerIpInfo() {
-        checkOptionsAndPrint();
-        getServerIpInfoModel();
-        printServerIpInfo();
-    }
-
-    public FtsServerIpInfoModel getServerIpInfoModel() {
-        if(serverIpInfoModel == null) {
-            serverIpInfoModel = getServerIpInfoModelImpl();
-        }
-        return serverIpInfoModel;
-    }
-
-    private void checkOptionsAndPrint() {
-        com.adam.localfts.webserver.util.Assert.isTrue(rootPath != null, "Root path is null!", LocalFtsStartupException.class);
-        boolean isMatch;
-        if(Util.isSystemWindows()) {
-            isMatch = PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(rootPath).matches();
-        } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
-            isMatch = PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(rootPath).matches();
-        } else {
-            throw new LocalFtsStartupException("Unknown system:" + Util.getOsName());
-        }
-//        com.adam.localfts.webserver.util.Assert.isTrue(isMatch, "Invalid root path:" + rootPath, LocalFtsStartupException.class);
-        boolean changeRootPathToDefault = false;
-        if(!isMatch) {
-            String oldRootPath = changeRootPathToDefault();
-            changeRootPathToDefault = true;
-            LOGGER.warn("Root path '{}' does not match rules, changing root path to default '{}'", oldRootPath, rootPath);
-        }
-        File file = IOUtil.getFile(rootPath);
-//        com.adam.localfts.webserver.util.Assert.isTrue(file.exists() && file.isDirectory(), "Root path\"" + rootPath + "\" does not exist or is not a directory!", LocalFtsStartupException.class);
-        if(!file.exists() || !file.isDirectory()) {
-            com.adam.localfts.webserver.util.Assert.isTrue(!changeRootPathToDefault, "Default root path does not work", LocalFtsStartupException.class);
-            String oldRootPath = changeRootPathToDefault();
-            LOGGER.warn("Root path '{}' does not exist or is not a directory, changing root path to default '{}'", oldRootPath, rootPath);
-        }
-
-        com.adam.localfts.webserver.util.Assert.isTrue(logFilePath != null, "Log file path is null!", LocalFtsStartupException.class);
-        if(Util.isSystemWindows()) {
-            isMatch = PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(logFilePath).matches() || PATTERN_PATH_WINDOWS_RELATIVE.matcher(logFilePath).matches();
-        } else {
-            //Linux or MacOS
-            isMatch = PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(logFilePath).matches() || PATTERN_PATH_LINUX_MACOS_RELATIVE.matcher(logFilePath).matches();
-        }
-        com.adam.localfts.webserver.util.Assert.isTrue(isMatch, "Invalid log file path:" + logFilePath, LocalFtsStartupException.class);
-
-        com.adam.localfts.webserver.util.Assert.isTrue(logLevelRoot != null, "Root log level is null!", LocalFtsStartupException.class);
-        List<String> allowedLogLevelList = Arrays.asList(ALLOWED_LOG_LEVELS);
-        com.adam.localfts.webserver.util.Assert.isTrue(allowedLogLevelList.contains(logLevelRoot), "Invalid root log level:" + logLevelRoot, LocalFtsStartupException.class);
-
-        StringBuilder stringBuilder = new StringBuilder("[Server Options & Info]").append(System.lineSeparator())
-                .append("root path=").append(rootPath).append(System.lineSeparator())
-                .append("total space=").append(Util.fileLengthToStringNew(file.getTotalSpace())).append(System.lineSeparator())
-                .append("usable space=").append(Util.fileLengthToStringNew(file.getUsableSpace())).append(System.lineSeparator())
-                .append("free space=").append(Util.fileLengthToStringNew(file.getFreeSpace())).append(System.lineSeparator())
-                .append("max file size=").append(Util.fileLengthToStringNew(maxFileSize.toBytes())).append(System.lineSeparator())
-                .append("max request size=").append(Util.fileLengthToStringNew(maxRequestSize.toBytes())).append(System.lineSeparator())
-                .append("log file path=").append(logFilePath).append(System.lineSeparator())
-                .append("log root level=").append(logLevelRoot).append(System.lineSeparator());
-        if(testLanguageSC) {
-            stringBuilder.append("test language [Simplified Chinese]:").append(TestLanguageText.Simplified_Chinese.getText()).append(System.lineSeparator());
-        }
-
-        LOGGER.info(stringBuilder.toString());
-    }
-
-    private String changeRootPathToDefault() {
-        String oldRootPath = rootPath;
-        if(Util.isSystemWindows()) {
-            rootPath = "C:";
-        } else {
-            rootPath = "/home";
-        }
-        return oldRootPath;
-    }
-
-    private void printServerIpInfo() {
-        StringBuilder stringBuilder = new StringBuilder("[Server Ip Info]").append(System.lineSeparator());
-        List<String> serverIpList = new LinkedList<>();
-//        for(FtsServerIpInfoModel.IpInfoItem ipInfoItem: serverIpInfoModel.getItems()) {
-        for(int seq=0;seq<serverIpInfoModel.getItems().length;seq++) {
-            FtsServerIpInfoModel.IpInfoItem ipInfoItem = serverIpInfoModel.getItems()[seq];
-            stringBuilder.append(seq).append(". ").append(ipInfoItem.getDisplayName()).append(",").append(ipInfoItem.getName()).append(",[");
-            for(int i=0;i<ipInfoItem.getAddresses().length;i++) {
-                stringBuilder.append(ipInfoItem.getAddresses()[i]);
-                serverIpList.add(ipInfoItem.getAddresses()[i]);
-                if(i!=ipInfoItem.getAddresses().length-1) {
-                    stringBuilder.append(",");
-                }
-            }
-            stringBuilder.append("]").append(System.lineSeparator());
-        }
-        stringBuilder.append("[Server Port]").append(serverPort).append(System.lineSeparator());
-        stringBuilder.append("[Server Context Path]").append(contextPath).append(System.lineSeparator());
-        stringBuilder.append("[All Possible Root Urls]");
-        List<String> urlList = serverIpList.stream().map(ip -> "http://" + ip + ":" + serverPort + contextPath).collect(Collectors.toList());
-        for(int i=0;i<urlList.size();i++) {
-            stringBuilder.append(urlList.get(i)).append(", ");
-        }
-        if(!urlList.isEmpty()) {
-            stringBuilder.deleteCharAt(stringBuilder.length() - 1);
-            stringBuilder.deleteCharAt(stringBuilder.length() - 1);
-        }
-        stringBuilder.append(System.lineSeparator());
-        LOGGER.info(stringBuilder.toString());
-    }
-
-    private FtsServerIpInfoModel getServerIpInfoModelImpl() {
-        FtsServerIpInfoModel model = new FtsServerIpInfoModel();
-        try {
-            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
-            List<FtsServerIpInfoModel.IpInfoItem> ipInfoItemList = new LinkedList<>();
-            while(networkInterfaces.hasMoreElements()) {
-                FtsServerIpInfoModel.IpInfoItem ipInfoItem = null;
-                List<String> ipAddressList = null;
-                NetworkInterface networkInterface = networkInterfaces.nextElement();
-                Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
-                int addressCount = 0;
-                while (inetAddresses.hasMoreElements()) {
-                    InetAddress inetAddress = inetAddresses.nextElement();
-                    if (!(inetAddress instanceof Inet4Address) || inetAddress.isLoopbackAddress()) {
-                        continue;
-                    }
-                    if (addressCount++ == 0) {
-                        ipInfoItem = model.new IpInfoItem();
-                        ipInfoItem.setDisplayName(networkInterface.getDisplayName());
-                        ipInfoItem.setName(networkInterface.getName());
-                        ipInfoItemList.add(ipInfoItem);
-                        ipAddressList = new LinkedList<>();
-                    }
-                    ipAddressList.add(inetAddress.getHostAddress());
-                }
-                if(addressCount > 0) {
-                    ipInfoItem.setAddresses(ipAddressList.toArray(new String[0]));
-                }
-            }
-            model.setItems(ipInfoItemList.toArray(new FtsServerIpInfoModel.IpInfoItem[0]));
-        } catch (SocketException e) {
-            System.err.println("Error getting server ips: " + e.getMessage());
-            e.printStackTrace();
-            model.setItems(new FtsServerIpInfoModel.IpInfoItem[0]);
-        }
-        return model;
     }
 
 }

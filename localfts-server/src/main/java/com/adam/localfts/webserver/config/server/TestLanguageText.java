@@ -1,4 +1,4 @@
-package com.adam.localfts.webserver.constant;
+package com.adam.localfts.webserver.config.server;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
