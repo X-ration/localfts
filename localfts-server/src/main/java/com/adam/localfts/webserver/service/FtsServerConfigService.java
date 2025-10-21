@@ -1,7 +1,8 @@
-package com.adam.localfts.webserver.config.server;
+package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
+import com.adam.localfts.webserver.config.server.*;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.util.Assert;
 import com.adam.localfts.webserver.util.IOUtil;
@@ -11,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.util.unit.DataSize;
 
 import javax.annotation.PostConstruct;
@@ -26,9 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Component
+@Service
 @Getter
-public class LocalFtsServerConfig {
+public class FtsServerConfigService {
 
     @Autowired
     private LocalFtsProperties localFtsProperties;
@@ -43,7 +44,7 @@ public class LocalFtsServerConfig {
     @Value("${spring.servlet.multipart.max-request-size}")
     private DataSize maxRequestSize;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LocalFtsServerConfig.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FtsServerConfigService.class);
 
     public void checkPropertiesAndPostConstruct() {
         //check properties

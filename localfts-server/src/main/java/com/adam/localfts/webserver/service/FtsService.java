@@ -1,7 +1,6 @@
 package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.*;
-import com.adam.localfts.webserver.config.server.LocalFtsServerConfig;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
@@ -32,21 +31,21 @@ import static com.adam.localfts.webserver.common.Constants.DATE_FORMAT_FILE_STAN
 public class FtsService {
 
     @Autowired
-    private LocalFtsServerConfig localFtsServerConfig;
+    private FtsServerConfigService ftsServerConfigService;
 
     private FtsServerIpInfoModel serverIpInfoModel;
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
 
     public void ensureDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
-        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         File directory = IOUtil.getFile(rootPath + relativePath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
     }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
-        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String actualPath = rootPath + relativePath;
         File directory = IOUtil.getFile(actualPath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
@@ -99,7 +98,7 @@ public class FtsService {
 
     public void headDownloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
         IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "headDownloadFile");
-        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String actualFilePath = rootPath + filePath;
         File file = IOUtil.getFile(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径");
@@ -115,7 +114,7 @@ public class FtsService {
     public void downloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
         long start = System.currentTimeMillis();
         IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "downloadFile");
-        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String actualFilePath = rootPath + filePath;
         File file = IOUtil.getFile(actualFilePath);
         Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径:" + actualFilePath);
@@ -250,7 +249,7 @@ public class FtsService {
     public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
         long start = System.currentTimeMillis();
         Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
-        String rootPath = localFtsServerConfig.getLocalFtsProperties().getRootPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         File directory = IOUtil.getFile(rootPath + dirName);
         ReturnObject<Void> returnObject = new ReturnObject<>();
         if(!directory.exists()) {
