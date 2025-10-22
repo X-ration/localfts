@@ -1,4 +1,4 @@
-package com.adam;
+package com.adam.junit;
 
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.util.Util;

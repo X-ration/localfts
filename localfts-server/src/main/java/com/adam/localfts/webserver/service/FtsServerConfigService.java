@@ -13,18 +13,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.unit.DataSize;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
+import java.io.*;
+import java.net.*;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,13 +34,13 @@ public class FtsServerConfigService {
     private RootPathInfo rootPathInfo;
     private FtsServerIpInfoModel ftsServerIpInfoModel;
     @Value("${server.port}")
-    private Integer serverPort;
+    private int serverPort;
     @Value("${server.servlet.context-path}")
     private String contextPath;
     @Value("${spring.servlet.multipart.max-file-size}")
-    private DataSize maxFileSize;
+    private String maxFileSize;
     @Value("${spring.servlet.multipart.max-request-size}")
-    private DataSize maxRequestSize;
+    private String maxRequestSize;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsServerConfigService.class);
 
@@ -101,8 +99,92 @@ public class FtsServerConfigService {
         return this.localFtsProperties.getLog();
     }
 
+    public Map<TestLanguageText, Boolean> updateTestLanguage(TestLanguageText testLanguageText, Boolean enabled) {
+        boolean checkTestLanguageEntry = checkTestLanguageItem(testLanguageText, enabled);
+        if(!checkTestLanguageEntry) {
+            LOGGER.warn("check test language item '{}:{}' failed", testLanguageText, enabled);
+            return this.localFtsProperties.getTestLanguage();
+        }
+        this.localFtsProperties.getTestLanguage().put(testLanguageText, enabled);
+        return this.localFtsProperties.getTestLanguage();
+    }
+
+    /**
+     * TODO 需要终止进程后由其他进程修改jar包中的文件
+     * 由于要求应用以jar方式启动，此方法暂不可用
+     * 持久化配置更改到application.yml文件
+     */
+    @Deprecated
+    public void persistConfigChanges() throws IOException {
+        URL fileURL = FtsServerConfigService.class.getClassLoader().getResource("application.yml");
+        org.springframework.util.Assert.notNull(fileURL, "fileURL is null!");
+        String filePath = fileURL.getPath();
+        Yaml yaml = new Yaml();
+        LOGGER.debug("config file path={}", filePath);
+
+        Map<String, Object> yamlMap;
+        File file;
+        boolean applicationInJar = false;
+        if(filePath.contains(".jar!")) {
+            applicationInJar = true;
+            String filePathString = filePath;
+            if(filePath.startsWith("file:")) {
+                filePathString = filePath.substring(5);
+            }
+            int index = filePathString.indexOf('!');
+            String jarFilePath = filePathString.substring(0, index);
+            String pathInJar = filePathString.substring(index + 1).replaceAll("!", "");
+            LOGGER.debug("jar file path={}, path in jar={}", jarFilePath, pathInJar);
+            file = new File(jarFilePath);
+            try (JarFile jarFile = new JarFile(file);
+                 InputStream inputStream = jarFile.getInputStream(jarFile.getJarEntry(pathInJar))
+            ) {
+                yamlMap = yaml.load(inputStream);
+            }
+        } else {
+            file = new File(filePath);
+            org.springframework.util.Assert.isTrue(file.exists() && file.isFile() && file.canRead() && file.canWrite(), "Invalid file path:" + filePath);
+            try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                yamlMap = yaml.load(fileInputStream);
+            }
+        }
+
+        org.springframework.util.Assert.isTrue(yamlMap != null && !yamlMap.isEmpty(), "Reading empty yaml map:" + file.getAbsolutePath());
+        Map<String, Object> yamlServerMap = (Map<String, Object>) yamlMap.get("server");
+        yamlServerMap.put("port", serverPort);
+        Map<String, Object> yamlSpringMap = (Map<String, Object>) yamlMap.get("spring");
+        Map<String, Object> yamlSpringServletMap = (Map<String, Object>) yamlSpringMap.get("servlet");
+        yamlSpringServletMap.put("context-path", contextPath);
+        Map<String, Object> yamlSpringServletMultipartMap = (Map<String, Object>) yamlSpringServletMap.get("multipart");
+        yamlSpringServletMultipartMap.put("max-file-size", maxFileSize);
+        yamlSpringServletMultipartMap.put("max-request-size", maxRequestSize);
+        Map<String, Object> yamlLocalftsMap = (Map<String, Object>) yamlMap.get("localfts");
+        yamlLocalftsMap.put("root_path", localFtsProperties.getRootPath());
+        Map<String, Object> yamlLocalftsLogMap = (Map<String, Object>) yamlLocalftsMap.get("log");
+        yamlLocalftsLogMap.put("file_path", localFtsProperties.getLog().getFilePath());
+        yamlLocalftsLogMap.put("root_level", localFtsProperties.getLog().getRootLevel().name());
+        Map<String, Object> yamlLocalftsTestLanguageMap = (Map<String, Object>) yamlLocalftsMap.get("test_language");
+        yamlLocalftsTestLanguageMap.clear();
+        for(Map.Entry<TestLanguageText, Boolean> entry: localFtsProperties.getTestLanguage().entrySet()) {
+            yamlLocalftsTestLanguageMap.put(entry.getKey().name(), entry.getValue());
+        }
+
+        if(applicationInJar) {
+            //由于JVM限制，不能向正在运行的jar包中写入文件
+        } else {
+            try (FileWriter fileWriter = new FileWriter(file)) {
+                fileWriter.write(yaml.dumpAsMap(yamlMap));
+                fileWriter.flush();
+                LOGGER.info("Successfully persisted config changes");
+            } catch (IOException e) {
+                LOGGER.error("persistConfigChanges error", e);
+                throw e;
+            }
+        }
+    }
+
     @PostConstruct
-    public void checkAndPrintServerIpInfo() {
+    public void checkAndPrintServerIpInfo() throws IOException {
         checkPropertiesAndPostConstruct();
         LOGGER.info(toStringConsole());
     }
@@ -112,8 +194,8 @@ public class FtsServerConfigService {
                 .append("======Server properties======").append(System.lineSeparator())
                 .append("[Server port]").append(serverPort).append(System.lineSeparator())
                 .append("[Server context path]").append(contextPath).append(System.lineSeparator())
-                .append("[Max file size]").append(Util.fileLengthToStringNew(maxFileSize.toBytes())).append(System.lineSeparator())
-                .append("[Max request size]").append(Util.fileLengthToStringNew(maxRequestSize.toBytes())).append(System.lineSeparator())
+                .append("[Max file size]").append(maxFileSize).append(System.lineSeparator())
+                .append("[Max request size]").append(maxRequestSize).append(System.lineSeparator())
                 .append("[Root path]").append(localFtsProperties.getRootPath()).append(System.lineSeparator())
                 .append("[Total space]").append(rootPathInfo.getTotalSpace()).append(System.lineSeparator())
                 .append("[Usable space]").append(rootPathInfo.getUsableSpace()).append(System.lineSeparator())
@@ -170,6 +252,10 @@ public class FtsServerConfigService {
         if(!Util.isSystemWindows() && !Util.isSystemLinux() && !Util.isSystemMacOS()) {
             throw new LocalFtsStartupException("Unknown system:" + Util.getOsName());
         }
+    }
+
+    private boolean checkTestLanguageItem(TestLanguageText testLanguageText, Boolean enabled) {
+        return testLanguageText != null && enabled != null;
     }
 
     private boolean checkTestLanguageAndDeleteNullKeyValue(Map<TestLanguageText, Boolean> testLanguageMap, boolean throwException, boolean deleteNullKeyValue) {
