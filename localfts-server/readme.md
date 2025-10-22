@@ -19,6 +19,7 @@
 
 ## v1.0.5 代码优化：
 - 将所有配置和向控制台输出信息的方法整理到单独的bean中：[LocalFtsServerConfig.java](src/main/java/com/adam/localfts/webserver/config/server/LocalFtsServerConfig.java)
+- 预留替换Spring Boot jar包中application.yml的方法
 
 ## v1.0.4 问题修复 & 功能更新：
 - 修复下载文件时文件名由空格变为加号的问题

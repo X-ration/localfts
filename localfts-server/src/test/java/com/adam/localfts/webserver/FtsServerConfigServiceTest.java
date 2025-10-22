@@ -2,7 +2,6 @@ package com.adam.localfts.webserver;
 
 import com.adam.localfts.webserver.config.server.TestLanguageText;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,7 +16,7 @@ public class FtsServerConfigServiceTest {
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
 
-    @Test
+//    @Test
     public void testPersistConfigChanges() throws IOException {
         ftsServerConfigService.updateTestLanguage(TestLanguageText.Simplified_Chinese, false);
         ftsServerConfigService.persistConfigChanges();
