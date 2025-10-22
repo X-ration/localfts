@@ -1,4 +1,4 @@
-package com.adam;
+package com.adam.junit;
 
 import org.junit.Assert;
 import org.junit.Test;

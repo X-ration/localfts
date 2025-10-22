@@ -17,6 +17,10 @@
 运行release版本时可以通过命令行参数覆盖application.yml配置，如：
 `java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam`
 
+## v1.0.5 代码优化：
+- 将所有配置和向控制台输出信息的方法整理到单独的bean中：[LocalFtsServerConfig.java](src/main/java/com/adam/localfts/webserver/config/server/LocalFtsServerConfig.java)
+- 预留替换Spring Boot jar包中application.yml的方法
+
 ## v1.0.4 问题修复 & 功能更新：
 - 修复下载文件时文件名由空格变为加号的问题
 - 修复中文文件夹上传文件后文件上传成功但是页面报错的问题

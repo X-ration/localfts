@@ -1,4 +1,4 @@
-package com.adam.localfts.webserver;
+package com.adam.localfts.webserver.common;
 
 public class ReturnObject <T>{
 

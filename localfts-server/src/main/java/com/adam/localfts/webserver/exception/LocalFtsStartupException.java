@@ -1,4 +1,4 @@
-package com.adam.localfts.webserver;
+package com.adam.localfts.webserver.exception;
 
 public class LocalFtsStartupException extends RuntimeException{
 

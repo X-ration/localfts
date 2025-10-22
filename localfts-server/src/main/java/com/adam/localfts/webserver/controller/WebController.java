@@ -1,5 +1,11 @@
-package com.adam.localfts.webserver;
+package com.adam.localfts.webserver.controller;
 
+import com.adam.localfts.webserver.common.FtsPageModel;
+import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
+import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.service.FtsServerConfigService;
+import com.adam.localfts.webserver.service.FtsService;
+import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +28,8 @@ public class WebController {
 
     @Autowired
     private FtsService ftsService;
+    @Autowired
+    private FtsServerConfigService ftsServerConfigService;
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -34,7 +42,7 @@ public class WebController {
     public String list(Model model, @RequestParam(name = "path") String relativePath, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
         FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
         model.addAttribute("ftsPage", ftsPageModel);
-        FtsServerIpInfoModel serverIpInfoModel = ftsService.getServerIpInfoModel();
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
@@ -58,7 +66,7 @@ public class WebController {
                              @RequestParam(required = false) String uploadMessage) {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
         ftsService.ensureDirectoryExists(dirName);
-        FtsServerIpInfoModel serverIpInfoModel = ftsService.getServerIpInfoModel();
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         model.addAttribute("currentPath", dirName);
         if(uploadStatus != null) {

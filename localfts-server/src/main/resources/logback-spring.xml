@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
-    <springProperty scope="context" name="rootLevel" source="localfts.log.level.root"/>
+    <springProperty scope="context" name="rootLevel" source="localfts.log.root_level"/>
     <springProperty scope="context" name="logBase" source="localfts.log.file_path"/>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
