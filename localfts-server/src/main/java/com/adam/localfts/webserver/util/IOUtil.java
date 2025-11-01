@@ -136,4 +136,28 @@ public class IOUtil {
         return new File(path);
     }
 
+
+    /**
+     * 检查特定路径下的子路径中是否存在同名文件
+     * @param directory
+     * @param path 以/分隔的子路径
+     * @return
+     */
+    public static boolean checkMiddlePathExistsAsFile(File directory, String path) {
+        Assert.notNull(directory, "directory is null");
+        Assert.notNull(path, "path is null");
+        String[] paths = path.split("/");
+        File middleDirectory = new File(directory, paths[0]);
+        if(middleDirectory.exists() && middleDirectory.isFile()) {
+            return true;
+        }
+        for(int i=1;i< paths.length;i++) {
+            middleDirectory = new File(middleDirectory, paths[i]);
+            if(middleDirectory.exists() && middleDirectory.isFile()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

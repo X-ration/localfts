@@ -1,5 +1,6 @@
 package com.adam.junit;
 
+import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.junit.Assert;
 import org.junit.Test;
@@ -7,6 +8,22 @@ import org.junit.Test;
 import java.io.File;
 
 public class FileTest {
+
+    @Test
+    public void testCheckMiddlePathExistsAsFile() {
+        testCheckMiddlePathExistsAsFile("D:\\Users\\Adam\\Documents", "测试文件夹（有文件）/头像", false);
+        testCheckMiddlePathExistsAsFile("D:\\Users\\Adam\\Documents", "测试文件夹（有文件）/头像/IMG_0702.JPG", true);
+        testCheckMiddlePathExistsAsFile("D:\\Users\\Adam\\Documents", "/测试文件夹（有文件）/头像", false);
+        testCheckMiddlePathExistsAsFile("D:\\Users\\Adam\\Documents", "/测试文件夹（有文件）/头像/IMG_0702.JPG", true);
+    }
+
+    private void testCheckMiddlePathExistsAsFile(String directoryPath, String childPath, boolean result) {
+        File directory = new File(directoryPath);
+        Assert.assertTrue(directory.exists() && directory.isDirectory());
+        boolean check = IOUtil.checkMiddlePathExistsAsFile(directory, childPath);
+        System.out.println("Directory:" + directoryPath + ",childPath:" + childPath + ",result:" + check);
+        Assert.assertEquals(check, result);
+    }
 
     @Test
     public void testFile() {

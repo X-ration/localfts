@@ -1,5 +1,10 @@
 package com.adam.localfts.webserver.common;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class ReturnObject <T>{
 
     private boolean success;
@@ -15,27 +20,19 @@ public class ReturnObject <T>{
         this.data = data;
     }
 
-    public boolean isSuccess() {
-        return success;
+    public static <T> ReturnObject<T> fail(String message, T data) {
+        return new ReturnObject<>(false, message, data);
     }
 
-    public void setSuccess(boolean success) {
-        this.success = success;
+    public static <T> ReturnObject<T> fail(String message) {
+        return fail(message, null);
     }
 
-    public String getMessage() {
-        return message;
+    public static <T> ReturnObject<T> success(String message, T data) {
+        return new ReturnObject<>(true, message, data);
     }
 
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public T getData() {
-        return data;
-    }
-
-    public void setData(T data) {
-        this.data = data;
+    public static <T> ReturnObject<T> success(T data) {
+        return success(null, data);
     }
 }

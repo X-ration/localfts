@@ -19,10 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import static com.adam.localfts.webserver.common.Constants.CRLF;
 import static com.adam.localfts.webserver.common.Constants.DATE_FORMAT_FILE_STANDARD;
@@ -36,11 +33,11 @@ public class FtsService {
     private FtsServerIpInfoModel serverIpInfoModel;
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
 
-    public void ensureDirectoryExists(String relativePath) {
+    public boolean checkDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         File directory = IOUtil.getFile(rootPath + relativePath);
-        Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
+        return directory.exists() && directory.isDirectory();
     }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
@@ -246,52 +243,112 @@ public class FtsService {
         }
     }
 
-    public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
-        long start = System.currentTimeMillis();
+    public ReturnObject<String> uploadFile(String dirName, MultipartFile file) {
         Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         File directory = IOUtil.getFile(rootPath + dirName);
-        ReturnObject<Void> returnObject = new ReturnObject<>();
         if(!directory.exists()) {
-            returnObject.setSuccess(false);
-            returnObject.setMessage("请求路径不存在");
-            return returnObject;
+            return ReturnObject.fail("请求路径不存在");
         }
         if(!directory.isDirectory()) {
-            returnObject.setSuccess(false);
-            returnObject.setMessage("请求路径不是文件夹");
-            return returnObject;
+            return ReturnObject.fail("请求路径不是文件夹");
         }
-        String fileName = file.getOriginalFilename() == null ? "未知文件" : file.getOriginalFilename();
+        return transferFile(rootPath, dirName, file, true);
+    }
+
+    public ReturnObject<List<ReturnObject<String>>> uploadFiles(String dirName, MultipartFile[] files) {
+        long start = System.currentTimeMillis();
+        Assert.isTrue(dirName != null && dirName.startsWith("/") && files != null, "非法请求参数");
+
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        File directory = IOUtil.getFile(rootPath + dirName);
+        if(!directory.exists()) {
+            return ReturnObject.fail("请求路径不存在");
+        }
+        if(!directory.isDirectory()) {
+            return ReturnObject.fail("请求路径不是文件夹");
+        }
+
+        List<ReturnObject<String>> returnObjectList = new LinkedList<>();
+        int successCount = 0;
+        for(MultipartFile file: files) {
+            ReturnObject<String> innerReturnObject = transferFile(rootPath, dirName, file, false);
+            returnObjectList.add(innerReturnObject);
+            if(innerReturnObject.isSuccess()) {
+                successCount++;
+            }
+        }
+        String returnObjectMessage = "上传" + files.length + "个文件，" + successCount + "个成功，" + (files.length - successCount) + "个失败";
+        LOGGER.info("上传{}个文件到路径'{}'完成!总耗时{}毫秒", files.length, dirName, (System.currentTimeMillis() - start));
+        return ReturnObject.success(returnObjectMessage, returnObjectList);
+    }
+
+    /**
+     * 将文件写入到rootPath下的dirName路径下
+     * @param rootPath
+     * @param dirName
+     * @param file
+     * @param createFileDirectly true:略过中间文件夹创建，直接在dirName路径创建文件
+     * @return
+     */
+    private ReturnObject<String> transferFile(final String rootPath, final String dirName, final MultipartFile file, boolean createFileDirectly) {
+        long start = System.currentTimeMillis();
+        File directory = IOUtil.getFile(rootPath + dirName);
+        Assert.isTrue(directory.exists() && directory.isDirectory(), "Invalid dirName '" + dirName + "' in root path '" + rootPath + "'");
+
+        String originalFilename = file.getOriginalFilename() == null ? "未知文件" : file.getOriginalFilename();
 //        if(file.getSize() > uploadFileLimit) {
 //            returnObject.setSuccess(false);
 //            returnObject.setMessage("待上传的文件大小超过系统限制");
 //            return returnObject;
 //        }
-        if(fileName.contains("\\")) {
-            fileName = fileName.substring(fileName.lastIndexOf('\\') + 1);
-        } else if(fileName.contains("/")) {
-            fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+
+        String filePath = originalFilename;
+        if(createFileDirectly) {
+            if(filePath.startsWith("/")) {
+                filePath = filePath.substring(1);
+            }
+            if(filePath.contains("/")) {
+                filePath = filePath.substring(filePath.lastIndexOf('/') + 1);
+            }
+        }
+        File actualFile = new File(directory, filePath);
+        if(actualFile.exists()) {
+            return ReturnObject.fail("请求路径下已存在同名文件", filePath);
         }
 
-        File actualFile = new File(directory, fileName);
-        if(actualFile.exists()) {
-            returnObject.setSuccess(false);
-            returnObject.setMessage("请求路径下已存在同名文件");
-            return returnObject;
+        if(!createFileDirectly) {
+            String parentPath = originalFilename;
+            if(parentPath.startsWith("/")) {
+                parentPath = parentPath.substring(1);
+            }
+            if(parentPath.contains("/")) {
+                parentPath = parentPath.substring(0, parentPath.lastIndexOf('/'));
+            }
+            boolean checkMiddlePathExistsAsFile = IOUtil.checkMiddlePathExistsAsFile(directory, parentPath);
+            if(checkMiddlePathExistsAsFile) {
+                return ReturnObject.fail("请求路径下的子路径存在同名文件，无法创建文件夹", filePath);
+            }
+
+            File actualParentDirectory = new File(directory, parentPath);
+            if(!actualParentDirectory.exists()) {
+                boolean mkdirs = actualParentDirectory.mkdirs();
+                if (!mkdirs) {
+                    return ReturnObject.fail("在请求路径下创建文件夹失败", filePath);
+                } else {
+                    LOGGER.info("成功在根路径'{}'下的路径'{}'中创建父级文件夹'{}'", rootPath, dirName, parentPath);
+                }
+            }
         }
-        LOGGER.info("开始上传文件{}到路径{}", fileName, dirName);
+        LOGGER.info("开始上传文件'{}'到路径'{}'", filePath, dirName);
         try {
             file.transferTo(actualFile);
-            returnObject.setSuccess(true);
-            returnObject.setMessage(fileName + "上传成功！");
-            LOGGER.info("上传文件{}到路径{}成功!耗时{}毫秒", fileName, dirName, (System.currentTimeMillis() - start));
+            LOGGER.info("上传文件'{}'到路径'{}'成功!耗时{}毫秒", filePath, dirName, (System.currentTimeMillis() - start));
+            return ReturnObject.success(filePath);
         } catch (IOException e) {
-            LOGGER.error("上传文件{}到路径{}时出错", fileName, dirName, e);
-            returnObject.setSuccess(false);
-            returnObject.setMessage(e.getMessage());
+            LOGGER.error("上传文件'{}'到路径'{}'时出错", filePath, dirName, e);
+            return ReturnObject.fail(e.getMessage(), filePath);
         }
-        return returnObject;
     }
 
 }

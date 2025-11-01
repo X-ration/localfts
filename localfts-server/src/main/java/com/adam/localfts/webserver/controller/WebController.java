@@ -20,7 +20,7 @@ import org.springframework.web.util.UriUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 @Controller
 @RequestMapping("")
@@ -31,7 +31,7 @@ public class WebController {
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final static Logger LOGGER = LoggerFactory.getLogger(WebController.class);
 
     @GetMapping("")
     public String index(Model model, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
@@ -62,19 +62,15 @@ public class WebController {
     }
 
     @GetMapping("/uploadFile")
-    public String uploadFile(Model model, @RequestParam String dirName, @RequestParam(required = false) Boolean uploadStatus,
-                             @RequestParam(required = false) String uploadMessage) {
+    public String uploadFile(Model model, @RequestParam String dirName) {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
-        ftsService.ensureDirectoryExists(dirName);
+        boolean directoryExists = ftsService.checkDirectoryExists(dirName);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         model.addAttribute("currentPath", dirName);
-        if(uploadStatus != null) {
-            model.addAttribute("uploadStatus", uploadStatus);
-            model.addAttribute("uploadMessage", uploadMessage);
-        }
         String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
+        model.addAttribute("directoryExists", directoryExists);
         return "upload";
     }
 
@@ -86,11 +82,19 @@ public class WebController {
      * @return
      */
     @PostMapping("/uploadFileTransfer")
-    public String uploadFileTransfer(MultipartFile file, @RequestParam String dirName, RedirectAttributes redirectAttributes) throws UnsupportedEncodingException {
+    public String uploadFileTransfer(MultipartFile file, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
         Assert.isTrue(file != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
-        ReturnObject<Void> returnObject = ftsService.uploadFile(dirName, file);
-        redirectAttributes.addFlashAttribute("uploadStatus", returnObject.isSuccess());
-        redirectAttributes.addFlashAttribute("uploadMessage", returnObject.getMessage());
+        ReturnObject<String> returnObject = ftsService.uploadFile(dirName, file);
+        redirectAttributes.addFlashAttribute("uploadFileRetObject", returnObject);
+        return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
+    }
+
+    @PostMapping("/uploadFilesTransfer")
+    public String uploadFilesTransfer(MultipartFile[] files, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
+        LOGGER.debug("uploadFilesTransfer files count={}, dirName={}", files.length, dirName);
+        Assert.isTrue(files != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
+        ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files);
+        redirectAttributes.addFlashAttribute("uploadDirRetObject", returnObject);
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
     }
 }

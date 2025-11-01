@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head lang="cn">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
     <meta charset="UTF-8">
     <title>局域网文件传输服务器</title>
     <style>
@@ -62,15 +62,15 @@
             <td>-</td>
             <td>-</td>
         </tr>
-        <tbody th:each="item:${ftsPage.fileList}">
-            <tr th:if="${item.directory}">
+        <tbody>
+            <tr th:if="${item.directory}" th:each="item:${ftsPage.fileList}">
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
                 <td>文件夹</td>
                 <td>-</td>
                 <td th:text="${item.lastModified}">last modified</td>
                 <td><a name="upload-file" th:text="${item.fileName}">上传文件</a></td>
             </tr>
-            <tr th:if="!${item.directory}">
+            <tr th:if="!${item.directory}" th:each="item:${ftsPage.fileList}">
                 <td th:text="${item.fileName}">fileName</td>
                 <td>文件</td>
                 <td th:text="${item.fileSizeStr}">0</td>
@@ -121,8 +121,12 @@
 
             //deal with serverIpInfo in IE
             if(!document.getElementById('serverIpInfo').getAttribute("class")) {
-                document.getElementById('serverIpInfoShowButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','show')};
-                document.getElementById('serverIpInfoHideButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','hidden')};
+                document.getElementById('serverIpInfoShowButton').onclick = function() {
+                    document.getElementById('serverIpInfo').setAttribute('className','show')
+                };
+                document.getElementById('serverIpInfoHideButton').onclick = function() {
+                    document.getElementById('serverIpInfo').setAttribute('className','hidden')
+                };
             }
 
 
