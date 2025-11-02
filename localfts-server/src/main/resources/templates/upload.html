@@ -32,11 +32,13 @@
 <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
     <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
     <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
+        <thead>
         <tr>
             <th style="padding-left:2em;padding-right:2em">网卡显示名称</th>
             <th style="padding-left:2em;padding-right:2em">网卡名称</th>
             <th style="padding-left:2em;padding-right:2em">Ipv4地址</th>
         </tr>
+        </thead>
         <tbody>
         <tr th:each="item:${serverIpInfo.items}">
             <td th:text="${item.displayName}">displayName</td>

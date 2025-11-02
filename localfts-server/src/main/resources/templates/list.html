@@ -32,13 +32,15 @@
     <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
         <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
         <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
+            <thead>
             <tr>
                 <th style="padding-left:2em;padding-right:2em">网卡显示名称</th>
                 <th style="padding-left:2em;padding-right:2em">网卡名称</th>
                 <th style="padding-left:2em;padding-right:2em">Ipv4地址</th>
             </tr>
-            <tbody th:each="item:${serverIpInfo.items}">
-            <tr>
+            </thead>
+            <tbody>
+            <tr th:each="item:${serverIpInfo.items}">
                 <td th:text="${item.displayName}">displayName</td>
                 <td th:text="${item.name}">name</td>
                 <td th:text="${{item.addresses}}">addresses</td>
@@ -48,6 +50,7 @@
         <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
     <table style="text-align:left;border-style:solid">
+        <thead>
         <tr>
             <th style="width:60%">文件名</th>
             <th style="width:10%">类型</th>
@@ -55,14 +58,15 @@
             <th style="width:10%">修改时间</th>
             <th style="width:10%">操作</th>
         </tr>
-        <tr>
-            <td><a id="up-path">返回上一级</a></td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-        </tr>
+        </thead>
         <tbody>
+            <tr>
+                <td><a id="up-path">返回上一级</a></td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
             <tr th:if="${item.directory}" th:each="item:${ftsPage.fileList}">
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
                 <td>文件夹</td>
