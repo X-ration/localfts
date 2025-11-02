@@ -21,6 +21,7 @@
 * 在受支持的浏览器中支持上传文件夹(Chrome和基于Chromium的浏览器、Opera、Firefox)
 ![localfts-server-1.1.0-upload-directory.png](readme/localfts-server-1.1.0-upload-directory.png)
 * 改进了上传页面，当请求路径不存在时页面给予友好提示
+* 列表页增加当前目录
 
 ## v1.0.5 代码优化：
 - 将所有配置和向控制台输出信息的方法整理到单独的bean中：[LocalFtsServerConfig.java](src/main/java/com/adam/localfts/webserver/config/server/LocalFtsServerConfig.java)

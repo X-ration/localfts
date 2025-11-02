@@ -72,7 +72,7 @@
                 <td>-</td>
                 <td>-</td>
                 <td>-</td>
-                <td>-</td>
+                <td><a id="upload-to-current-path">上传文件</a></td>
             </tr>
             <tr th:if="${item.directory}" th:each="item:${ftsPage.fileList}">
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
@@ -156,6 +156,10 @@
             //deal with current-path
             var currentUrl = concatUrlList(ftsPagePath, 1, ftsPageSize);
             document.getElementById("return-to-current-path").setAttribute("href", currentUrl);
+
+            //deal with upload-to-current-path
+            var uploadToCurrentUrl = concatUrlUpload(ftsPagePath);
+            document.getElementById("upload-to-current-path").setAttribute("href", uploadToCurrentUrl);
             
             //deal with directory-path
             var directoryPaths = document.getElementsByName("directory-path");
