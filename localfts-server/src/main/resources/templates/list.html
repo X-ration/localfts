@@ -61,7 +61,14 @@
         </thead>
         <tbody>
             <tr>
-                <td><a id="up-path">返回上一级</a></td>
+                <td><a id="return-to-up-path">返回上一级</a></td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td><a id="return-to-current-path">当前目录</a></td>
                 <td>-</td>
                 <td>-</td>
                 <td>-</td>
@@ -136,16 +143,20 @@
 
             //deal with up-path
             //   /->/   ;   /a->/   ;   /a/b->/a
-            var upPath = ftsPagePath;
-            var lastIdxOfSlash = upPath.lastIndexOf("/");
+            var upUrl = ftsPagePath;
+            var lastIdxOfSlash = upUrl.lastIndexOf("/");
             if(lastIdxOfSlash == 0) {
-                upPath = "/";
+                upUrl = "/";
             } else {
-                upPath = upPath.substring(0, lastIdxOfSlash);
+                upUrl = upUrl.substring(0, lastIdxOfSlash);
             }
-            upPath = concatUrlList(upPath, 1, ftsPageSize);
-            document.getElementById("up-path").setAttribute("href", upPath);
+            upUrl = concatUrlList(upUrl, 1, ftsPageSize);
+            document.getElementById("return-to-up-path").setAttribute("href", upUrl);
 
+            //deal with current-path
+            var currentUrl = concatUrlList(ftsPagePath, 1, ftsPageSize);
+            document.getElementById("return-to-current-path").setAttribute("href", currentUrl);
+            
             //deal with directory-path
             var directoryPaths = document.getElementsByName("directory-path");
             if(!directoryPaths) {

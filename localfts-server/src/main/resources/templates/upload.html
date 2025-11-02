@@ -66,7 +66,7 @@
     <h4 th:text="'上传失败：' + ${uploadDirRetObject.message}"></h4>
 </div>
 <div th:if="${directoryExists}">
-    <h4 style="display: none" id="uploadDirectoryHint"></h4>
+    <div style="display: none" id="uploadDirectoryHint"></div><br>
     <fieldset style="display: inline-block;*display: inline; zoom: 1;">
         <legend>上传文件</legend>
         <form th:action="@{'/uploadFileTransfer'}" enctype="multipart/form-data" method="post">
@@ -119,15 +119,15 @@
             + 'webkitdirectory:' + folderSelectionSupported.webkitdirectory + '\r\n'
             + 'directory:' + folderSelectionSupported.directory;
     var uploadDirectoryHint = document.getElementById('uploadDirectoryHint');
-    var hintText = null;
+    var hintHtml = null;
     if(!folderSelectionSupported.supported) {
         var dirFieldset = document.getElementById('uploadDirectoryFieldset');
         document.body.removeChild(dirFieldset);
-        hintText = '此浏览器不支持上传文件夹。';
+        hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器不支持上传文件夹。</h4>';
     } else {
-        hintText = '此浏览器支持上传文件夹。';
+        hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器支持上传文件夹。</h4><span style=\'color:red\'>注意：上传文件夹时，空文件夹不会上传。</span>';
     }
-    uploadDirectoryHint.innerHTML = hintText;
+    uploadDirectoryHint.innerHTML = hintHtml;
     uploadDirectoryHint.style.display = 'block';  //for ie
     //uploadDirectoryHint.setAttribute('style', 'display: block');
     //alert(alertString);
