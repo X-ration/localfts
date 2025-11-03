@@ -6,8 +6,15 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 
 public class FileTest {
+
+//    @Test
+    public void testCompressFolderAsZip() throws IOException {
+//        IOUtil.compressFolderAsZip("D:\\Users\\Adam\\Documents\\测试文件夹\\测试文件夹（有文件）", "D:\\Users\\Adam\\Documents\\测试文件夹", "D:\\Users\\Adam\\Documents");
+        IOUtil.compressFolderAsZip("D:\\Users\\Adam\\Documents\\测试文件夹\\测试文件夹（有文件）", "D:\\Users\\Adam\\Documents\\测试文件夹", "D:\\Users\\Adam\\Documents\\");
+    }
 
     @Test
     public void testCheckMiddlePathExistsAsFile() {

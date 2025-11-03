@@ -1,16 +1,118 @@
 package com.adam.localfts.webserver.util;
 
+import com.adam.localfts.webserver.common.Constants;
 import org.slf4j.Logger;
 import org.springframework.util.Assert;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
 import java.util.Enumeration;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class IOUtil {
 
     private static final int BUFFER_SIZE = 1024;
     private static final String[] SELECTED_HTTP_REQUEST_HEADERS = new String[]{"range", "if-range", "user-agent"};
+
+    /**
+     * 压缩文件夹为zip文件
+     * @param folderPath 要压缩的文件夹绝对路径
+     * @param zipFilePath 压缩后要写入的zip文件绝对路径
+     * @param rootPath 根路径
+     * @return
+     * @throws IOException
+     */
+    public static File compressFolderAsZip(final String folderPath, final String zipFilePath, final String rootPath) throws IOException {
+        boolean isMatch1 = false, isMatch2 = false;
+        if(Util.isSystemWindows()) {
+            isMatch1 = Constants.PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(folderPath).matches();
+            isMatch2 = Constants.PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(zipFilePath).matches();
+        } else if(Util.isSystemMacOS() || Util.isSystemLinux()) {
+            isMatch1 = Constants.PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(folderPath).matches();
+            isMatch2 = Constants.PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(zipFilePath).matches();
+        }
+        Assert.isTrue(isMatch1, "folderPath '" + folderPath + "' not match rules!");
+        Assert.isTrue(isMatch2, "zipFilePath '" + zipFilePath + "' not match rules!");
+
+        File folder = new File(folderPath);
+        Assert.isTrue(folder.exists(), "folderPath '" + folderPath + "' does not exist!");
+        Assert.isTrue(folder.isDirectory(), "folderPath '" + folderPath + "' is not a directory!");
+        Assert.isTrue(folder.canRead(), "folderPath '" + folderPath + "' cannot read!");
+        File zipFileFolder = new File(zipFilePath);
+        boolean zipFileFolderExists = zipFileFolder.exists();
+        Assert.isTrue(!zipFileFolderExists || zipFileFolder.isDirectory(), "zipFileFolder '" + zipFilePath + "' is not a directory!");
+        if(!zipFileFolderExists) {
+            boolean mkdirs = zipFileFolder.mkdirs();
+            Assert.isTrue(mkdirs, "zipFileFolder '" + zipFilePath + "' mkdirs failed");
+        }
+
+        String zipFileName = folderPathToZipFileName(folderPath, rootPath);
+        File zipFile = new File(zipFileFolder, zipFileName + ".zip");
+
+        try(FileOutputStream fileOutputStream = new FileOutputStream(zipFile);
+            ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream);
+            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(zipOutputStream)
+        ) {
+            zipDirectory(folder, folder.getName(), true, zipOutputStream, bufferedOutputStream);
+        }
+
+        return zipFile;
+    }
+
+    private static void zipDirectory(File currentFile, String parentEntryName, boolean isOuterCall, ZipOutputStream zipOutputStream, BufferedOutputStream bufferedOutputStream) throws IOException{
+        if(currentFile.isDirectory()) {
+            String entryName = "";
+            if(!isOuterCall) {
+                entryName = parentEntryName + "/";
+                ZipEntry entry = new ZipEntry(entryName);
+                zipOutputStream.putNextEntry(entry);
+                zipOutputStream.closeEntry();
+            }
+
+            File[] files = currentFile.listFiles();
+            if(files != null) {
+                for(File file: files) {
+                    zipDirectory(file, entryName + file.getName(), false, zipOutputStream, bufferedOutputStream);
+                }
+            }
+        } else {
+            ZipEntry entry = new ZipEntry(parentEntryName);
+            zipOutputStream.putNextEntry(entry);
+            try(FileInputStream fileInputStream = new FileInputStream(currentFile);
+                BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream)
+            ) {
+                byte[] buffer = new byte[BUFFER_SIZE];
+                int bytesRead;
+                while((bytesRead = bufferedInputStream.read(buffer)) != -1) {
+                    bufferedOutputStream.write(buffer, 0, bytesRead);
+                }
+                bufferedOutputStream.flush();
+            } finally {
+                zipOutputStream.closeEntry();
+            }
+        }
+    }
+
+    public static String folderPathToZipFileName(String folderPath, String rootPath) {
+        String processedPath = folderPath;
+        if(processedPath.startsWith(rootPath)) {
+            processedPath = processedPath.substring(rootPath.length());
+        }
+        if(processedPath.startsWith(File.separator)) {
+            processedPath = processedPath.substring(File.separator.length());
+        }
+        String zipFileName = null;
+        if(Util.isSystemWindows()) {
+            zipFileName = processedPath.replaceFirst(":", "").replaceAll("\\\\", "_");
+        } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
+            if(processedPath.startsWith("/")) {
+                processedPath = processedPath.substring(1);
+            }
+            zipFileName = processedPath.replaceAll("/", "_");
+        }
+        return zipFileName;
+    }
 
     /**
      * @param randomAccessFile
