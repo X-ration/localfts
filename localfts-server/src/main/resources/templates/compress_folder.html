@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>局域网文件传输服务器</title>
+    <style>
+        .hidden {
+            display:none;
+        }
+        .show {
+           width:70%;height:auto;margin:5em 15% auto 15%;
+           background-color:white;
+           border-style:solid;border-width:0.05em;
+        }
+        table,th,td {
+            border-style:solid;
+            border-collapse:collapse;
+            border-color:black;
+        }
+        table {
+            border-width:0.1em;
+        }
+        th,td {
+            border-width:0.05em;
+        }
+    </style>
+</head>
+<body>
+<h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
+<hr>
+<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" href="/localfts">返回首页</a><br><br>
+<div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
+    <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
+    <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
+        <thead>
+        <tr>
+            <th style="padding-left:2em;padding-right:2em">网卡显示名称</th>
+            <th style="padding-left:2em;padding-right:2em">网卡名称</th>
+            <th style="padding-left:2em;padding-right:2em">Ipv4地址</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item:${serverIpInfo.items}">
+            <td th:text="${item.displayName}">displayName</td>
+            <td th:text="${item.name}">name</td>
+            <td th:text="${{item.addresses}}">addresses</td>
+        </tr>
+        </tbody>
+    </table>
+    <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
+</div>
+<div th:if="${directoryExists}">
+    <div id="compressingDiv" th:if="${compressStatus == 'NOT_COMPRESSED' or compressStatus == 'COMPRESSING'}">
+        <h4 id="compressingHint">正在压缩</h4>
+        <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
+    </div>
+    <div th:if="${compressStatus == 'COMPRESSED'}">
+        <h4 id="compressingHint">压缩完成</h4>
+        <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
+        <a id="download-zip" th:text="${compressedFilePath}">下载压缩文件(zip)</a>
+    </div>
+</div>
+<div th:if="${!directoryExists}">
+    该路径不存在！
+</div>
+</body>
+<script th:src="${#request.contextPath} + '/json2.min.js'"></script>
+<script type="text/javascript">
+    //deal with serverIpInfo in IE
+    if(!document.getElementById('serverIpInfo').getAttribute("class")) {
+        document.getElementById('serverIpInfoShowButton').onclick = function() {
+            document.getElementById('serverIpInfo').setAttribute('className','show')
+        };
+        document.getElementById('serverIpInfoHideButton').onclick = function() {
+            document.getElementById('serverIpInfo').setAttribute('className','hidden')
+        };
+    }
+</script>
+<script type="text/javascript" th:inline="javascript">
+var contextPath = [[${#request.contextPath}]];
+var currentPath = [[${currentPath}]];
+var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
+var compressStatus = [[${compressStatus}]];
+
+if(compressStatus === 'COMPRESSING' || compressStatus === 'NOT_COMPRESSED') {
+  compressFolder();
+} else {
+  var downloadZip = document.getElementById("download-zip");
+  downloadZip.setAttribute('href', concatUrlDownload(downloadZip.innerText));
+  downloadZip.innerText = '下载压缩文件(zip)';
+}
+function compressFolder() {
+  document.getElementById('compressingHint').innerText = '正在压缩';
+  document.getElementById('compressingHint').style.display = 'block';
+  sendPostFormRequest(
+    contextPath + "/compressFolder", // 目标接口 URL
+    "path=" + encodeURIComponent(currentPath), // 表单格式数据
+    function (xhr) {
+      // readyState=4 表示请求完成，status=200 表示成功
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          var returnObject = JSON.parse(xhr.responseText);
+          console.log(returnObject);
+          if(returnObject.success) {
+            document.getElementById('compressingHint').innerText = '压缩完成';
+            document.getElementById('compressingHint').style.display = 'block';
+            var downloadZip = document.createElement('a');
+            downloadZip.innerText = '下载压缩文件(zip)';
+            downloadZip.setAttribute('href', concatUrlDownload(returnObject.data));
+            var divChildren = document.getElementById('compressingDiv').children;
+            for(var i=0;i<divChildren.length;i++) {
+              var childElement = divChildren[i];
+              if(childElement.tagName.toUpperCase() === 'A') {
+                document.getElementById('compressingDiv').removeChild(childElement);
+              }
+            }
+            document.getElementById('compressingDiv').appendChild(downloadZip);
+          } else {
+            document.getElementById('compressingHint').innerText = '压缩失败，原因：' + returnObject.message;
+            document.getElementById('compressingHint').style.display = 'block';
+          }
+        } else {
+          console.error("请求失败，状态码：", xhr.status);
+          document.getElementById('compressingHint').innerText = '压缩失败，状态码：' + xhr.status;
+          document.getElementById('compressingHint').style.display = 'block';
+        }
+      }
+    }
+  );
+}
+function concatUrlForConstant(contextPath, path) {
+  return contextPath + path;
+}
+function concatUrlDownload(fileName) {
+  return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
+}
+// 创建 XMLHttpRequest 对象（兼容 IE6）
+function createXHR() {
+  var xhr;
+  // 现代浏览器及 IE7+ 支持原生 XMLHttpRequest
+  if (window.XMLHttpRequest) {
+    xhr = new XMLHttpRequest();
+  } else {
+    // IE6 及更早版本不支持原生 XMLHttpRequest，需使用 ActiveXObject
+    try {
+      xhr = new ActiveXObject("Microsoft.XMLHTTP"); // IE6 常用的 ActiveX 控件
+    } catch (e) {
+      console.error("无法创建 XMLHttpRequest 对象（不支持的浏览器）");
+      return null;
+    }
+  }
+  return xhr;
+}
+
+// 发送 POST 请求
+function sendPostFormRequest(url, data, func) {
+  var xhr = createXHR();
+  if (!xhr) return;
+
+  // 监听请求状态变化
+  xhr.onreadystatechange = function() {
+    func(xhr);
+  };
+
+  // 初始化请求（POST 方法，目标 URL，异步请求）
+  xhr.open("POST", url, true);
+
+  // 设置请求头：POST 请求需指定 Content-Type，否则服务器可能无法解析数据
+  // 表单格式数据通常用 application/x-www-form-urlencoded
+  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  // 发送数据（格式为 key=value&key2=value2，与表单提交格式一致）
+  xhr.send(data);
+}
+
+</script>
+</html>

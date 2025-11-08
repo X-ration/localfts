@@ -22,6 +22,12 @@
 ![localfts-server-1.1.0-upload-directory.png](readme/localfts-server-1.1.0-upload-directory.png)
 * 改进了上传页面，当请求路径不存在时页面给予友好提示
 * 列表页增加当前目录
+* 支持进入压缩页面压缩并下载文件夹(zip)，支持在列表页面下载已经压缩好的文件夹
+* 当应用关闭时自动清理压缩文件所在文件夹(`localfts.zip_folder.delete_on_exit`控制)
+* 下载文件当文件不存在时跳转到错误页面并展示404状态码
+* 列表页面生成可点击链接时不再硬编码，而是根据配置的context-path拼接链接
+![localfts-server-1.1.0-list-page.png](readme/localfts-server-1.1.0-list-page.png)
+![localfts-server-1.1.0-compress-page.png](readme/localfts-server-1.1.0-compress-page.png)
 
 ## v1.0.5 代码优化：
 - 将所有配置和向控制台输出信息的方法整理到单独的bean中：[LocalFtsServerConfig.java](src/main/java/com/adam/localfts/webserver/config/server/LocalFtsServerConfig.java)

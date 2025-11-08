@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.controller;
 
+import com.adam.localfts.webserver.common.FolderCompressStatus;
 import com.adam.localfts.webserver.common.FtsPageModel;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
 import com.adam.localfts.webserver.common.ReturnObject;
@@ -17,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriUtils;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -49,8 +51,41 @@ public class WebController {
         return "list";
     }
 
+    @GetMapping("/compressFolder")
+    public String compressFolder(@RequestParam(value = "path") String relativePath, Model model) {
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
+        String serverTime = Util.getServerTimeFormattedString();
+        model.addAttribute("serverTime", serverTime);
+        boolean directoryExists = ftsService.checkDirectoryExists(relativePath);
+        model.addAttribute("directoryExists", directoryExists);
+        model.addAttribute("currentPath", relativePath);
+        if(directoryExists) {
+            FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath);
+            model.addAttribute("compressStatus", compressStatus.name());
+            if(compressStatus == FolderCompressStatus.COMPRESSED) {
+                String zipFileRelativePath = ftsService.getFolderCompressedZipRelativePath(relativePath);
+                model.addAttribute("compressedFilePath", zipFileRelativePath);
+            }
+        }
+        return "compress_folder";
+    }
+
+    @PostMapping("/compressFolder")
+    @ResponseBody
+    public ReturnObject<String> compressFolder(@RequestParam(value = "path") String relativePath) {
+        Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        try {
+            String zipFilePath = ftsService.compressFolder(relativePath);
+            return ReturnObject.success(zipFilePath);
+        } catch (IOException e) {
+            LOGGER.error("压缩文件夹'{}'时出错", relativePath, e);
+            return ReturnObject.fail(e.getMessage());
+        }
+    }
+
     @GetMapping("/downloadFile")
-    public void downloadFile(@RequestParam(value = "fileName") String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void downloadFile(@RequestParam(value = "fileName") String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         Assert.isTrue(null != filePath & !"".equals(filePath), "非法请求参数");
         ftsService.downloadFile(filePath, request, response);
     }

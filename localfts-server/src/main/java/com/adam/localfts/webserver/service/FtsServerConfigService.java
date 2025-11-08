@@ -55,11 +55,15 @@ public class FtsServerConfigService {
             checkRootPath = checkRootPath(localFtsProperties.getRootPath(), true);
             Assert.isTrue(checkRootPath, "Check root path failed", LocalFtsStartupException.class);
         }
+        boolean checkZipFolderPath = checkZipFolderPath(localFtsProperties.getZipFolder().getPath(), localFtsProperties.getRootPath(), true);
+        Assert.isTrue(checkZipFolderPath, "Check zip folder path failed", LocalFtsStartupException.class);
         boolean checkLogProperties = checkLogProperties(localFtsProperties.getLog(), true);
         Assert.isTrue(checkLogProperties, "Check log properties failed", LocalFtsStartupException.class);
         boolean checkTestLanguage = checkTestLanguageAndDeleteNullKeyValue(localFtsProperties.getTestLanguage(), false, true);
+        Assert.isTrue(checkTestLanguage, "Check test language failed", LocalFtsStartupException.class);
 
         //post construct
+        this.createZipFolder(localFtsProperties.getZipFolder().getPath(), true);
         this.rootPathInfo = new RootPathInfo(localFtsProperties.getRootPath());
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
     }
@@ -201,7 +205,10 @@ public class FtsServerConfigService {
                 .append("[Usable space]").append(rootPathInfo.getUsableSpace()).append(System.lineSeparator())
                 .append("[Free space]").append(rootPathInfo.getFreeSpace()).append(System.lineSeparator())
                 .append("[Log file path]").append(localFtsProperties.getLog().getFilePath()).append(System.lineSeparator())
-                .append("[Log root level]").append(localFtsProperties.getLog().getRootLevel()).append(System.lineSeparator());
+                .append("[Log root level]").append(localFtsProperties.getLog().getRootLevel()).append(System.lineSeparator())
+                .append("[Zip folder path]").append(localFtsProperties.getZipFolder().getPath()).append(System.lineSeparator())
+                .append("[Zip folder delete on exit]").append(localFtsProperties.getZipFolder().isDeleteOnExit()).append(System.lineSeparator())
+                ;
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!testLanguageMap.isEmpty()) {
             for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
@@ -347,6 +354,62 @@ public class FtsServerConfigService {
             }
         }
         return true;
+    }
+
+    private boolean checkZipFolderPath(String zipFolderPath, String rootPath, boolean throwException) {
+        if(zipFolderPath == null) {
+            if(throwException) {
+                throw new LocalFtsStartupException("Zip folder path is null!");
+            } else {
+                return false;
+            }
+        }
+
+        if(!zipFolderPath.startsWith(rootPath)) {
+            if(throwException) {
+                throw new LocalFtsStartupException("Zip folder path outside of root path!");
+            } else {
+                return false;
+            }
+        }
+
+        boolean isMatch;
+        if(Util.isSystemWindows()) {
+            isMatch = Constants.PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(zipFolderPath).matches();
+        } else {
+            isMatch = Constants.PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(zipFolderPath).matches();
+        }
+        if(!isMatch) {
+            if(throwException) {
+                throw new LocalFtsStartupException("Zip folder path '" + zipFolderPath + "' does not match rules!");
+            } else {
+                return false;
+            }
+        }
+
+        File zipFolderPathFile = IOUtil.getFile(zipFolderPath);
+        if(zipFolderPathFile.exists() && zipFolderPathFile.isFile()) {
+            if(throwException) {
+                throw new LocalFtsStartupException("Zip folder path '" + zipFolderPath + "' is not a directory!");
+            } else {
+                return false;
+            }
+        }
+
+        return true;
+
+    }
+
+    private void createZipFolder(String zipFolderPath, boolean throwException) {
+        File zipFolderPathFile = IOUtil.getFile(zipFolderPath);
+        if(!zipFolderPathFile.exists()) {
+            boolean mkdirs = zipFolderPathFile.mkdirs();
+            if(!mkdirs) {
+                if(throwException) {
+                    throw new LocalFtsStartupException("Create zip folder path '" + zipFolderPath + "' failed!");
+                }
+            }
+        }
     }
 
     /**

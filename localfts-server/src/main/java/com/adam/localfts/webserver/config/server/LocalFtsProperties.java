@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.ToString;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
-import org.springframework.util.unit.DataSize;
 
 import java.util.Map;
 
@@ -16,6 +15,8 @@ import java.util.Map;
 public class LocalFtsProperties {
 
     private String rootPath;
+    @NestedConfigurationProperty
+    private ZipFolderProperties zipFolder;
     @NestedConfigurationProperty
     private LogProperties log;
     private Map<TestLanguageText, Boolean> testLanguage;

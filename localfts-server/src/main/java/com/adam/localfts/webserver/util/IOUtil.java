@@ -19,11 +19,11 @@ public class IOUtil {
      * 压缩文件夹为zip文件
      * @param folderPath 要压缩的文件夹绝对路径
      * @param zipFilePath 压缩后要写入的zip文件绝对路径
-     * @param rootPath 根路径
-     * @return
+     * @param zipFileName 压缩文件名
+     * @return 压缩文件File对象
      * @throws IOException
      */
-    public static File compressFolderAsZip(final String folderPath, final String zipFilePath, final String rootPath) throws IOException {
+    public static File compressFolderAsZip(final String folderPath, final String zipFilePath, final String zipFileName) throws IOException {
         boolean isMatch1 = false, isMatch2 = false;
         if(Util.isSystemWindows()) {
             isMatch1 = Constants.PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(folderPath).matches();
@@ -47,8 +47,7 @@ public class IOUtil {
             Assert.isTrue(mkdirs, "zipFileFolder '" + zipFilePath + "' mkdirs failed");
         }
 
-        String zipFileName = folderPathToZipFileName(folderPath, rootPath);
-        File zipFile = new File(zipFileFolder, zipFileName + ".zip");
+        File zipFile = new File(zipFileFolder, zipFileName);
 
         try(FileOutputStream fileOutputStream = new FileOutputStream(zipFile);
             ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream);
@@ -60,6 +59,14 @@ public class IOUtil {
         return zipFile;
     }
 
+    /**
+     * @param currentFile
+     * @param parentEntryName
+     * @param isOuterCall 是否为外层调用，当外层调用时不写入目录名称，减少一层文件夹
+     * @param zipOutputStream
+     * @param bufferedOutputStream
+     * @throws IOException
+     */
     private static void zipDirectory(File currentFile, String parentEntryName, boolean isOuterCall, ZipOutputStream zipOutputStream, BufferedOutputStream bufferedOutputStream) throws IOException{
         if(currentFile.isDirectory()) {
             String entryName = "";
@@ -92,26 +99,6 @@ public class IOUtil {
                 zipOutputStream.closeEntry();
             }
         }
-    }
-
-    public static String folderPathToZipFileName(String folderPath, String rootPath) {
-        String processedPath = folderPath;
-        if(processedPath.startsWith(rootPath)) {
-            processedPath = processedPath.substring(rootPath.length());
-        }
-        if(processedPath.startsWith(File.separator)) {
-            processedPath = processedPath.substring(File.separator.length());
-        }
-        String zipFileName = null;
-        if(Util.isSystemWindows()) {
-            zipFileName = processedPath.replaceFirst(":", "").replaceAll("\\\\", "_");
-        } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
-            if(processedPath.startsWith("/")) {
-                processedPath = processedPath.substring(1);
-            }
-            zipFileName = processedPath.replaceAll("/", "_");
-        }
-        return zipFileName;
     }
 
     /**

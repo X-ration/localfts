@@ -5,6 +5,8 @@ import lombok.Setter;
 
 import java.util.List;
 
+@Getter
+@Setter
 public class FtsPageModel {
     private String path;
     private int pageSize;
@@ -12,63 +14,8 @@ public class FtsPageModel {
     private int currentSize;
     private int totalPage;
     private int totalSize;
+    private FtsPageFileModel currentPathModel;
     private List<FtsPageFileModel> fileList;
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public int getPageSize() {
-        return pageSize;
-    }
-
-    public void setPageSize(int pageSize) {
-        this.pageSize = pageSize;
-    }
-
-    public int getCurrentPage() {
-        return currentPage;
-    }
-
-    public void setCurrentPage(int currentPage) {
-        this.currentPage = currentPage;
-    }
-
-    public int getCurrentSize() {
-        return currentSize;
-    }
-
-    public void setCurrentSize(int currentSize) {
-        this.currentSize = currentSize;
-    }
-
-    public int getTotalPage() {
-        return totalPage;
-    }
-
-    public void setTotalPage(int totalPage) {
-        this.totalPage = totalPage;
-    }
-
-    public int getTotalSize() {
-        return totalSize;
-    }
-
-    public void setTotalSize(int totalSize) {
-        this.totalSize = totalSize;
-    }
-
-    public List<FtsPageFileModel> getFileList() {
-        return fileList;
-    }
-
-    public void setFileList(List<FtsPageFileModel> fileList) {
-        this.fileList = fileList;
-    }
 
     @Getter
     @Setter
@@ -78,5 +25,7 @@ public class FtsPageModel {
         private long fileSize;
         private String lastModified;
         private String fileSizeStr;
+        private boolean compressed;
+        private String compressedPath;
     }
 }
