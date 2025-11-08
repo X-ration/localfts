@@ -49,16 +49,11 @@
     </table>
     <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
 </div>
-<div th:if="${directoryExists}">
-    <div id="compressingDiv" th:if="${compressStatus == 'NOT_COMPRESSED' or compressStatus == 'COMPRESSING'}">
-        <h4 id="compressingHint">正在压缩</h4>
-        <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
-    </div>
-    <div th:if="${compressStatus == 'COMPRESSED'}">
-        <h4 id="compressingHint">压缩完成</h4>
-        <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
-        <a id="download-zip" th:text="${compressedFilePath}">下载压缩文件(zip)</a>
-    </div>
+<div th:if="${directoryExists}" id="compressingDiv">
+    <h4 id="compressingHint" th:if="${compressStatus == 'NOT_COMPRESSED' or compressStatus == 'COMPRESSING'}">正在压缩</h4>
+    <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
+    <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
+    <a id="download-zip" th:if="${compressStatus == 'COMPRESSED'}" th:text="${compressedFilePath}">下载压缩文件(zip)</a>
 </div>
 <div th:if="${!directoryExists}">
     该路径不存在！
@@ -92,41 +87,50 @@ if(compressStatus === 'COMPRESSING' || compressStatus === 'NOT_COMPRESSED') {
 function compressFolder() {
   document.getElementById('compressingHint').innerText = '正在压缩';
   document.getElementById('compressingHint').style.display = 'block';
+  removeChildrenByIdAndTagName('compressingDiv','a');
   sendPostFormRequest(
     contextPath + "/compressFolder", // 目标接口 URL
     "path=" + encodeURIComponent(currentPath), // 表单格式数据
     function (xhr) {
+      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
       // readyState=4 表示请求完成，status=200 表示成功
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
           var returnObject = JSON.parse(xhr.responseText);
-          console.log(returnObject);
+          if(window.console) {
+            console.log(returnObject);
+          }
           if(returnObject.success) {
             document.getElementById('compressingHint').innerText = '压缩完成';
             document.getElementById('compressingHint').style.display = 'block';
             var downloadZip = document.createElement('a');
             downloadZip.innerText = '下载压缩文件(zip)';
             downloadZip.setAttribute('href', concatUrlDownload(returnObject.data));
-            var divChildren = document.getElementById('compressingDiv').children;
-            for(var i=0;i<divChildren.length;i++) {
-              var childElement = divChildren[i];
-              if(childElement.tagName.toUpperCase() === 'A') {
-                document.getElementById('compressingDiv').removeChild(childElement);
-              }
-            }
+            removeChildrenByIdAndTagName('compressingDiv','a');
             document.getElementById('compressingDiv').appendChild(downloadZip);
           } else {
             document.getElementById('compressingHint').innerText = '压缩失败，原因：' + returnObject.message;
             document.getElementById('compressingHint').style.display = 'block';
           }
         } else {
-          console.error("请求失败，状态码：", xhr.status);
+          if(window.console) {
+            console.error("请求失败，状态码：", xhr.status);
+          }
           document.getElementById('compressingHint').innerText = '压缩失败，状态码：' + xhr.status;
           document.getElementById('compressingHint').style.display = 'block';
         }
       }
     }
   );
+}
+function removeChildrenByIdAndTagName(id,tagName) {
+  var divChildren = document.getElementById(id).children;
+  for(var i=0;i<divChildren.length;i++) {
+    var childElement = divChildren[i];
+    if(childElement.tagName.toLowerCase() === tagName) {
+      document.getElementById(id).removeChild(childElement);
+    }
+  }
 }
 function concatUrlForConstant(contextPath, path) {
   return contextPath + path;
