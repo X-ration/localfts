@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.unit.DataSize;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.PostConstruct;
@@ -55,15 +56,17 @@ public class FtsServerConfigService {
             checkRootPath = checkRootPath(localFtsProperties.getRootPath(), true);
             Assert.isTrue(checkRootPath, "Check root path failed", LocalFtsStartupException.class);
         }
-        boolean checkZipFolderPath = checkZipFolderPath(localFtsProperties.getZipFolder().getPath(), localFtsProperties.getRootPath(), true);
+        boolean checkZipFolderPath = checkZipFolderPath(localFtsProperties.getZip().getPath(), localFtsProperties.getRootPath(), true);
         Assert.isTrue(checkZipFolderPath, "Check zip folder path failed", LocalFtsStartupException.class);
+        boolean checkZipMaxFolderSize = checkZipMaxFolderSize(localFtsProperties.getZip().getMaxFolderSize(), true);
+        Assert.isTrue(checkZipMaxFolderSize, "Check zip max folder size failed", LocalFtsStartupException.class);
         boolean checkLogProperties = checkLogProperties(localFtsProperties.getLog(), true);
         Assert.isTrue(checkLogProperties, "Check log properties failed", LocalFtsStartupException.class);
         boolean checkTestLanguage = checkTestLanguageAndDeleteNullKeyValue(localFtsProperties.getTestLanguage(), false, true);
         Assert.isTrue(checkTestLanguage, "Check test language failed", LocalFtsStartupException.class);
 
         //post construct
-        this.createZipFolder(localFtsProperties.getZipFolder().getPath(), true);
+        this.createZipFolder(localFtsProperties.getZip().getPath(), true);
         this.rootPathInfo = new RootPathInfo(localFtsProperties.getRootPath());
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
     }
@@ -206,8 +209,9 @@ public class FtsServerConfigService {
                 .append("[Free space]").append(rootPathInfo.getFreeSpace()).append(System.lineSeparator())
                 .append("[Log file path]").append(localFtsProperties.getLog().getFilePath()).append(System.lineSeparator())
                 .append("[Log root level]").append(localFtsProperties.getLog().getRootLevel()).append(System.lineSeparator())
-                .append("[Zip folder path]").append(localFtsProperties.getZipFolder().getPath()).append(System.lineSeparator())
-                .append("[Zip folder delete on exit]").append(localFtsProperties.getZipFolder().isDeleteOnExit()).append(System.lineSeparator())
+                .append("[Zip folder path]").append(localFtsProperties.getZip().getPath()).append(System.lineSeparator())
+                .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
+                .append("[Zip max size of compressed folder]").append(localFtsProperties.getZip().getMaxFolderSize()).append(System.lineSeparator())
                 ;
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!testLanguageMap.isEmpty()) {
@@ -349,6 +353,39 @@ public class FtsServerConfigService {
         if(rootLevel == null) {
             if(throwException) {
                 throw new LocalFtsStartupException("Log root level is null!");
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean checkZipMaxFolderSize(String zipMaxFolderSize, boolean throwException) {
+        /*if(zipMaxFolderSize == null) {
+            if(throwException) {
+                throw new LocalFtsStartupException("Zip max folder size is null!");
+            } else {
+                return false;
+            }
+        }*/
+        //allow null
+        if(zipMaxFolderSize == null) {
+            return true;
+        }
+        DataSize dataSize;
+        try {
+            dataSize = DataSize.parse(zipMaxFolderSize);
+        } catch (IllegalArgumentException e) {
+            LOGGER.error("解析Zip max folder size配置失败", e);
+            if(throwException) {
+                throw new LocalFtsStartupException("Error parsing zip max folder size '" + zipMaxFolderSize + "': " + e.getMessage());
+            } else {
+                return false;
+            }
+        }
+        if(dataSize.toBytes() < 0) {
+            if(throwException) {
+                throw new LocalFtsStartupException("Zip max folder size '" + dataSize.toBytes() + "' is negative!");
             } else {
                 return false;
             }

@@ -1,9 +1,6 @@
 package com.adam.localfts.webserver.service;
 
-import com.adam.localfts.webserver.common.FolderCompressStatus;
-import com.adam.localfts.webserver.common.FtsPageModel;
-import com.adam.localfts.webserver.common.HttpRangeObject;
-import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.common.*;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
@@ -17,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
@@ -55,7 +53,7 @@ public class FtsService implements DisposableBean {
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
-        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZipFolder().getPath();
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         File rootDirectory = new File(rootPath);
         Assert.isTrue(rootDirectory.exists() && rootDirectory.isDirectory(), "根路径不存在或不是文件夹");
         File zipDirectory = new File(zipFolderPath);
@@ -139,15 +137,23 @@ public class FtsService implements DisposableBean {
      * @param relativePath 相对于根路径的相对路径
      * @return zip压缩文件的相对路径
      */
-    public String compressFolder(String relativePath) throws IOException {
-        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZipFolder().getPath();
+    public ReturnObject<String> compressFolder(String relativePath) throws IOException {
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String zipMaxFolderSizeStr = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize();
         long start = System.currentTimeMillis();
         String actualFolderPath = rootPath + relativePath;
         File folderFile = new File(actualFolderPath);
         Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
 
         String folderAbsolutePath = folderFile.getAbsolutePath();
+        if(zipMaxFolderSizeStr != null) {
+            DataSize zipMaxFolderSize = DataSize.parse(zipMaxFolderSizeStr);
+            boolean checkFolderSizeGeLimit = IOUtil.isDirectorySizeGeIterative(folderAbsolutePath, zipMaxFolderSize.toBytes());
+            if (checkFolderSizeGeLimit) {
+                return ReturnObject.fail("待压缩的文件夹大小超过" + zipMaxFolderSizeStr + "限制，无法压缩");
+            }
+        }
         String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
         String zipFileParentRelativePath = zipFolderPath.substring(rootPath.length());
         String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
@@ -173,11 +179,13 @@ public class FtsService implements DisposableBean {
                 lock.unlock();
             }
         }
-        return zipFileRelativePath;
+        long end = System.currentTimeMillis();
+        LOGGER.info("压缩文件夹（路径：{}）完成，压缩文件路径：{}，耗时{}毫秒", folderAbsolutePath, zipFileAbsolutePath, end - start);
+        return ReturnObject.success(zipFileRelativePath);
     }
 
     public String getFolderCompressedZipRelativePath(String relativePath) {
-        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZipFolder().getPath();
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         long start = System.currentTimeMillis();
         String actualFolderPath = rootPath + relativePath;
@@ -195,7 +203,7 @@ public class FtsService implements DisposableBean {
     }
 
     public FolderCompressStatus getFolderCompressStatus(String relativePath) {
-        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZipFolder().getPath();
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         long start = System.currentTimeMillis();
         String actualFolderPath = rootPath + relativePath;
@@ -526,9 +534,9 @@ public class FtsService implements DisposableBean {
     @Override
     public void destroy() throws Exception {
         //清理压缩文件夹
-        boolean deleteOnExit = ftsServerConfigService.getLocalFtsProperties().getZipFolder().isDeleteOnExit();
-        if(deleteOnExit) {
-            String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZipFolder().getPath();
+        Boolean deleteOnExit = ftsServerConfigService.getLocalFtsProperties().getZip().getDeleteOnExit();
+        if(deleteOnExit != null && deleteOnExit) {
+            String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
             File zipFolderFile = new File(zipFolderPath);
             if (zipFolderFile.exists() && zipFolderFile.isDirectory()) {
                 FileUtils.deleteDirectory(zipFolderFile);

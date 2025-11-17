@@ -4,11 +4,35 @@ import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.junit.Assert;
 import org.junit.Test;
+import org.springframework.util.unit.DataSize;
 
 import java.io.File;
 import java.io.IOException;
 
 public class FileTest {
+
+//    @Test
+    public void testCheckFolderSizeGe() {
+        long time1 = System.currentTimeMillis();
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 1024L));
+        long time2= System.currentTimeMillis();
+        System.out.println("耗时" + (time2-time1) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 102400L));
+        time1 = System.currentTimeMillis();
+        System.out.println("耗时" + (time1-time2) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 1024000L));
+        time2 = System.currentTimeMillis();
+        System.out.println("耗时" + (time2-time1) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 10240000L));
+        time1 = System.currentTimeMillis();
+        System.out.println("耗时" + (time1-time2) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", DataSize.parse("2GB").toBytes()));
+        time2 = System.currentTimeMillis();
+        System.out.println("耗时" + (time2-time1) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents", DataSize.parse("10GB").toBytes()));
+        time1 = System.currentTimeMillis();
+        System.out.println("耗时" + (time1-time2) + "毫秒");
+    }
 
 //    @Test
     public void testCompressFolderAsZip() throws IOException {

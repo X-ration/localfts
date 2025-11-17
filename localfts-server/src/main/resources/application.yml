@@ -23,9 +23,10 @@ spring:
       #file-size-threshold: 0
 localfts:
   root_path: D:\Users\Adam\Documents
-  zip_folder:
+  zip:
     path: D:\Users\Adam\Documents\localfts_zip
     delete_on_exit: true
+    max-folder-size: 2GB
   log:
     file_path: log
     root_level: DEBUG

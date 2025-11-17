@@ -42,8 +42,13 @@ public class WebController {
 
     @GetMapping("/list")
     public String list(Model model, @RequestParam(name = "path") String relativePath, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
-        FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
-        model.addAttribute("ftsPage", ftsPageModel);
+        model.addAttribute("currentPath", relativePath);
+        boolean directoryExists = ftsService.checkDirectoryExists(relativePath);
+        model.addAttribute("directoryExists", directoryExists);
+        if(directoryExists) {
+            FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
+            model.addAttribute("ftsPage", ftsPageModel);
+        }
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
@@ -67,6 +72,8 @@ public class WebController {
                 String zipFileRelativePath = ftsService.getFolderCompressedZipRelativePath(relativePath);
                 model.addAttribute("compressedFilePath", zipFileRelativePath);
             }
+            boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
+            model.addAttribute("needSizeCheck", needSizeCheck);
         }
         return "compress_folder";
     }
@@ -76,8 +83,7 @@ public class WebController {
     public ReturnObject<String> compressFolder(@RequestParam(value = "path") String relativePath) {
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
         try {
-            String zipFilePath = ftsService.compressFolder(relativePath);
-            return ReturnObject.success(zipFilePath);
+            return ftsService.compressFolder(relativePath);
         } catch (IOException e) {
             LOGGER.error("压缩文件夹'{}'时出错", relativePath, e);
             return ReturnObject.fail(e.getMessage());

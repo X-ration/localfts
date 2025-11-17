@@ -16,7 +16,7 @@ public class LocalFtsProperties {
 
     private String rootPath;
     @NestedConfigurationProperty
-    private ZipFolderProperties zipFolder;
+    private ZipProperties zip;
     @NestedConfigurationProperty
     private LogProperties log;
     private Map<TestLanguageText, Boolean> testLanguage;

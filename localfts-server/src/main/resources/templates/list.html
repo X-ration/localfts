@@ -28,7 +28,7 @@
 <body>
     <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
     <hr>
-    <br>当前路径：<span id="page-path" th:text="${ftsPage.path}">path</span><a style="margin-left:1em" href="/localfts">返回首页</a><br><br>
+    <br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><br><br>
 <!--    <strong style="color: red">注意：下载文件夹前需要压缩，否则会报404 Not Found错误。</strong>-->
     <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
         <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
@@ -50,17 +50,18 @@
         </table>
         <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
-    <table style="text-align:left;border-style:solid">
-        <thead>
-        <tr>
-            <th style="width:60%">文件名</th>
-            <th style="width:10%">类型</th>
-            <th style="width:10%">大小</th>
-            <th style="width:10%">修改时间</th>
-            <th style="width:10%">操作</th>
-        </tr>
-        </thead>
-        <tbody>
+    <div th:if="${directoryExists}">
+        <table style="text-align:left;border-style:solid">
+            <thead>
+            <tr>
+                <th style="width:60%">文件名</th>
+                <th style="width:10%">类型</th>
+                <th style="width:10%">大小</th>
+                <th style="width:10%">修改时间</th>
+                <th style="width:10%">操作</th>
+            </tr>
+            </thead>
+            <tbody>
             <tr>
                 <td><a id="return-to-up-path">返回上一级</a></td>
                 <td>-</td>
@@ -98,32 +99,36 @@
                 <td th:text="${item.lastModified}">last modified</td>
                 <td><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
             </tr>
-        </tbody>
-    </table>
-    <br>
+            </tbody>
+        </table>
+        <br>
 
-    <p>
-        第<span id="current-page" th:text="${ftsPage.currentPage}">page no</span>页 <span id="current-size" th:text="${ftsPage.currentSize}">page size</span>条
-        总<span id="total-page" th:text="${ftsPage.totalPage}">total page</span>页 <span id="total-size" th:text="${ftsPage.totalSize}">total size</span>条
-    </p>
+        <p>
+            第<span id="current-page" th:text="${ftsPage.currentPage}">page no</span>页 <span id="current-size" th:text="${ftsPage.currentSize}">page size</span>条
+            总<span id="total-page" th:text="${ftsPage.totalPage}">total page</span>页 <span id="total-size" th:text="${ftsPage.totalSize}">total size</span>条
+        </p>
 
-    <a id="first-page">首页</a>
-    <a id="previous-page">上一页</a>
-    <a id="next-page">下一页</a>
-    <a id="last-page">尾页</a>
+        <a id="first-page">首页</a>
+        <a id="previous-page">上一页</a>
+        <a id="next-page">下一页</a>
+        <a id="last-page">尾页</a>
 
-    <form th:action="@{'/list'}" enctype="application/x-www-form-urlencoded">
-        <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
-        <input type="hidden" name="path" th:value="${ftsPage.path}">
-        <input type="text" size="2" id="page-no" name="pageNo" th:value="${ftsPage.currentPage}">
-        <select name="pageSize" id="page-size-select">
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-        </select>
-        <input type="submit" value="跳转">
-    </form>
-    <script type="text/javascript" th:inline="javascript">
+        <form th:action="@{'/list'}" enctype="application/x-www-form-urlencoded">
+            <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
+            <input type="hidden" name="path" th:value="${ftsPage.path}">
+            <input type="text" size="2" id="page-no" name="pageNo" th:value="${ftsPage.currentPage}">
+            <select name="pageSize" id="page-size-select">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select>
+            <input type="submit" value="跳转">
+        </form>
+    </div>
+    <div th:if="${!directoryExists}">
+        该路径不存在！
+    </div>
+    <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
         var contextPath = [[${#request.contextPath}]];
         /*var URL_LIST = "/localfts/list";
         var URL_DOWNLOAD = "/localfts/downloadFile";

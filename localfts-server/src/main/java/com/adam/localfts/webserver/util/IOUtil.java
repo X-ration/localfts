@@ -2,10 +2,13 @@ package com.adam.localfts.webserver.util;
 
 import com.adam.localfts.webserver.common.Constants;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -14,6 +17,7 @@ public class IOUtil {
 
     private static final int BUFFER_SIZE = 1024;
     private static final String[] SELECTED_HTTP_REQUEST_HEADERS = new String[]{"range", "if-range", "user-agent"};
+    private static final Logger LOGGER = LoggerFactory.getLogger(IOUtil.class);
 
     /**
      * 压缩文件夹为zip文件
@@ -24,6 +28,7 @@ public class IOUtil {
      * @throws IOException
      */
     public static File compressFolderAsZip(final String folderPath, final String zipFilePath, final String zipFileName) throws IOException {
+        LOGGER.debug("compressFolderAsZip starts,folderPath={},zipFilePath={},zipFileName={}", folderPath, zipFilePath, zipFileName);
         boolean isMatch1 = false, isMatch2 = false;
         if(Util.isSystemWindows()) {
             isMatch1 = Constants.PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(folderPath).matches();
@@ -56,7 +61,77 @@ public class IOUtil {
             zipDirectory(folder, folder.getName(), true, zipOutputStream, bufferedOutputStream);
         }
 
+        LOGGER.debug("compressFolderAsZip ends,folderPath={},zipFilePath={},zipFileName={}", folderPath, zipFilePath, zipFileName);
         return zipFile;
+    }
+
+    public static boolean isDirectorySizeGeIterative(String directoryAbsolutePath, long limit) {
+        File directory = new File(directoryAbsolutePath);
+        Assert.isTrue(directory.exists() && directory.isDirectory(), "path '" + directoryAbsolutePath + "' does not refer to a existing directory!");
+        long total = 0;
+        Deque<File> stack = new ArrayDeque<>();
+        stack.push(directory);
+        while(!stack.isEmpty()) {
+            File file = stack.pop();
+            if(file.isFile()) {
+                total += file.length();
+                if(total >= limit) {
+                    return true;
+                }
+            } else {
+                File[] files = file.listFiles();
+                if(files != null) {
+                    for(File file1: files) {
+                        if(file1.isFile()) {
+                            stack.push(file1);
+                        }
+                    }
+                    for(File file1: files) {
+                        if(file1.isDirectory()) {
+                            stack.push(file1);
+                        }
+                    }
+                }
+            }
+        }
+        return total >= limit;
+    }
+
+    public static boolean isDirectorySizeGeRecursive(String directoryAbsolutePath, long limit) {
+        File directory = new File(directoryAbsolutePath);
+        Assert.isTrue(directory.exists() && directory.isDirectory(), "path '" + directoryAbsolutePath + "' does not refer to a existing directory!");
+        return isFileSizeGeRecursive(directory, limit, new long[1]);
+    }
+
+    private static boolean isFileSizeGeRecursive(File file, long limit, long[] total) {
+        if(total[0] >= limit) {
+            return true;
+        }
+        if(file.isFile()) {
+            total[0] += file.length();
+            return total[0] >= limit;
+        } else {
+            File[] files = file.listFiles();
+            if(files != null) {
+                for (File file1 : files) {
+                    if (file1.isFile()) {
+                        boolean result = isFileSizeGeRecursive(file1, limit, total);
+                        if (result) {
+                            return true;
+                        }
+                    }
+                }
+                for (File file1 : files) {
+                    if (file1.isDirectory()) {
+                        boolean result = isFileSizeGeRecursive(file1, limit, total);
+                        if (result) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
     }
 
     /**
@@ -72,6 +147,7 @@ public class IOUtil {
             String entryName = "";
             if(!isOuterCall) {
                 entryName = parentEntryName + "/";
+                LOGGER.trace("zipDirectory writing directory entry {}", entryName);
                 ZipEntry entry = new ZipEntry(entryName);
                 zipOutputStream.putNextEntry(entry);
                 zipOutputStream.closeEntry();
@@ -84,6 +160,7 @@ public class IOUtil {
                 }
             }
         } else {
+            LOGGER.trace("zipDirectory writing file entry {}", parentEntryName);
             ZipEntry entry = new ZipEntry(parentEntryName);
             zipOutputStream.putNextEntry(entry);
             try(FileInputStream fileInputStream = new FileInputStream(currentFile);
