@@ -27,6 +27,7 @@ localfts:
     path: D:\Users\Adam\Documents\localfts_zip
     delete_on_exit: true
     max-folder-size: 3GB
+    background-enabled: false
   log:
     file_path: log
     root_level: DEBUG

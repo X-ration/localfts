@@ -71,6 +71,8 @@ public class WebController {
             }
             boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
             model.addAttribute("needSizeCheck", needSizeCheck);
+            Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
+            model.addAttribute("backgroundEnabled", backgroundEnabled);
         }
         return "compress_folder";
     }

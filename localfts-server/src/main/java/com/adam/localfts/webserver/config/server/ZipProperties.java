@@ -11,4 +11,5 @@ public class ZipProperties {
     private String path;
     private Boolean deleteOnExit;
     private String maxFolderSize;
+    private Boolean backgroundEnabled;
 }

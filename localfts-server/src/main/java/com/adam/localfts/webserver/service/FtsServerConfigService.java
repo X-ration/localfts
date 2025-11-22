@@ -60,6 +60,15 @@ public class FtsServerConfigService {
         Assert.isTrue(checkZipFolderPath, "Check zip folder path failed", LocalFtsStartupException.class);
         boolean checkZipMaxFolderSize = checkZipMaxFolderSize(localFtsProperties.getZip().getMaxFolderSize(), true);
         Assert.isTrue(checkZipMaxFolderSize, "Check zip max folder size failed", LocalFtsStartupException.class);
+        Boolean zipDeleteOnExit = localFtsProperties.getZip().getDeleteOnExit();
+        if(zipDeleteOnExit == null) {
+            localFtsProperties.getZip().setDeleteOnExit(true);
+        }
+        Boolean zipBackgroundEnabled = localFtsProperties.getZip().getBackgroundEnabled();
+        if(zipBackgroundEnabled == null) {
+            localFtsProperties.getZip().setBackgroundEnabled(false);
+        }
+
         boolean checkLogProperties = checkLogProperties(localFtsProperties.getLog(), true);
         Assert.isTrue(checkLogProperties, "Check log properties failed", LocalFtsStartupException.class);
         boolean checkTestLanguage = checkTestLanguageAndDeleteNullKeyValue(localFtsProperties.getTestLanguage(), false, true);
@@ -210,8 +219,9 @@ public class FtsServerConfigService {
                 .append("[Log file path]").append(localFtsProperties.getLog().getFilePath()).append(System.lineSeparator())
                 .append("[Log root level]").append(localFtsProperties.getLog().getRootLevel()).append(System.lineSeparator())
                 .append("[Zip folder path]").append(localFtsProperties.getZip().getPath()).append(System.lineSeparator())
-                .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
                 .append("[Zip max size of compressed folder]").append(localFtsProperties.getZip().getMaxFolderSize()).append(System.lineSeparator())
+                .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
+                .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled());
                 ;
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!testLanguageMap.isEmpty()) {

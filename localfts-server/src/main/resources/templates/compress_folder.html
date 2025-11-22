@@ -80,6 +80,7 @@ var currentPath = [[${currentPath}]];
 var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
 var compressStatus = [[${compressStatus}]];
 var needSizeCheck = [[${needSizeCheck}]];
+var backgroundEnabled = [[${backgroundEnabled}]];
 var xhr = null;
 
 if(compressStatus === 'COMPRESSED') {
@@ -88,11 +89,13 @@ if(compressStatus === 'COMPRESSED') {
   downloadZip.innerText = '下载压缩文件(zip)';
 }
 
-// 监听页面关闭事件
-if (typeof window.addEventListener !== "undefined") {
-  window.addEventListener('beforeunload', unload);
-} else {
-  window.attachEvent('onbeforeunload', unload);
+if(!backgroundEnabled) {
+  // 监听页面关闭事件
+  if (typeof window.addEventListener !== "undefined") {
+    window.addEventListener('beforeunload', unload);
+  } else {
+    window.attachEvent('onbeforeunload', unload);
+  }
 }
 
 function unload(e) {
