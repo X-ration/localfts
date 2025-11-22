@@ -55,10 +55,11 @@
             <thead>
             <tr>
                 <th style="width:60%">文件名</th>
-                <th style="width:10%">类型</th>
-                <th style="width:10%">大小</th>
-                <th style="width:10%">修改时间</th>
-                <th style="width:10%">操作</th>
+                <th style="width:8%">类型</th>
+                <th style="width:8%">大小</th>
+                <th style="width:8%">文件夹压缩状态</th>
+                <th style="width:8%">修改时间</th>
+                <th style="width:8%">操作</th>
             </tr>
             </thead>
             <tbody>
@@ -68,27 +69,30 @@
                 <td>-</td>
                 <td>-</td>
                 <td>-</td>
+                <td>-</td>
             </tr>
             <tr>
                 <td><a id="return-to-current-path">当前目录</a></td>
                 <td>-</td>
                 <td>-</td>
+                <td th:text="${ftsPage.currentPathModel.compressStatus.desc}"></td>
                 <td>-</td>
                 <td>
                     <a id="upload-to-current-path">上传文件</a>
                     <a id="compress-current-path">压缩文件夹(zip)</a>
-                    <a name="download-folder" th:if="${ftsPage.currentPathModel.compressed}" th:text="${ftsPage.currentPathModel.compressedPath}">下载文件夹(zip)</a>
+                    <a name="download-folder" th:if="${ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedPath}">下载文件夹(zip)</a>
                 </td>
             </tr>
             <tr th:if="${item.directory}" th:each="item:${ftsPage.fileList}">
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
                 <td>文件夹</td>
                 <td>-</td>
+                <td th:text="${item.compressStatus.desc}"></td>
                 <td th:text="${item.lastModified}">last modified</td>
                 <td>
                     <a name="upload-file" th:text="${item.fileName}">上传文件</a>
                     <a name="compress-folder" th:text="${item.fileName}">压缩文件夹(zip)</a>
-                    <a name="download-folder" th:if="${item.compressed}" th:text="${item.compressedPath}">下载文件夹(zip)
+                    <a name="download-folder" th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedPath}">下载文件夹(zip)
                     </a>
                 </td>
             </tr>
@@ -96,6 +100,7 @@
                 <td th:text="${item.fileName}">fileName</td>
                 <td>文件</td>
                 <td th:text="${item.fileSizeStr}">0</td>
+                <td>-</td>
                 <td th:text="${item.lastModified}">last modified</td>
                 <td><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
             </tr>

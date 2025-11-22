@@ -115,16 +115,14 @@ public class FtsService implements DisposableBean {
 
     private void fillDirectoryModel(File directory, File zipDirectory, String rootPath, String zipFileParentRelativePath, FtsPageModel.FtsPageFileModel fileModel) {
         fileModel.setFileSize(0);
-        //添加压缩文件标识
-        fileModel.setCompressed(false);
         String folderAbsolutePath = directory.getAbsolutePath();
+        //添加压缩文件标识
+        FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
+        fileModel.setCompressStatus(folderCompressStatus);
         String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
         File zipFile = new File(zipDirectory, zipFileName);
         String zipFileAbsolutePath = zipFile.getAbsolutePath();
-        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(zipFileAbsolutePath);
-        long zipFileRecordSize = folderCompressingInfo != null ? folderCompressingInfo.getCompressSize() : -1L;
-        if(zipFile.exists() && zipFile.isFile() && zipFileRecordSize == zipFile.length()) {
-            fileModel.setCompressed(true);
+        if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
             String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
             if(Util.isSystemWindows()) {
                 zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
@@ -197,7 +195,7 @@ public class FtsService implements DisposableBean {
             }
         }
 
-        FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath);
+        FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath, false);
         if(needCompress) {
             long end = System.currentTimeMillis();
             String statusMessage = interrupted ? "被中断" : "完成";
@@ -259,11 +257,16 @@ public class FtsService implements DisposableBean {
         return zipFileRelativePath;
     }
 
-    public FolderCompressStatus getFolderCompressStatus(String relativePath) {
+    public FolderCompressStatus getFolderCompressStatus(String path, boolean isAbsolute) {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         long start = System.currentTimeMillis();
-        String actualFolderPath = rootPath + relativePath;
+        String actualFolderPath;
+        if(isAbsolute) {
+            actualFolderPath = path;
+        } else {
+            actualFolderPath = rootPath + path;
+        }
         File folderFile = new File(actualFolderPath);
         Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
 

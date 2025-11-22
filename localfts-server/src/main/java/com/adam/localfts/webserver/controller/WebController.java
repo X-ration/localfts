@@ -63,7 +63,7 @@ public class WebController {
         model.addAttribute("directoryExists", directoryExists);
         model.addAttribute("currentPath", relativePath);
         if(directoryExists) {
-            FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath);
+            FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
             model.addAttribute("compressStatus", compressStatus.name());
             if(compressStatus == FolderCompressStatus.COMPRESSED) {
                 String zipFileRelativePath = ftsService.getFolderCompressedZipRelativePath(relativePath);

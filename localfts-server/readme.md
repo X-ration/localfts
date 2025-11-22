@@ -26,6 +26,7 @@
 * 支持进入压缩页面压缩并下载文件夹(zip)，支持在列表页面下载已经压缩好的文件夹
   ![localfts-server-1.1.0-list-page.png](readme/localfts-server-1.1.0-list-page.png)
   ![localfts-server-1.1.0-compress-page.png](readme/localfts-server-1.1.0-compress-page.png)
+* 列表页增加当前目录，压缩状态
 * 根据文件夹的压缩状态在浏览器和服务端均有相应的处理
 * 配置压缩文件存储路径(`localfts.zip.path`控制)
 * 当应用关闭时自动清理压缩文件所在文件夹(`localfts.zip.delete_on_exit`控制)
@@ -33,7 +34,6 @@
 * 后台压缩开关(`localfts.zip.background-enabled`控制)，开启时：允许在退出压缩页面后继续压缩操作，更消耗服务器性能
 ### 优化
 * 改进了上传页面，当请求路径不存在时页面给予友好提示
-* 列表页增加当前目录
 * 列表页面生成可点击链接时不再硬编码，而是根据配置的context-path拼接链接
 * 下载文件当文件不存在时跳转到错误页面并展示404状态码
 * 支持在退出压缩页面时取消压缩操作，释放服务器资源

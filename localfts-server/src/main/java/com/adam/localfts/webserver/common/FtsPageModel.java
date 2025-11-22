@@ -25,7 +25,8 @@ public class FtsPageModel {
         private long fileSize;
         private String lastModified;
         private String fileSizeStr;
-        private boolean compressed;
+        //private boolean compressed;
+        private FolderCompressStatus compressStatus;
         private String compressedPath;
     }
 }
