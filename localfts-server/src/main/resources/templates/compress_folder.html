@@ -50,9 +50,12 @@
     <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
 </div>
 <div th:if="${directoryExists}" id="compressingDiv">
-    <h4 id="compressingHint" th:if="${compressStatus == 'NOT_COMPRESSED' or compressStatus == 'COMPRESSING'}">正在检查文件夹大小并压缩</h4>
+    <h4 id="compressingHint" th:if="${compressStatus == 'NOT_COMPRESSED'}">文件夹待压缩</h4>
+    <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSING' and needSizeCheck}">正在检查文件夹大小并压缩</h4>
+    <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSING' and !needSizeCheck}">正在压缩</h4>
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
     <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
+    <button id="cancelCompressButton" type="button" onclick="cancelCompress()" th:if="${compressStatus == 'COMPRESSING'}">取消压缩</button>
     <a id="download-zip" th:if="${compressStatus == 'COMPRESSED'}" th:text="${compressedFilePath}">下载压缩文件(zip)</a>
 </div>
 <div th:if="${!directoryExists}">
@@ -77,22 +80,99 @@ var currentPath = [[${currentPath}]];
 var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
 var compressStatus = [[${compressStatus}]];
 var needSizeCheck = [[${needSizeCheck}]];
+var xhr = null;
 
-if(compressStatus === 'COMPRESSING' || compressStatus === 'NOT_COMPRESSED') {
-  compressFolder();
-} else {
+if(compressStatus === 'COMPRESSED') {
   var downloadZip = document.getElementById("download-zip");
   downloadZip.setAttribute('href', concatUrlDownload(downloadZip.innerText));
   downloadZip.innerText = '下载压缩文件(zip)';
 }
+
+// 监听页面关闭事件
+if (typeof window.addEventListener !== "undefined") {
+  window.addEventListener('beforeunload', unload);
+} else {
+  window.attachEvent('onbeforeunload', unload);
+}
+
+function unload(e) {
+  //abortXhr();
+  if (navigator.sendBeacon) {
+    //在win11 edge/winxp ie,qq适用，不适用winxp 360
+    /*var data = new URLSearchParams();
+    data.append('path', currentPath);
+    navigator.sendBeacon(contextPath + "/cancelCompress", data);*/
+    var blob = new Blob(['path='+encodeURIComponent(currentPath)], {type: 'application/x-www-form-urlencoded'});
+    navigator.sendBeacon(contextPath + "/cancelCompress", blob);
+  } else {
+    sendPostFormRequest(
+      contextPath + "/cancelCompress", // 目标接口 URL
+      "path=" + encodeURIComponent(currentPath), // 表单格式数据
+      false,
+      function (xhr) {
+      }
+    );
+    var start = new Date().getTime();
+    while (new Date().getTime() - start < 100) {
+      // 循环 100 毫秒，确保请求完成
+    }
+  }
+}
+
+function cancelCompress() {
+  updateCompressingHint('正在取消');
+  abortXhr();
+  sendPostFormRequest(
+    contextPath + "/cancelCompress", // 目标接口 URL
+    "path=" + encodeURIComponent(currentPath), // 表单格式数据
+    true,
+    function (xhr) {
+      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
+      // readyState=4 表示请求完成，status=200 表示成功
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          var returnObject = JSON.parse(xhr.responseText);
+          if(returnObject.success) {
+            updateCompressingHint('已取消');
+            var cancelCompressButton = document.getElementById('cancelCompressButton');
+            if(cancelCompressButton) {
+              document.getElementById('compressingDiv').removeChild(cancelCompressButton);
+            }
+          } else {
+            updateCompressingHint('取消失败，原因：' + returnObject.message);
+          }
+        } else {
+          updateCompressingHint('取消失败，状态码：' + xhr.status);
+        }
+      }
+    }
+  );
+}
+
+function updateCompressingHint(text) {
+  document.getElementById('compressingHint').innerText = text;
+  document.getElementById('compressingHint').style.display = 'block';
+}
+
 function compressFolder() {
   var compressingHintText = needSizeCheck ? '正在检查文件夹大小并压缩' : '正在压缩';
   document.getElementById('compressingHint').innerText = compressingHintText;
   document.getElementById('compressingHint').style.display = 'block';
   removeChildrenByIdAndTagName('compressingDiv','a');
+  var cancelCompressButton = document.getElementById('cancelCompressButton');
+  if(!cancelCompressButton) {
+    cancelCompressButton = document.createElement('button');
+    cancelCompressButton.innerText = '取消压缩';
+    cancelCompressButton.setAttribute('id', 'cancelCompressButton');
+    cancelCompressButton.setAttribute('type', 'button');
+    cancelCompressButton.onclick = cancelCompress;
+    document.getElementById('compressingDiv').appendChild(cancelCompressButton);
+  }
+  abortXhr();
   sendPostFormRequest(
     contextPath + "/compressFolder", // 目标接口 URL
     "path=" + encodeURIComponent(currentPath), // 表单格式数据
+    true,
     function (xhr) {
       //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
       // readyState=4 表示请求完成，status=200 表示成功
@@ -103,13 +183,25 @@ function compressFolder() {
             console.log(returnObject);
           }
           if(returnObject.success) {
-            document.getElementById('compressingHint').innerText = '压缩完成';
-            document.getElementById('compressingHint').style.display = 'block';
-            var downloadZip = document.createElement('a');
-            downloadZip.innerText = '下载压缩文件(zip)';
-            downloadZip.setAttribute('href', concatUrlDownload(returnObject.data));
-            removeChildrenByIdAndTagName('compressingDiv','a');
-            document.getElementById('compressingDiv').appendChild(downloadZip);
+            if(returnObject.data.status === 'COMPRESSED') {
+              document.getElementById('compressingHint').innerText = '压缩完成';
+              document.getElementById('compressingHint').style.display = 'block';
+              var downloadZip = document.createElement('a');
+              downloadZip.innerText = '下载压缩文件(zip)';
+              downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.path));
+              removeChildrenByIdAndTagName('compressingDiv','a');
+              document.getElementById('compressingDiv').appendChild(downloadZip);
+              cancelCompressButton = document.getElementById('cancelCompressButton');
+              if(cancelCompressButton) {
+                document.getElementById('compressingDiv').removeChild(cancelCompressButton);
+              }
+            } else if(returnObject.data.status === 'COMPRESSING') {
+              document.getElementById('compressingHint').innerText = compressingHintText;
+              document.getElementById('compressingHint').style.display = 'block';
+            } else {
+              document.getElementById('compressingHint').innerText = '非法状态';
+              document.getElementById('compressingHint').style.display = 'block';
+            }
           } else {
             document.getElementById('compressingHint').innerText = '压缩失败，原因：' + returnObject.message;
             document.getElementById('compressingHint').style.display = 'block';
@@ -142,7 +234,8 @@ function concatUrlDownload(fileName) {
 }
 // 创建 XMLHttpRequest 对象（兼容 IE6）
 function createXHR() {
-  var xhr;
+  //保存全局引用
+  //var xhr;
   // 现代浏览器及 IE7+ 支持原生 XMLHttpRequest
   if (window.XMLHttpRequest) {
     xhr = new XMLHttpRequest();
@@ -159,7 +252,7 @@ function createXHR() {
 }
 
 // 发送 POST 请求
-function sendPostFormRequest(url, data, func) {
+function sendPostFormRequest(url, data, isAsync, func) {
   var xhr = createXHR();
   if (!xhr) return;
 
@@ -169,7 +262,7 @@ function sendPostFormRequest(url, data, func) {
   };
 
   // 初始化请求（POST 方法，目标 URL，异步请求）
-  xhr.open("POST", url, true);
+  xhr.open("POST", url, isAsync);
 
   // 设置请求头：POST 请求需指定 Content-Type，否则服务器可能无法解析数据
   // 表单格式数据通常用 application/x-www-form-urlencoded
@@ -177,6 +270,12 @@ function sendPostFormRequest(url, data, func) {
 
   // 发送数据（格式为 key=value&key2=value2，与表单提交格式一致）
   xhr.send(data);
+}
+
+function abortXhr() {
+  if(xhr && xhr.readyState != 4) {
+     xhr.abort();
+  }
 }
 
 </script>

@@ -12,6 +12,11 @@ import java.io.IOException;
 public class FileTest {
 
 //    @Test
+    public void testDeleteDirectory() throws IOException {
+        IOUtil.deleteDirectory("D:\\Users\\Adam\\Documents\\localfts_zip", true);
+    }
+
+//    @Test
     public void testCheckFolderSizeGe() {
         long time1 = System.currentTimeMillis();
         Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 1024L));
@@ -35,7 +40,7 @@ public class FileTest {
     }
 
 //    @Test
-    public void testCompressFolderAsZip() throws IOException {
+    public void testCompressFolderAsZip() throws IOException, InterruptedException {
 //        IOUtil.compressFolderAsZip("D:\\Users\\Adam\\Documents\\测试文件夹\\测试文件夹（有文件）", "D:\\Users\\Adam\\Documents\\测试文件夹", "D:\\Users\\Adam\\Documents");
         IOUtil.compressFolderAsZip("D:\\Users\\Adam\\Documents\\测试文件夹\\测试文件夹（有文件）", "D:\\Users\\Adam\\Documents\\测试文件夹", "D:\\Users\\Adam\\Documents\\");
     }

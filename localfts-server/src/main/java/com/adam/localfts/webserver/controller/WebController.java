@@ -1,9 +1,6 @@
 package com.adam.localfts.webserver.controller;
 
-import com.adam.localfts.webserver.common.FolderCompressStatus;
-import com.adam.localfts.webserver.common.FtsPageModel;
-import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
-import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.common.*;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
 import com.adam.localfts.webserver.util.Util;
@@ -80,7 +77,7 @@ public class WebController {
 
     @PostMapping("/compressFolder")
     @ResponseBody
-    public ReturnObject<String> compressFolder(@RequestParam(value = "path") String relativePath) {
+    public ReturnObject<FolderCompressData> compressFolder(@RequestParam(value = "path") String relativePath) {
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
         try {
             return ftsService.compressFolder(relativePath);
@@ -88,6 +85,13 @@ public class WebController {
             LOGGER.error("压缩文件夹'{}'时出错", relativePath, e);
             return ReturnObject.fail(e.getMessage());
         }
+    }
+
+    @PostMapping("/cancelCompress")
+    @ResponseBody
+    public ReturnObject<Void> cancelCompress(@RequestParam(value = "path") String relativePath) {
+        Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        return ftsService.cancelCompress(relativePath);
     }
 
     @GetMapping("/downloadFile")

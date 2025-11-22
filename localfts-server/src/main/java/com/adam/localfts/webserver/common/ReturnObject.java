@@ -35,4 +35,8 @@ public class ReturnObject <T>{
     public static <T> ReturnObject<T> success(T data) {
         return success(null, data);
     }
+
+    public static <T> ReturnObject<T> success() {
+        return success(null, null);
+    }
 }

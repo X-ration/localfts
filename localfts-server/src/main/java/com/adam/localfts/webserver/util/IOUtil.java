@@ -27,7 +27,7 @@ public class IOUtil {
      * @return 压缩文件File对象
      * @throws IOException
      */
-    public static File compressFolderAsZip(final String folderPath, final String zipFilePath, final String zipFileName) throws IOException {
+    public static File compressFolderAsZip(final String folderPath, final String zipFilePath, final String zipFileName) throws IOException, InterruptedException {
         LOGGER.debug("compressFolderAsZip starts,folderPath={},zipFilePath={},zipFileName={}", folderPath, zipFilePath, zipFileName);
         boolean isMatch1 = false, isMatch2 = false;
         if(Util.isSystemWindows()) {
@@ -142,7 +142,8 @@ public class IOUtil {
      * @param bufferedOutputStream
      * @throws IOException
      */
-    private static void zipDirectory(File currentFile, String parentEntryName, boolean isOuterCall, ZipOutputStream zipOutputStream, BufferedOutputStream bufferedOutputStream) throws IOException{
+    private static void zipDirectory(File currentFile, String parentEntryName, boolean isOuterCall, ZipOutputStream zipOutputStream, BufferedOutputStream bufferedOutputStream) throws IOException, InterruptedException {
+        checkAndThrowInterruptedException();
         if(currentFile.isDirectory()) {
             String entryName = "";
             if(!isOuterCall) {
@@ -169,6 +170,7 @@ public class IOUtil {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 int bytesRead;
                 while((bytesRead = bufferedInputStream.read(buffer)) != -1) {
+                    checkAndThrowInterruptedException();
                     bufferedOutputStream.write(buffer, 0, bytesRead);
                 }
                 bufferedOutputStream.flush();
@@ -324,6 +326,66 @@ public class IOUtil {
             }
         }
         return false;
+    }
+
+    public static void deleteDirectory(String absolutePath, final boolean ignoreFailure) throws IOException{
+        File directory = new File(absolutePath);
+        if(!directory.exists()) {
+            LOGGER.warn("Discarding non-exist directory:{}", absolutePath);
+            return;
+        }
+        if(directory.isFile()) {
+            LOGGER.warn("Discarding file:{}", absolutePath);
+        }
+        boolean deletes = deleteFile(directory, ignoreFailure);
+        if(!deletes) {
+            LOGGER.warn("Failed to delete directory:" + absolutePath);
+        }
+    }
+
+    private static boolean deleteFile(File file, final boolean ignoreFailure) throws IOException {
+        if(file.isFile()) {
+            boolean deletes = file.delete();
+            if(!deletes) {
+                LOGGER.warn("Cannot delete file:" + file.getAbsolutePath());
+                if(!ignoreFailure) {
+                    throw new IOException("Cannot delete file:" + file.getAbsolutePath());
+                }
+            }
+            return deletes;
+        } else {
+            File[] files = file.listFiles();
+            boolean hasFailure = false;
+            if(files != null) {
+                for (File file1 : files) {
+                    boolean deletes = deleteFile(file1, ignoreFailure);
+                    if (!deletes && !hasFailure) {
+                        hasFailure = true;
+                    }
+                }
+            }
+            if(!hasFailure) {
+                boolean deletes = file.delete();
+                if(!deletes) {
+                    if(!ignoreFailure) {
+                        throw new IOException("Cannot delete directory itself:" + file.getAbsolutePath());
+                    } else {
+                        hasFailure = true;
+                    }
+                }
+            } else {
+                if(!ignoreFailure) {
+                    throw new IOException("Cannot delete files in directory:" + file.getAbsolutePath());
+                }
+            }
+            return !hasFailure;
+        }
+    }
+
+    public static void checkAndThrowInterruptedException() throws InterruptedException{
+        if(Thread.interrupted()) {
+            throw new InterruptedException();
+        }
     }
 
 }
