@@ -185,8 +185,7 @@ function updateCompressingHint(text) {
 
 function compressFolder() {
   var compressingHintText = needSizeCheck ? '正在检查文件夹大小并压缩' : '正在压缩';
-  document.getElementById('compressingHint').innerText = compressingHintText;
-  document.getElementById('compressingHint').style.display = 'block';
+  updateCompressingHint(compressingHintText);
   removeChildrenByIdAndTagName('compressingDiv','a');
   var cancelCompressButton = document.getElementById('cancelCompressButton');
   if(!cancelCompressButton) {
@@ -213,8 +212,7 @@ function compressFolder() {
           }
           if(returnObject.success) {
             if(returnObject.data.status === 'COMPRESSED') {
-              document.getElementById('compressingHint').innerText = '压缩完成';
-              document.getElementById('compressingHint').style.display = 'block';
+              updateCompressingHint('压缩完成');
               removeElementById('download-zip', 'compressingDiv');
               removeElementById('deleteCompressFileButton', 'compressingDiv');
               var downloadZip = document.createElement('a');
@@ -230,22 +228,18 @@ function compressFolder() {
               document.getElementById('compressingDiv').appendChild(deleteCompressFileButton);
               removeElementById('cancelCompressButton', 'compressingDiv');
             } else if(returnObject.data.status === 'COMPRESSING') {
-              document.getElementById('compressingHint').innerText = compressingHintText;
-              document.getElementById('compressingHint').style.display = 'block';
+              updateCompressingHint(compressingHintText);
             } else {
-              document.getElementById('compressingHint').innerText = '非法状态';
-              document.getElementById('compressingHint').style.display = 'block';
+              updateCompressingHint('非法状态');
             }
           } else {
-            document.getElementById('compressingHint').innerText = '压缩失败，原因：' + returnObject.message;
-            document.getElementById('compressingHint').style.display = 'block';
+            updateCompressingHint('压缩失败，原因：' + returnObject.message);
           }
         } else {
           if(window.console) {
             console.error("请求失败，状态码：", xhr.status);
           }
-          document.getElementById('compressingHint').innerText = '压缩失败，状态码：' + xhr.status;
-          document.getElementById('compressingHint').style.display = 'block';
+          updateCompressingHint('压缩失败，状态码：' + xhr.status);
         }
       }
     }
