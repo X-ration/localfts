@@ -79,7 +79,7 @@
                 <td>-</td>
                 <td>
                     <a id="upload-to-current-path">上传文件</a>
-                    <a id="compress-current-path">压缩文件夹(zip)</a>
+                    <a id="compress-current-path">压缩管理</a>
                     <a name="download-folder" th:if="${ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedPath}">下载文件夹(zip)</a>
                 </td>
             </tr>
@@ -91,7 +91,7 @@
                 <td th:text="${item.lastModified}">last modified</td>
                 <td>
                     <a name="upload-file" th:text="${item.fileName}">上传文件</a>
-                    <a name="compress-folder" th:text="${item.fileName}">压缩文件夹(zip)</a>
+                    <a name="compress-folder" th:text="${item.fileName}">压缩管理</a>
                     <a name="download-folder" th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedPath}">下载文件夹(zip)
                     </a>
                 </td>
@@ -226,7 +226,7 @@
             }
             for(var i=0;i<compressFolders.length;i++) {
                 compressFolders[i].setAttribute("href", concatUrlCompressFolder(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + compressFolders[i].innerText));
-                compressFolders[i].innerText = "压缩文件夹(zip)";
+                compressFolders[i].innerText = "压缩管理";
             }
 
             //deal with download-folder

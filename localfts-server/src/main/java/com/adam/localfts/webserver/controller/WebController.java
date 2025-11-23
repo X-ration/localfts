@@ -96,6 +96,13 @@ public class WebController {
         return ftsService.cancelCompress(relativePath);
     }
 
+    @PostMapping("/deleteCompressFile")
+    @ResponseBody
+    public ReturnObject<Void> deleteCompressFile(@RequestParam(value = "path") String relativePath) {
+        Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        return ftsService.deleteCompressFile(relativePath);
+    }
+
     @GetMapping("/downloadFile")
     public void downloadFile(@RequestParam(value = "fileName") String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         Assert.isTrue(null != filePath & !"".equals(filePath), "非法请求参数");

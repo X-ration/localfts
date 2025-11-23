@@ -239,6 +239,43 @@ public class FtsService implements DisposableBean {
         }
     }
 
+    public ReturnObject<Void> deleteCompressFile(String relativePath) {
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String actualFolderPath = rootPath + relativePath;
+        File folderFile = new File(actualFolderPath);
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
+        String zipFileParentRelativePath = zipFolderPath.substring(rootPath.length());
+        String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
+
+        File rootPathFile = new File(rootPath);
+        File zipFile = new File(rootPathFile, zipFileRelativePath);
+        String zipFileAbsolutePath = zipFile.getAbsolutePath();
+        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(zipFileAbsolutePath);
+        if(folderCompressingInfo == null) {
+            return ReturnObject.fail("文件夹未在压缩");
+        }
+
+        FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath, false);
+        if(folderCompressStatus == FolderCompressStatus.COMPRESSING) {
+            if(!folderCompressingInfo.interruptThread()) {
+                return ReturnObject.fail("取消压缩任务失败");
+            }
+        }
+
+        if(!zipFile.exists()) {
+            return ReturnObject.fail("压缩文件不存在");
+        }
+
+        boolean deletes = zipFile.delete();
+        if(deletes) {
+            return ReturnObject.success();
+        } else {
+            return ReturnObject.fail("未知原因");
+        }
+    }
+
     public String getFolderCompressedZipRelativePath(String relativePath) {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();

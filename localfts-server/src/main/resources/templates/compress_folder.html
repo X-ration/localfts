@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>局域网文件传输服务器</title>
+    <title>局域网文件传输服务器-压缩管理</title>
     <style>
         .hidden {
             display:none;
@@ -55,8 +55,9 @@
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSING' and !needSizeCheck}">正在压缩</h4>
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
     <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
-    <button id="cancelCompressButton" type="button" onclick="cancelCompress()" th:if="${compressStatus == 'COMPRESSING'}">取消压缩</button>
+    <button id="cancelCompressButton" type="button" th:if="${compressStatus == 'COMPRESSING'}" onclick="cancelCompress()">取消压缩</button>
     <a id="download-zip" th:if="${compressStatus == 'COMPRESSED'}" th:text="${compressedFilePath}">下载压缩文件(zip)</a>
+    <button id="deleteCompressFileButton" type="button" th:if="${compressStatus == 'COMPRESSED'}" onclick="deleteCompressFile()">删除压缩文件</button>
 </div>
 <div th:if="${!directoryExists}">
     该路径不存在！
@@ -122,6 +123,34 @@ function unload(e) {
   }
 }
 
+function deleteCompressFile() {
+  updateCompressingHint('正在删除');
+  abortXhr();
+  sendPostFormRequest(
+    contextPath + "/deleteCompressFile", // 目标接口 URL
+    "path=" + encodeURIComponent(currentPath), // 表单格式数据
+    true,
+    function (xhr) {
+      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
+      // readyState=4 表示请求完成，status=200 表示成功
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          var returnObject = JSON.parse(xhr.responseText);
+          if(returnObject.success) {
+            removeElementById('deleteCompressFileButton', 'compressingDiv');
+            removeElementById('download-zip', 'compressingDiv');
+            updateCompressingHint('成功删除压缩文件');
+          } else {
+            updateCompressingHint('删除失败，原因：' + returnObject.message);
+          }
+        } else {
+          updateCompressingHint('删除失败，状态码：' + xhr.status);
+        }
+      }
+    }
+  );
+}
+
 function cancelCompress() {
   updateCompressingHint('正在取消');
   abortXhr();
@@ -137,10 +166,7 @@ function cancelCompress() {
           var returnObject = JSON.parse(xhr.responseText);
           if(returnObject.success) {
             updateCompressingHint('已取消');
-            var cancelCompressButton = document.getElementById('cancelCompressButton');
-            if(cancelCompressButton) {
-              document.getElementById('compressingDiv').removeChild(cancelCompressButton);
-            }
+            removeElementById('cancelCompressButton', 'compressingDiv');
           } else {
             updateCompressingHint('取消失败，原因：' + returnObject.message);
           }
@@ -189,15 +215,20 @@ function compressFolder() {
             if(returnObject.data.status === 'COMPRESSED') {
               document.getElementById('compressingHint').innerText = '压缩完成';
               document.getElementById('compressingHint').style.display = 'block';
+              removeElementById('download-zip', 'compressingDiv');
+              removeElementById('deleteCompressFileButton', 'compressingDiv');
               var downloadZip = document.createElement('a');
               downloadZip.innerText = '下载压缩文件(zip)';
+              downloadZip.setAttribute('id', 'download-zip');
               downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.path));
-              removeChildrenByIdAndTagName('compressingDiv','a');
               document.getElementById('compressingDiv').appendChild(downloadZip);
-              cancelCompressButton = document.getElementById('cancelCompressButton');
-              if(cancelCompressButton) {
-                document.getElementById('compressingDiv').removeChild(cancelCompressButton);
-              }
+              var deleteCompressFileButton = document.createElement('button');
+              deleteCompressFileButton.innerText = '删除压缩文件';
+              deleteCompressFileButton.setAttribute('id', 'deleteCompressFileButton');
+              deleteCompressFileButton.setAttribute('type', 'button');
+              deleteCompressFileButton.onclick = deleteCompressFile;
+              document.getElementById('compressingDiv').appendChild(deleteCompressFileButton);
+              removeElementById('cancelCompressButton', 'compressingDiv');
             } else if(returnObject.data.status === 'COMPRESSING') {
               document.getElementById('compressingHint').innerText = compressingHintText;
               document.getElementById('compressingHint').style.display = 'block';
@@ -227,6 +258,12 @@ function removeChildrenByIdAndTagName(id,tagName) {
     if(childElement.tagName.toLowerCase() === tagName) {
       document.getElementById(id).removeChild(childElement);
     }
+  }
+}
+function removeElementById(id,parentId) {
+  var element = document.getElementById(id);
+  if(element) {
+    document.getElementById(parentId).removeChild(element);
   }
 }
 function concatUrlForConstant(contextPath, path) {
