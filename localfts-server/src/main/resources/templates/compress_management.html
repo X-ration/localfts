@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>局域网文件传输服务器-全局压缩管理</title>
+    <style>
+        .hidden {
+            display:none;
+        }
+        .show {
+           width:70%;height:auto;margin:5em 15% auto 15%;
+           background-color:white;
+           border-style:solid;border-width:0.05em;
+        }
+        table,th,td {
+            border-style:solid;
+            border-collapse:collapse;
+            border-color:black;
+        }
+        table {
+            border-width:0.1em;
+        }
+        th,td {
+            border-width:0.05em;
+        }
+    </style>
+</head>
+<body>
+<h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
+<hr>
+<br><a th:href="${#request.contextPath}">返回首页</a><br><br>
+<div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
+    <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
+    <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
+        <thead>
+        <tr>
+            <th style="padding-left:2em;padding-right:2em">网卡显示名称</th>
+            <th style="padding-left:2em;padding-right:2em">网卡名称</th>
+            <th style="padding-left:2em;padding-right:2em">Ipv4地址</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item:${serverIpInfo.items}">
+            <td th:text="${item.displayName}">displayName</td>
+            <td th:text="${item.name}">name</td>
+            <td th:text="${{item.addresses}}">addresses</td>
+        </tr>
+        </tbody>
+    </table>
+    <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
+</div>
+<div id="cmDiv">
+    <h4 id="cmHint">统计信息</h4>
+    <table style="text-align:left;border-style:solid;width:100%">
+        <thead>
+        <tr>
+            <th style="width:60%">文件夹</th>
+            <th style="width:10%">压缩状态</th>
+            <th style="width:10%">下载链接</th>
+            <th style="width:10%">提示信息</th>
+            <th style="width:10%">操作</th>
+            <th style="display:none">压缩状态</th>
+        </tr>
+        </thead>
+        <tbody id="tbody">
+        <tr th:each="item:${list}">
+            <td th:text="${item.path}">path</td>
+            <td name="statusDesc" th:text="${item.statusDesc}">status</td>
+            <td name="download">
+                <a name="download-zip" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFilePath}">下载压缩文件(zip)</a>
+            </td>
+            <td name="trHint" th:if="${item.status == 'COMPRESSING' and needSizeCheck}">正在检查文件夹大小并压缩</td>
+            <td name="trHint" th:if="${item.status != 'COMPRESSING' or !needSizeCheck}"></td>
+            <td name="operations">
+                <button name="compressButton" type="button" th:onclick="compressFolder([[${item.path}]],this)">压缩文件夹</button>
+                <button name="cancelCompressButton" type="button" th:if="${item.status == 'COMPRESSING'}" th:onclick="cancelCompress([[${item.path}]],this)">取消压缩</button>
+                <button name="deleteCompressFileButton" type="button" th:if="${item.status == 'COMPRESSED'}" th:onclick="deleteCompressFile([[${item.path}]],this)">删除压缩文件</button>
+            </td>
+            <td name="status" style="display:none" th:text="${item.status}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+<script th:src="${#request.contextPath} + '/json2.min.js'"></script>
+<script type="text/javascript">
+    //deal with serverIpInfo in IE
+    if(!document.getElementById('serverIpInfo').getAttribute("class")) {
+        document.getElementById('serverIpInfoShowButton').onclick = function() {
+            document.getElementById('serverIpInfo').setAttribute('className','show')
+        };
+        document.getElementById('serverIpInfoHideButton').onclick = function() {
+            document.getElementById('serverIpInfo').setAttribute('className','hidden')
+        };
+    }
+</script>
+<script type="text/javascript" th:inline="javascript">
+var contextPath = [[${#request.contextPath}]];
+var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
+var needSizeCheck = [[${needSizeCheck}]];
+//var backgroundEnabled = [[${backgroundEnabled}]];
+var xhrObject = {};
+
+//deal with download-zip
+var downloadZips = document.getElementsByName("download-zip");
+if(!downloadZips) {
+  downloadZips = getElementsByName("a", "download-zip");
+}
+for(var i=0;i<downloadZips.length;i++) {
+  downloadZips[i].setAttribute("href", concatUrlDownload(downloadZips[i].innerText));
+  downloadZips[i].innerText = '下载压缩文件(zip)';
+}
+updateCmHint();
+
+function deleteCompressFile(currentPath,button) {
+  updateCmTrHint('正在删除',button);
+  abortXhr(currentPath);
+  sendPostFormRequest(
+    contextPath + "/deleteCompressFile", // 目标接口 URL
+    "path=" + encodeURIComponent(currentPath), // 表单格式数据
+    true,
+    currentPath,
+    function (xhr) {
+      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
+      // readyState=4 表示请求完成，status=200 表示成功
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          var returnObject = JSON.parse(xhr.responseText);
+          if(returnObject.success) {
+            removeChildrenByTdNameAndTagName(button,'download','a');
+            updateCmTrHint('成功删除压缩文件',button);
+            getTdByName(button,'statusDesc').innerText = '未压缩';
+            getTdByName(button,'status').innerText = 'NOT_COMPRESSED';
+            updateCmHint();
+            removeChildrenByTdNameAndTagName(button,'operations','button','deleteCompressFileButton');
+          } else {
+            updateCmTrHint('删除失败，原因：' + returnObject.message,button);
+          }
+        } else {
+          updateCmTrHint('删除失败，状态码：' + xhr.status,button);
+        }
+      }
+    }
+  );
+}
+
+function cancelCompress(currentPath,button) {
+  updateCmTrHint('正在取消',button);
+  abortXhr(currentPath);
+  sendPostFormRequest(
+    contextPath + "/cancelCompress", // 目标接口 URL
+    "path=" + encodeURIComponent(currentPath), // 表单格式数据
+    true,
+    currentPath,
+    function (xhr) {
+      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
+      // readyState=4 表示请求完成，status=200 表示成功
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          var returnObject = JSON.parse(xhr.responseText);
+          if(returnObject.success) {
+            updateCmTrHint('已取消',button);
+            getTdByName(button,'statusDesc').innerText = '未压缩';
+            getTdByName(button,'status').innerText = 'NOT_COMPRESSED';
+            updateCmHint();
+            removeChildrenByTdNameAndTagName(button,'operations','button','cancelCompressButton');
+          } else {
+            updateCmTrHint('取消失败，原因：' + returnObject.message,button);
+          }
+        } else {
+          updateCmTrHint('取消失败，状态码：' + xhr.status,button);
+        }
+      }
+    }
+  );
+}
+
+function updateCmTrHint(text,button) {
+  var tr = button.parentElement.parentElement;
+  var trChildren = tr.children;
+  for(var i=0;i<trChildren.length;i++) {
+    var td = trChildren[i];
+    if(td.getAttribute('name') === 'trHint') {
+      td.innerText = text;
+      return;
+    }
+  }
+}
+
+function updateCmHint() {
+  var tbody = document.getElementById('tbody');
+  var tbodyChildren = tbody.children;
+  var totalCounter = tbodyChildren.length;
+  var notCompressedCounter = 0, compressingCounter = 0, compressedCounter = 0;
+  for(var i=0;i<tbodyChildren.length;i++) {
+    var tr = tbodyChildren[i];
+    var trChildren = tr.children;
+    for(var j=0;j<trChildren.length;j++) {
+      var td = trChildren[j];
+      if(td.getAttribute('name') === 'status') {
+        var status = td.innerText;
+        switch(status) {
+          case 'NOT_COMPRESSED':
+            notCompressedCounter++;
+            break;
+          case 'COMPRESSING':
+            compressingCounter++;
+            break;
+          case 'COMPRESSED':
+            compressedCounter++;
+            break;
+          default:
+            if(window.console) {
+              console.error('Unknown status:' + status);
+            }
+            break;
+        }
+        break;
+      }
+    }
+  }
+  var text = '共' + totalCounter + '个压缩任务，其中压缩完成' + compressedCounter +
+    '个，压缩中' + compressingCounter + '个，未压缩' + notCompressedCounter + '个。';
+  document.getElementById('cmHint').innerText = text;
+  document.getElementById('cmHint').style.display = 'block';
+}
+
+function compressFolder(currentPath,button) {
+  var compressingHintText = needSizeCheck ? '正在检查文件夹大小并压缩' : '正在压缩';
+  var compressingWaitingHintText = compressingHintText + '(等待请求完成...)';
+  updateCmTrHint(compressingWaitingHintText,button);
+  removeChildrenByTdNameAndTagName(button,'download','a');
+  getTdByName(button,'statusDesc').innerText = '压缩中';
+  getTdByName(button,'status').innerText = 'COMPRESSING';
+  updateCmHint();
+  var cancelCompressButton = getChildElementByTagNameAndName(button.parentElement,'button','cancelCompressButton');
+  if(!cancelCompressButton) {
+    cancelCompressButton = document.createElement('button');
+    cancelCompressButton.innerText = '取消压缩';
+    cancelCompressButton.setAttribute('name', 'cancelCompressButton');
+    cancelCompressButton.setAttribute('type', 'button');
+    cancelCompressButton.onclick = function() {
+      cancelCompress(currentPath,cancelCompressButton);
+    };
+    button.parentElement.appendChild(cancelCompressButton);
+  }
+  abortXhr(currentPath);
+  sendPostFormRequest(
+    contextPath + "/compressFolder", // 目标接口 URL
+    "path=" + encodeURIComponent(currentPath), // 表单格式数据
+    true,
+    currentPath,
+    function (xhr) {
+      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
+      // readyState=4 表示请求完成，status=200 表示成功
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          var returnObject = JSON.parse(xhr.responseText);
+          if(window.console) {
+            console.log(returnObject);
+          }
+          if(returnObject.success) {
+            getTdByName(button,'status').innerText = returnObject.data.status;
+            updateCmHint();
+            if(returnObject.data.status === 'COMPRESSED') {
+              getTdByName(button,'statusDesc').innerText = '已压缩';
+              updateCmTrHint('压缩完成',button);
+              removeChildrenByTdNameAndTagName(button,'operations','button','deleteCompressFileButton');
+              var downloadZip = document.createElement('a');
+              downloadZip.innerText = '下载压缩文件(zip)';
+              downloadZip.setAttribute('name', 'download-zip');
+              downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.zipFilePath));
+              getTdByName(button,'download').appendChild(downloadZip);
+              var deleteCompressFileButton = document.createElement('button');
+              deleteCompressFileButton.innerText = '删除压缩文件';
+              deleteCompressFileButton.setAttribute('name', 'deleteCompressFileButton');
+              deleteCompressFileButton.setAttribute('type', 'button');
+              deleteCompressFileButton.onclick = function() {
+                deleteCompressFile(currentPath,deleteCompressFileButton);
+              };
+              getTdByName(button,'operations').appendChild(deleteCompressFileButton);
+              removeChildrenByTdNameAndTagName(button,'operations','button','cancelCompressButton');
+            } else if(returnObject.data.status === 'COMPRESSING') {
+              getTdByName(button,'statusDesc').innerText = '压缩中';
+              updateCmTrHint(compressingHintText,button);
+            } else {
+              getTdByName(button,'statusDesc').innerText = '非法状态';
+              updateCmTrHint('非法状态',button);
+            }
+          } else {
+            getTdByName(button,'status').innerText = 'NOT_COMPRESSED';
+            getTdByName(button,'statusDesc').innerText = '未压缩';
+            updateCmHint();
+            updateCmTrHint('压缩失败，原因：' + returnObject.message,button);
+          }
+        } else {
+          getTdByName(button,'status').innerText = 'NOT_COMPRESSED';
+          getTdByName(button,'statusDesc').innerText = '未压缩';
+          updateCmHint();
+          updateCmTrHint('压缩失败，状态码：' + xhr.status,button);
+          if(window.console) {
+            console.error("请求失败，状态码：", xhr.status);
+          }
+        }
+      }
+    }
+  );
+}
+function getChildElementByTagNameAndName(parentElement,tagName,name) {
+  var children = parentElement.children;
+  for(var i=0;i<children.length;i++) {
+    var childElement = children[i];
+    if(childElement.tagName.toLowerCase() === tagName && childElement.getAttribute('name') === name) {
+      return childElement;
+    }
+  }
+  return null;
+}
+function removeChildrenByTdNameAndTagName(button,tdName,tagName,name) {
+  var trChildren = button.parentElement.parentElement.children;
+  for(var i=0;i<trChildren.length;i++) {
+    var td = trChildren[i];
+    if(td.getAttribute('name') === tdName) {
+      var tdChildren = td.children;
+      for(var j=0;j<tdChildren.length;j++) {
+        var childElement = tdChildren[j];
+        if(childElement.tagName.toLowerCase() === tagName) {
+          if(name === undefined || childElement.getAttribute('name') === name) {
+            td.removeChild(childElement);
+          }
+        }
+      }
+    }
+  }
+}
+function removeElementById(id,parentId) {
+  var element = document.getElementById(id);
+  if(element) {
+    document.getElementById(parentId).removeChild(element);
+  }
+}
+function getParentTr(button) {
+  return button.parentElement.parentElement;
+}
+function getTdByName(button,tdName) {
+  var tr = getParentTr(button);
+  var trChildren = tr.children;
+  for(var i=0;i<trChildren.length;i++) {
+    var td = trChildren[i];
+    if(td.getAttribute('name') === tdName) {
+      return td;
+    }
+  }
+}
+function concatUrlForConstant(contextPath, path) {
+  return contextPath + path;
+}
+function concatUrlDownload(fileName) {
+  return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
+}
+//for IE, not supporting document.getElementsByName
+function getElementsByName(tagName, name) {
+  var collection = document.getElementsByTagName(tagName);
+  var result = [];
+  if(!collection) {
+    var children = collection.children;
+    for(var i=0;i<children.length;i++) {
+      if(children[i].getAttribute("name") == name) {
+        result[result.length] = children[i];
+      }
+    }
+  }
+  return result;
+}
+// 创建 XMLHttpRequest 对象（兼容 IE6）
+function createXHR() {
+  //保存全局引用
+  var xhr;
+  // 现代浏览器及 IE7+ 支持原生 XMLHttpRequest
+  if (window.XMLHttpRequest) {
+    xhr = new XMLHttpRequest();
+  } else {
+    // IE6 及更早版本不支持原生 XMLHttpRequest，需使用 ActiveXObject
+    try {
+      xhr = new ActiveXObject("Microsoft.XMLHTTP"); // IE6 常用的 ActiveX 控件
+    } catch (e) {
+      console.error("无法创建 XMLHttpRequest 对象（不支持的浏览器）");
+      return null;
+    }
+  }
+  return xhr;
+}
+
+// 发送 POST 请求
+function sendPostFormRequest(url, data, isAsync, xhrKey, func) {
+  var xhr = createXHR();
+  if (!xhr) return;
+
+  xhrObject[xhrKey] = xhr;
+
+  // 监听请求状态变化
+  xhr.onreadystatechange = function() {
+    func(xhr);
+  };
+
+  // 初始化请求（POST 方法，目标 URL，异步请求）
+  xhr.open("POST", url, isAsync);
+
+  // 设置请求头：POST 请求需指定 Content-Type，否则服务器可能无法解析数据
+  // 表单格式数据通常用 application/x-www-form-urlencoded
+  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+  // 发送数据（格式为 key=value&key2=value2，与表单提交格式一致）
+  xhr.send(data);
+}
+function abortXhr(xhrKey) {
+  var xhr = xhrObject[xhrKey];
+  if(xhr && xhr.readyState != 4) {
+     xhr.abort();
+  }
+}
+</script>
+</html>

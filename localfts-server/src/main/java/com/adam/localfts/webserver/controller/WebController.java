@@ -53,6 +53,30 @@ public class WebController {
         return "list";
     }
 
+    /**
+     * 全局压缩管理页面
+     * @param model
+     * @return
+     */
+    @GetMapping("/compressManagement")
+    public String compressManagement(Model model) {
+        List<FolderCompressData> list = ftsService.listCompressTask();
+        model.addAttribute("list", list);
+        boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
+        model.addAttribute("needSizeCheck", needSizeCheck);
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
+        String serverTime = Util.getServerTimeFormattedString();
+        model.addAttribute("serverTime", serverTime);
+        return "compress_management";
+    }
+
+    /**
+     * 文件夹压缩管理页面
+     * @param relativePath
+     * @param model
+     * @return
+     */
     @GetMapping("/compressFolder")
     public String compressFolder(@RequestParam(value = "path") String relativePath, Model model) {
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
@@ -66,7 +90,7 @@ public class WebController {
             FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
             model.addAttribute("compressStatus", compressStatus.name());
             if(compressStatus == FolderCompressStatus.COMPRESSED) {
-                String zipFileRelativePath = ftsService.getFolderCompressedZipRelativePath(relativePath);
+                String zipFileRelativePath = ftsService.getFolderCompressedZipRelativePath(relativePath, false);
                 model.addAttribute("compressedFilePath", zipFileRelativePath);
             }
             boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;

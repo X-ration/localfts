@@ -33,6 +33,8 @@
 * 支持在压缩文件夹前检查文件夹大小是否小于指定值(`localfts.zip.max-folder-size`控制)，若小于则不进行压缩（存在性能问题）
 * 后台压缩开关(`localfts.zip.background-enabled`控制)，开启时：允许在退出压缩页面后继续压缩操作，更消耗服务器性能
 * 支持取消压缩任务、删除压缩文件
+* 增加全局压缩管理页面
+  ![localfts-server.1.1.0-global-cm-page.png](readme/localfts-server.1.1.0-global-cm-page.png)
 ### 优化
 * 改进了上传页面，当请求路径不存在时页面给予友好提示
 * 列表页面生成可点击链接时不再硬编码，而是根据配置的context-path拼接链接

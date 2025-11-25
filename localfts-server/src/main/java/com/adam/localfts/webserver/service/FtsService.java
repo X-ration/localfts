@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import static com.adam.localfts.webserver.common.Constants.CRLF;
 import static com.adam.localfts.webserver.common.Constants.DATE_FORMAT_FILE_STANDARD;
@@ -131,6 +132,28 @@ public class FtsService implements DisposableBean {
         }
     }
 
+    public List<FolderCompressData> listCompressTask() {
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        return folderCompressingInfoMap.entrySet().stream()
+                .map(entry -> {
+                    String folderAbsolutePath = entry.getKey();
+                    FolderCompressingInfo folderCompressingInfo = entry.getValue();
+                    String relativePath = folderAbsolutePath.substring(rootPath.length());
+                    if(Util.isSystemWindows()) {
+                        relativePath = relativePath.replaceAll("\\\\", "/");
+                    }
+                    FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
+                    FolderCompressData folderCompressData = new FolderCompressData();
+                    String zipFileRelativePath = getFolderCompressedZipRelativePath(folderAbsolutePath, true);
+                    folderCompressData.setPath(relativePath);
+                    folderCompressData.setStatus(folderCompressStatus.name());
+                    folderCompressData.setStatusDesc(folderCompressStatus.getDesc());
+                    folderCompressData.setZipFilePath(zipFileRelativePath);
+                    return folderCompressData;
+                })
+                .collect(Collectors.toList());
+    }
+
     /**
      * 下载文件夹（zip压缩文件）
      * @param relativePath 相对于根路径的相对路径
@@ -173,24 +196,27 @@ public class FtsService implements DisposableBean {
                 lock.lock();
                 if (!zipFile.exists()) {
                     needCompress = true;
-                    folderCompressingInfoMap.put(zipFileAbsolutePath, new FolderCompressingInfo(-1L));
-                    FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(zipFileAbsolutePath);
-                    folderCompressingInfo.setCompressSize(-1L);
+                    FolderCompressingInfo folderCompressingInfo = new FolderCompressingInfo(-1L);
+                    folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
                     IOUtil.compressFolderAsZip(folderAbsolutePath, zipFolderPath, zipFileName);
+                    folderCompressingInfo.setCompressSize(zipFile.length());
+                    folderCompressingInfo.setExecuteThread(null);
+                    if(!folderCompressingInfoMap.containsKey(folderAbsolutePath)) {
+                        LOGGER.warn("FolderCompressingInfo {} has been removed", zipFileAbsolutePath);
+                        folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
+                    }
                 }
             } catch (InterruptedException e) {
                 interrupted = true;
-                LOGGER.warn("interrupt folder compressing:{} -- delete zip file:{}", folderAbsolutePath, zipFileAbsolutePath);
+                LOGGER.info("interrupt folder compressing:{} -- delete zip file:{}", folderAbsolutePath, zipFileAbsolutePath);
                 boolean deletes = zipFile.delete();
                 if(!deletes) {
                     LOGGER.warn("delete zip file failed:{}", zipFileAbsolutePath);
                 } else {
                     LOGGER.info("successfully deleted zip file:{}", zipFileAbsolutePath);
                 }
+                folderCompressingInfoMap.remove(folderAbsolutePath);
             } finally {
-                FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(zipFileAbsolutePath);
-                folderCompressingInfo.setCompressSize(zipFile.length());
-                folderCompressingInfo.setExecuteThread(null);
                 lock.unlock();
             }
         }
@@ -202,11 +228,14 @@ public class FtsService implements DisposableBean {
             LOGGER.info("压缩文件夹（路径：{}）{}，压缩文件路径：{}，耗时{}毫秒", folderAbsolutePath, statusMessage, zipFileAbsolutePath, end - start);
         }
         if(folderCompressStatus == FolderCompressStatus.NOT_COMPRESSED) {
-            return ReturnObject.fail("未知原因");
+            String reason = interrupted ? "压缩任务被取消" : "未知原因";
+            return ReturnObject.fail(reason);
         } else {
             FolderCompressData data = new FolderCompressData();
             if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
-                data.setPath(zipFileRelativePath);
+//                data.setPath(zipFileRelativePath);
+                data.setPath(relativePath);
+                data.setZipFilePath(zipFileRelativePath);
             }
             data.setStatus(folderCompressStatus.name());
             return ReturnObject.success(data);
@@ -219,14 +248,8 @@ public class FtsService implements DisposableBean {
         String actualFolderPath = rootPath + relativePath;
         File folderFile = new File(actualFolderPath);
         String folderAbsolutePath = folderFile.getAbsolutePath();
-        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
-        String zipFileParentRelativePath = zipFolderPath.substring(rootPath.length());
-        String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
 
-        File rootPathFile = new File(rootPath);
-        File zipFile = new File(rootPathFile, zipFileRelativePath);
-        String zipFileAbsolutePath = zipFile.getAbsolutePath();
-        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(zipFileAbsolutePath);
+        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
         if(folderCompressingInfo == null) {
             return ReturnObject.fail("文件夹未在压缩");
         }
@@ -251,36 +274,43 @@ public class FtsService implements DisposableBean {
 
         File rootPathFile = new File(rootPath);
         File zipFile = new File(rootPathFile, zipFileRelativePath);
-        String zipFileAbsolutePath = zipFile.getAbsolutePath();
-        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(zipFileAbsolutePath);
+        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
         if(folderCompressingInfo == null) {
-            return ReturnObject.fail("文件夹未在压缩");
+            LOGGER.warn("folder {} zip task does not exist, no need to delete", folderAbsolutePath);
+            return ReturnObject.success();
         }
 
         FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath, false);
+        boolean interrupt = false;
         if(folderCompressStatus == FolderCompressStatus.COMPRESSING) {
-            if(!folderCompressingInfo.interruptThread()) {
+            interrupt = folderCompressingInfo.interruptThread();
+            if(!interrupt) {
                 return ReturnObject.fail("取消压缩任务失败");
             }
         }
 
         if(!zipFile.exists()) {
-            return ReturnObject.fail("压缩文件不存在");
+            LOGGER.warn("(folder={})zip file {} does not exist, no need to delete", folderAbsolutePath, zipFile.getAbsolutePath());
+            return ReturnObject.success();
         }
 
         boolean deletes = zipFile.delete();
         if(deletes) {
+            folderCompressingInfoMap.remove(folderAbsolutePath);
             return ReturnObject.success();
         } else {
-            return ReturnObject.fail("未知原因");
+            return ReturnObject.fail("文件可能正在被占用");
         }
     }
 
-    public String getFolderCompressedZipRelativePath(String relativePath) {
+    public String getFolderCompressedZipRelativePath(String path, boolean isAbsolute) {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         long start = System.currentTimeMillis();
-        String actualFolderPath = rootPath + relativePath;
+        String actualFolderPath = path;
+        if(!isAbsolute) {
+            actualFolderPath = rootPath + path;
+        }
         File folderFile = new File(actualFolderPath);
         Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
 
@@ -318,11 +348,10 @@ public class FtsService implements DisposableBean {
         File zipFile = new File(rootPathFile, zipFileRelativePath);
         boolean zipFileExists = zipFile.exists();
 
-        String zipFileAbsolutePath = zipFile.getAbsolutePath();
         if(!zipFileExists) {
             return FolderCompressStatus.NOT_COMPRESSED;
         } else {
-            FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(zipFileAbsolutePath);
+            FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
             long recordSize = folderCompressingInfo != null ? folderCompressingInfo.getCompressSize() : -1L;
             long zipFileSize = zipFile.length();
             if(recordSize == zipFileSize) {
