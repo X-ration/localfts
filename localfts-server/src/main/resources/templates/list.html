@@ -83,7 +83,7 @@
                     <a name="download-folder" th:if="${ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedPath}">下载文件夹(zip)</a>
                 </td>
             </tr>
-            <tr th:if="${item.directory}" th:each="item:${ftsPage.fileList}">
+            <tr th:if="${item.directory}" th:each="item:${ftsPage.data}">
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
                 <td>文件夹</td>
                 <td>-</td>
@@ -96,7 +96,7 @@
                     </a>
                 </td>
             </tr>
-            <tr th:if="!${item.directory}" th:each="item:${ftsPage.fileList}">
+            <tr th:if="!${item.directory}" th:each="item:${ftsPage.data}">
                 <td th:text="${item.fileName}">fileName</td>
                 <td>文件</td>
                 <td th:text="${item.fileSizeStr}">0</td>

@@ -76,7 +76,7 @@ public class FtsService implements DisposableBean {
             model.setCurrentSize(0);
             model.setTotalPage(0);
             model.setTotalSize(0);
-            model.setFileList(null);
+            model.setData(null);
             return model;
         }
         int totalSize = items.length, totalPage = totalSize / pageSize + 1;
@@ -110,7 +110,7 @@ public class FtsService implements DisposableBean {
                 fileModels.add(fileModel);
             }
         }
-        model.setFileList(fileModels);
+        model.setData(fileModels);
         return model;
     }
 

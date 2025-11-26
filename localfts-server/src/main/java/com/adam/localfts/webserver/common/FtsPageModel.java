@@ -3,19 +3,11 @@ package com.adam.localfts.webserver.common;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
-public class FtsPageModel {
+public class FtsPageModel extends PageObject<FtsPageModel.FtsPageFileModel> {
     private String path;
-    private int pageSize;
-    private int currentPage;
-    private int currentSize;
-    private int totalPage;
-    private int totalSize;
     private FtsPageFileModel currentPathModel;
-    private List<FtsPageFileModel> fileList;
 
     @Getter
     @Setter
