@@ -79,11 +79,12 @@ public class FtsService implements DisposableBean {
             model.setData(null);
             return model;
         }
-        int totalSize = items.length, totalPage = totalSize / pageSize + 1;
+        int totalSize = items.length, totalPage = totalSize / pageSize + (totalSize % pageSize > 0 ? 1 : 0);
         model.setTotalSize(totalSize);
         model.setTotalPage(totalPage);
         if(pageNo > totalPage) {
             model.setCurrentSize(0);
+            model.setData(null);
             return model;
         }
 
@@ -132,9 +133,10 @@ public class FtsService implements DisposableBean {
         }
     }
 
-    public List<FolderCompressData> listCompressTask() {
+    public CompressManagementPageModel listCompressTask(int pageNo, int pageSize) {
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
-        return folderCompressingInfoMap.entrySet().stream()
+        FolderCompressCounter counter = new FolderCompressCounter();
+        List<FolderCompressData> allList = folderCompressingInfoMap.entrySet().stream()
                 .map(entry -> {
                     String folderAbsolutePath = entry.getKey();
                     FolderCompressingInfo folderCompressingInfo = entry.getValue();
@@ -143,6 +145,7 @@ public class FtsService implements DisposableBean {
                         relativePath = relativePath.replaceAll("\\\\", "/");
                     }
                     FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
+                    counter.countFolder(folderCompressStatus);
                     FolderCompressData folderCompressData = new FolderCompressData();
                     String zipFileRelativePath = getFolderCompressedZipRelativePath(folderAbsolutePath, true);
                     folderCompressData.setPath(relativePath);
@@ -152,6 +155,12 @@ public class FtsService implements DisposableBean {
                     return folderCompressData;
                 })
                 .collect(Collectors.toList());
+        CompressManagementPageModel pageModel = new CompressManagementPageModel(pageNo, pageSize, allList);
+        pageModel.setTotalCount(counter.getTotalCount());
+        pageModel.setNotCompressedCount(counter.getNotCompressedCount());
+        pageModel.setCompressingCount(counter.getCompressingCount());
+        pageModel.setCompressedCount(counter.getCompressedCount());
+        return pageModel;
     }
 
     /**

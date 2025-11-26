@@ -121,9 +121,12 @@
         <form th:action="@{'/list'}" enctype="application/x-www-form-urlencoded">
             <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
             <input type="hidden" name="path" th:value="${ftsPage.path}">
+            <label for="page-no">页数:</label>
             <input type="text" size="2" id="page-no" name="pageNo" th:value="${ftsPage.currentPage}">
+            <label for="page-size-select">每页数量:</label>
             <select name="pageSize" id="page-size-select">
                 <option value="10">10</option>
+                <option value="15">15</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
             </select>

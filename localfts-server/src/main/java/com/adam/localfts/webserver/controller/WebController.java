@@ -42,6 +42,12 @@ public class WebController {
         model.addAttribute("currentPath", relativePath);
         boolean directoryExists = ftsService.checkDirectoryExists(relativePath);
         model.addAttribute("directoryExists", directoryExists);
+        if(pageNo <= 0) {
+            pageNo = 1;
+        }
+        if(pageSize <= 0) {
+            pageSize = 20;
+        }
         if(directoryExists) {
             FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
             model.addAttribute("ftsPage", ftsPageModel);
@@ -59,9 +65,15 @@ public class WebController {
      * @return
      */
     @GetMapping("/compressManagement")
-    public String compressManagement(Model model) {
-        List<FolderCompressData> list = ftsService.listCompressTask();
-        model.addAttribute("list", list);
+    public String compressManagement(@RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "10") int pageSize, Model model) {
+        if(pageNo <= 0) {
+            pageNo = 1;
+        }
+        if(pageSize <= 0) {
+            pageSize = 10;
+        }
+        CompressManagementPageModel list = ftsService.listCompressTask(pageNo, pageSize);
+        model.addAttribute("pagedList", list);
         boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
         model.addAttribute("needSizeCheck", needSizeCheck);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
