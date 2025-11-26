@@ -56,7 +56,7 @@
         <tr>
             <th style="width:60%">文件夹</th>
             <th style="width:10%">压缩状态</th>
-            <th style="width:10%">下载链接</th>
+            <th style="width:10%">链接</th>
             <th style="width:10%">提示信息</th>
             <th style="width:10%">操作</th>
             <th style="display:none">压缩状态</th>
@@ -66,7 +66,8 @@
         <tr th:each="item:${list}">
             <td th:text="${item.path}">path</td>
             <td name="statusDesc" th:text="${item.statusDesc}">status</td>
-            <td name="download">
+            <td name="links">
+                <a name="compress-folder" th:text="${item.path}">压缩管理</a>
                 <a name="download-zip" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFilePath}">下载压缩文件(zip)</a>
             </td>
             <td name="trHint" th:if="${item.status == 'COMPRESSING' and needSizeCheck}">正在检查文件夹大小并压缩</td>
@@ -97,6 +98,7 @@
 <script type="text/javascript" th:inline="javascript">
 var contextPath = [[${#request.contextPath}]];
 var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
+var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
 var needSizeCheck = [[${needSizeCheck}]];
 //var backgroundEnabled = [[${backgroundEnabled}]];
 var xhrObject = {};
@@ -109,6 +111,15 @@ if(!downloadZips) {
 for(var i=0;i<downloadZips.length;i++) {
   downloadZips[i].setAttribute("href", concatUrlDownload(downloadZips[i].innerText));
   downloadZips[i].innerText = '下载压缩文件(zip)';
+}
+//deal with compress-folder
+var compressFolders = document.getElementsByName("compress-folder");
+if(!compressFolders) {
+  compressFolders = getElementsByName("a", "compress-folder");
+}
+for(var i=0;i<compressFolders.length;i++) {
+  compressFolders[i].setAttribute("href", concatUrlCompressFolder(compressFolders[i].innerText));
+  compressFolders[i].innerText = '压缩管理';
 }
 updateCmHint();
 
@@ -127,7 +138,7 @@ function deleteCompressFile(currentPath,button) {
         if (xhr.status === 200) {
           var returnObject = JSON.parse(xhr.responseText);
           if(returnObject.success) {
-            removeChildrenByTdNameAndTagName(button,'download','a');
+            removeChildrenByTdNameAndTagName(button,'links','a','download-zip');
             updateCmTrHint('成功删除压缩文件',button);
             getTdByName(button,'statusDesc').innerText = '未压缩';
             getTdByName(button,'status').innerText = 'NOT_COMPRESSED';
@@ -229,7 +240,7 @@ function compressFolder(currentPath,button) {
   var compressingHintText = needSizeCheck ? '正在检查文件夹大小并压缩' : '正在压缩';
   var compressingWaitingHintText = compressingHintText + '(等待请求完成...)';
   updateCmTrHint(compressingWaitingHintText,button);
-  removeChildrenByTdNameAndTagName(button,'download','a');
+  removeChildrenByTdNameAndTagName(button,'links','a','download-zip');
   getTdByName(button,'statusDesc').innerText = '压缩中';
   getTdByName(button,'status').innerText = 'COMPRESSING';
   updateCmHint();
@@ -270,7 +281,7 @@ function compressFolder(currentPath,button) {
               downloadZip.innerText = '下载压缩文件(zip)';
               downloadZip.setAttribute('name', 'download-zip');
               downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.zipFilePath));
-              getTdByName(button,'download').appendChild(downloadZip);
+              getTdByName(button,'links').appendChild(downloadZip);
               var deleteCompressFileButton = document.createElement('button');
               deleteCompressFileButton.innerText = '删除压缩文件';
               deleteCompressFileButton.setAttribute('name', 'deleteCompressFileButton');
@@ -357,6 +368,9 @@ function concatUrlForConstant(contextPath, path) {
 }
 function concatUrlDownload(fileName) {
   return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
+}
+function concatUrlCompressFolder(path) {
+  return URL_COMPRESS_FOLDER + "?path=" + encodeURIComponent(path);
 }
 //for IE, not supporting document.getElementsByName
 function getElementsByName(tagName, name) {
