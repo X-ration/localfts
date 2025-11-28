@@ -68,6 +68,7 @@
             <td th:text="${item.path}">path</td>
             <td name="statusDesc" th:text="${item.statusDesc}">status</td>
             <td name="links">
+                <a name="visit-directory" th:text="${item.path}">访问目录</a>
                 <a name="compress-folder" th:text="${item.path}">压缩管理</a>
                 <a name="download-zip" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFilePath}">下载压缩文件(zip)</a>
             </td>
@@ -125,6 +126,7 @@ var contextPath = [[${#request.contextPath}]];
 var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
 var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
 var URL_COMPRESS_MANAGEMENT = concatUrlForConstant(contextPath, '/compressManagement');
+var URL_LIST = concatUrlForConstant(contextPath, '/list');
 var needSizeCheck = [[${needSizeCheck}]];
 //var backgroundEnabled = [[${backgroundEnabled}]];
 var xhrObject = {};
@@ -150,6 +152,15 @@ if(!compressFolders) {
 for(var i=0;i<compressFolders.length;i++) {
   compressFolders[i].setAttribute("href", concatUrlCompressFolder(compressFolders[i].innerText));
   compressFolders[i].innerText = '压缩管理';
+}
+//deal with visit-directory
+var visitDirectories = document.getElementsByName("visit-directory");
+if(!visitDirectories) {
+  visitDirectories = getElementsByName("a", "visit-directory");
+}
+for(var i=0;i<visitDirectories.length;i++) {
+  visitDirectories[i].setAttribute("href", concatUrlList(visitDirectories[i].innerText));
+  visitDirectories[i].innerText = '访问目录';
 }
 updateCmHint();
 updateCmPageHint();
@@ -489,6 +500,16 @@ function getTdByName(button,tdName) {
 }
 function concatUrlForConstant(contextPath, path) {
   return contextPath + path;
+}
+function concatUrlList(path, pageNo, pageSize) {
+  var url = URL_LIST + "?path=" + encodeURIComponent(path);
+  if(pageNo !== undefined) {
+    url = url + '&pageNo=' + pageNo;
+  }
+  if(pageSize !== undefined) {
+    url = url + '&pageSize=' + pageSize;
+  }
+  return url;
 }
 function concatUrlDownload(fileName) {
   return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);

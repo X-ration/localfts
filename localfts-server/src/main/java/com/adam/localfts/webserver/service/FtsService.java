@@ -260,7 +260,8 @@ public class FtsService implements DisposableBean {
 
         FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
         if(folderCompressingInfo == null) {
-            return ReturnObject.fail("文件夹未在压缩");
+            LOGGER.warn("FolderCompressingInfo not found for {}, no need to cancel", folderAbsolutePath);
+            return ReturnObject.success();
         }
 
         boolean interrupt = folderCompressingInfo.interruptThread();

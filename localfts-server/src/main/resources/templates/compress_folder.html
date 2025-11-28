@@ -28,7 +28,7 @@
 <body>
 <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
 <hr>
-<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><br><br>
+<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" id="visit-directory" th:text="${currentPath}">访问目录</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><br><br>
 <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
     <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
     <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
@@ -79,10 +79,15 @@
 var contextPath = [[${#request.contextPath}]];
 var currentPath = [[${currentPath}]];
 var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
+var URL_LIST = concatUrlForConstant(contextPath, '/list');
 var compressStatus = [[${compressStatus}]];
 var needSizeCheck = [[${needSizeCheck}]];
 var backgroundEnabled = [[${backgroundEnabled}]];
 var xhr = null;
+
+var visitDirectory = document.getElementById("visit-directory");
+visitDirectory.setAttribute('href', concatUrlList(visitDirectory.innerText));
+visitDirectory.innerText = '访问目录';
 
 if(compressStatus === 'COMPRESSED') {
   var downloadZip = document.getElementById("download-zip");
@@ -187,7 +192,7 @@ function compressFolder() {
   var compressingHintText = needSizeCheck ? '正在检查文件夹大小并压缩' : '正在压缩';
   var compressingWaitingHintText = compressingHintText + '(等待请求完成...)';
   updateCompressingHint(compressingWaitingHintText);
-  removeChildrenByIdAndTagName('compressingDiv','a');
+  removeElementById('download-zip', 'compressingDiv');
   var cancelCompressButton = document.getElementById('cancelCompressButton');
   if(!cancelCompressButton) {
     cancelCompressButton = document.createElement('button');
@@ -263,6 +268,16 @@ function removeElementById(id,parentId) {
 }
 function concatUrlForConstant(contextPath, path) {
   return contextPath + path;
+}
+function concatUrlList(path, pageNo, pageSize) {
+  var url = URL_LIST + "?path=" + encodeURIComponent(path);
+  if(pageNo !== undefined) {
+    url = url + '&pageNo=' + pageNo;
+  }
+  if(pageSize !== undefined) {
+    url = url + '&pageSize=' + pageSize;
+  }
+  return url;
 }
 function concatUrlDownload(fileName) {
   return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
