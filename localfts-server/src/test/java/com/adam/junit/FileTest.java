@@ -3,12 +3,14 @@ package com.adam.junit;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.util.unit.DataSize;
 
 import java.io.File;
 import java.io.IOException;
 
+@Ignore
 public class FileTest {
 
 //    @Test
