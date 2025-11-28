@@ -1,6 +1,7 @@
 package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.*;
+import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
@@ -38,6 +39,8 @@ public class FtsService implements DisposableBean {
     private FtsServerConfigService ftsServerConfigService;
     @Value("${server.error.path:${error.path:/error}}")
     private String errorPath;
+    @Autowired
+    private ShutdownListener shutdownListener;
 
     private final Map<String, ReentrantLock> zipFileLockMap = new ConcurrentHashMap<>();
     private final Map<String, FolderCompressingInfo> folderCompressingInfoMap = new ConcurrentHashMap<>();
@@ -670,18 +673,20 @@ public class FtsService implements DisposableBean {
 
     @Override
     public void destroy() throws Exception {
-        //清理压缩文件夹
-        Boolean deleteOnExit = ftsServerConfigService.getLocalFtsProperties().getZip().getDeleteOnExit();
-        if(deleteOnExit != null && deleteOnExit) {
-            String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
-            File zipFolderFile = new File(zipFolderPath);
-            if (zipFolderFile.exists() && zipFolderFile.isDirectory()) {
+        if(shutdownListener.getWebServer() != null) {
+            //清理压缩文件夹
+            Boolean deleteOnExit = ftsServerConfigService.getLocalFtsProperties().getZip().getDeleteOnExit();
+            if (deleteOnExit != null && deleteOnExit) {
+                String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+                File zipFolderFile = new File(zipFolderPath);
+                if (zipFolderFile.exists() && zipFolderFile.isDirectory()) {
 //                FileUtils.deleteDirectory(zipFolderFile);
-                LOGGER.info("Deleting zip file folder {}", zipFolderPath);
-                IOUtil.deleteDirectory(zipFolderPath, true);
-            } else if (zipFolderFile.exists()) {
-                LOGGER.info("Deleting zip file {}", zipFolderPath);
-                zipFolderFile.delete();
+                    LOGGER.info("Deleting zip file folder {}", zipFolderPath);
+                    IOUtil.deleteDirectory(zipFolderPath, true);
+                } else if (zipFolderFile.exists()) {
+                    LOGGER.info("Deleting zip file {}", zipFolderPath);
+                    zipFolderFile.delete();
+                }
             }
         }
     }

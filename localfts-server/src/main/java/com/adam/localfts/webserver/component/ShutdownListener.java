@@ -31,26 +31,32 @@ public class ShutdownListener implements ApplicationListener<ContextClosedEvent>
         logger.debug("Injected WebServer {}", this.webServer);
     }
 
+    public WebServer getWebServer() {
+        return webServer;
+    }
+
     @Override
     public void onApplicationEvent(ContextClosedEvent event) {
-        logger.debug("Preparing shutdown");
-        TomcatWebServer tomcatWebServer = (TomcatWebServer) webServer;
-        for (Connector connector : tomcatWebServer.getTomcat().getService().findConnectors()) {
-            Executor executor = connector.getProtocolHandler().getExecutor();
-            if (executor instanceof ExecutorService) {
-                ExecutorService executorService = (ExecutorService) executor;
-                logger.debug("Preparing force shutdown connector={},executorService={}", connector, executorService);
-                executorService.shutdownNow();
-            } else {
-                logger.warn("failed to shutdown executor,connector={},executor={}", connector, executor);
+        if(webServer != null) {
+            logger.debug("Preparing shutdown");
+            TomcatWebServer tomcatWebServer = (TomcatWebServer) webServer;
+            for (Connector connector : tomcatWebServer.getTomcat().getService().findConnectors()) {
+                Executor executor = connector.getProtocolHandler().getExecutor();
+                if (executor instanceof ExecutorService) {
+                    ExecutorService executorService = (ExecutorService) executor;
+                    logger.debug("Preparing force shutdown connector={},executorService={}", connector, executorService);
+                    executorService.shutdownNow();
+                } else {
+                    logger.warn("failed to shutdown executor,connector={},executor={}", connector, executor);
+                }
             }
-        }
 //
 //        try {
 //            ftsService.shutdown();
 //        } catch (Exception e) {
 //            logger.warn("failed to shutdown FtsService:{} {}", e.getClass(), e.getMessage());
 //        }
+        }
     }
 
 }
