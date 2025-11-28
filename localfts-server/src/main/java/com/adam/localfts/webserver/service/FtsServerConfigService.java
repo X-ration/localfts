@@ -221,7 +221,7 @@ public class FtsServerConfigService {
                 .append("[Zip folder path]").append(localFtsProperties.getZip().getPath()).append(System.lineSeparator())
                 .append("[Zip max size of compressed folder]").append(localFtsProperties.getZip().getMaxFolderSize()).append(System.lineSeparator())
                 .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
-                .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled());
+                .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
                 ;
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!testLanguageMap.isEmpty()) {
