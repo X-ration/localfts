@@ -59,8 +59,11 @@ public class FtsServerConfigService {
             LOGGER.warn("Root path '{}' does not match rules, changed to default '{}'", oldRootPath, newRootPath);
             checkRootPath(LocalFtsStartupException.class);
         }
-        checkZipFolderPath(LocalFtsStartupException.class);
-        checkZipMaxFolderSize(LocalFtsStartupException.class);
+        checkZip(LocalFtsStartupException.class);
+        if(localFtsProperties.getZip().getEnabled() != null && localFtsProperties.getZip().getEnabled()) {
+            checkZipFolderPath(LocalFtsStartupException.class);
+            checkZipMaxFolderSize(LocalFtsStartupException.class);
+        }
         if(localFtsProperties.getLog() != null) {
             checkLogProperties(LocalFtsStartupException.class);
         }
@@ -69,9 +72,10 @@ public class FtsServerConfigService {
         }
 
         //post construct
-        this.setZipDeleteOnExistIfNull();
-        this.setZipBackgroundEnabledIfNull();
-        this.createZipFolder(localFtsProperties.getZip().getPath(), true);
+        this.setZipPropertiesIfNull();
+        if(localFtsProperties.getZip().getEnabled()) {
+            this.createZipFolder(localFtsProperties.getZip().getPath(), true);
+        }
         this.rootPathInfo = new RootPathInfo(localFtsProperties.getRootPath());
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
     }
@@ -216,11 +220,13 @@ public class FtsServerConfigService {
             stringBuilder.append("[Log file path]").append(localFtsProperties.getLog().getFilePath()).append(System.lineSeparator())
                     .append("[Log root level]").append(localFtsProperties.getLog().getRootLevel()).append(System.lineSeparator());
         }
-        stringBuilder.append("[Zip folder path]").append(localFtsProperties.getZip().getPath()).append(System.lineSeparator())
-                .append("[Zip max size of compressed folder]").append(localFtsProperties.getZip().getMaxFolderSize()).append(System.lineSeparator())
-                .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
-                .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
-                ;
+        stringBuilder.append("[Zip enabled]").append(localFtsProperties.getZip().getEnabled()).append(System.lineSeparator());
+        if(localFtsProperties.getZip().getEnabled()) {
+            stringBuilder.append("[Zip folder path]").append(localFtsProperties.getZip().getPath()).append(System.lineSeparator())
+                    .append("[Zip max size of compressed folder]").append(localFtsProperties.getZip().getMaxFolderSize()).append(System.lineSeparator())
+                    .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
+                    .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
+        }
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!CollectionUtils.isEmpty(testLanguageMap)) {
             for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
@@ -265,6 +271,19 @@ public class FtsServerConfigService {
         }
 
         return stringBuilder.toString();
+    }
+
+    private void setZipPropertiesIfNull() {
+        setZipEnabledIfNull();
+        setZipDeleteOnExistIfNull();
+        setZipBackgroundEnabledIfNull();
+    }
+
+    private void setZipEnabledIfNull() {
+        Boolean zipEnabled = localFtsProperties.getZip().getEnabled();
+        if(zipEnabled == null) {
+            localFtsProperties.getZip().setEnabled(false);
+        }
     }
 
     private void setZipDeleteOnExistIfNull() {
@@ -419,6 +438,21 @@ public class FtsServerConfigService {
         if(dataSize.toBytes() < 0) {
             if(exClass != null) {
                 throwException(exClass, "Zip max folder size '" + dataSize.toBytes() + "' is negative!");
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean checkZip(Class<? extends RuntimeException> exClass) {
+        return checkZip(localFtsProperties.getZip(), exClass);
+    }
+
+    private boolean checkZip(ZipProperties zipProperties, Class<? extends RuntimeException> exClass) {
+        if(zipProperties == null) {
+            if(exClass != null) {
+                throwException(exClass, "localfts.zip not configured!");
             } else {
                 return false;
             }

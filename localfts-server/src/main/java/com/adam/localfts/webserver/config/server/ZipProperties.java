@@ -8,6 +8,7 @@ import lombok.ToString;
 @Setter
 @ToString
 public class ZipProperties {
+    private Boolean enabled;
     private String path;
     private Boolean deleteOnExit;
     private String maxFolderSize;

@@ -7,11 +7,13 @@ import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriUtils;
 
@@ -52,6 +54,8 @@ public class WebController {
             FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
             model.addAttribute("ftsPage", ftsPageModel);
         }
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        model.addAttribute("zipEnabled", zipEnabled);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
@@ -66,6 +70,10 @@ public class WebController {
      */
     @GetMapping("/compressManagement")
     public String compressManagement(@RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "10") int pageSize, Model model) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         if(pageNo <= 0) {
             pageNo = 1;
         }
@@ -91,6 +99,10 @@ public class WebController {
      */
     @GetMapping("/compressFolder")
     public String compressFolder(@RequestParam(value = "path") String relativePath, Model model) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
@@ -116,6 +128,10 @@ public class WebController {
     @PostMapping("/compressFolder")
     @ResponseBody
     public ReturnObject<FolderCompressData> compressFolder(@RequestParam(value = "path") String relativePath) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
         try {
             return ftsService.compressFolder(relativePath);
@@ -128,6 +144,10 @@ public class WebController {
     @PostMapping("/cancelCompress")
     @ResponseBody
     public ReturnObject<Void> cancelCompress(@RequestParam(value = "path") String relativePath) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
         return ftsService.cancelCompress(relativePath);
     }
@@ -135,6 +155,10 @@ public class WebController {
     @PostMapping("/deleteCompressFile")
     @ResponseBody
     public ReturnObject<Void> deleteCompressFile(@RequestParam(value = "path") String relativePath) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
         return ftsService.deleteCompressFile(relativePath);
     }

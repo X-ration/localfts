@@ -28,6 +28,7 @@
   ![localfts-server-1.1.0-compress-page.png](readme/localfts-server-1.1.0-compress-page.png)
 * 列表页增加当前目录，压缩状态
 * 根据文件夹的压缩状态在浏览器和服务端均有相应的处理
+* 配置压缩功能开关(`localfts.zip.enabled`控制)
 * 配置压缩文件存储路径(`localfts.zip.path`控制)
 * 当应用关闭时自动清理压缩文件所在文件夹(`localfts.zip.delete_on_exit`控制)
 * 支持在压缩文件夹前检查文件夹大小是否小于指定值(`localfts.zip.max-folder-size`控制)，若小于则不进行压缩（存在性能问题）

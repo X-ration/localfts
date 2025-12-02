@@ -24,6 +24,7 @@ spring:
 localfts:
   root_path: D:\Users\Adam\Documents
   zip:
+    enabled: true
     path: D:\Users\Adam\Documents\localfts_zip
     delete_on_exit: true
     max-folder-size: 3GB

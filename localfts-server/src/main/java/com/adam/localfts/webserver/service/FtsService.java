@@ -60,6 +60,7 @@ public class FtsService implements DisposableBean {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         File rootDirectory = new File(rootPath);
         Assert.isTrue(rootDirectory.exists() && rootDirectory.isDirectory(), "根路径不存在或不是文件夹");
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         File zipDirectory = new File(zipFolderPath);
         String actualPath = rootPath + relativePath;
         File directory = IOUtil.getFile(actualPath);
@@ -71,7 +72,10 @@ public class FtsService implements DisposableBean {
 
         String zipFileParentRelativePath = zipFolderPath.substring(rootPath.length());
         FtsPageModel.FtsPageFileModel currentPathModel = model.new FtsPageFileModel();
-        fillDirectoryModel(directory, zipDirectory, rootPath, zipFileParentRelativePath, currentPathModel);
+        currentPathModel.setFileSize(0);
+        if(zipEnabled) {
+            fillDirectoryModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, currentPathModel);
+        }
         model.setCurrentPathModel(currentPathModel);
 
         File[] items = directory.listFiles();
@@ -104,7 +108,10 @@ public class FtsService implements DisposableBean {
                 fileModel.setDirectory(isDirectory);
                 fileModel.setFileName(item.getName());
                 if(isDirectory) {
-                    fillDirectoryModel(item, zipDirectory, rootPath, zipFileParentRelativePath, fileModel);
+                    fileModel.setFileSize(0);
+                    if(zipEnabled) {
+                        fillDirectoryModelCompress(item, zipDirectory, rootPath, zipFileParentRelativePath, fileModel);
+                    }
                 } else {
                     fileModel.setFileSize(item.length());
                 }
@@ -118,20 +125,19 @@ public class FtsService implements DisposableBean {
         return model;
     }
 
-    private void fillDirectoryModel(File directory, File zipDirectory, String rootPath, String zipFileParentRelativePath, FtsPageModel.FtsPageFileModel fileModel) {
-        fileModel.setFileSize(0);
+    private void fillDirectoryModelCompress(File directory, File zipDirectory, String rootPath, String zipFileParentRelativePath, FtsPageModel.FtsPageFileModel fileModel) {
         String folderAbsolutePath = directory.getAbsolutePath();
         //添加压缩文件标识
         FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
         fileModel.setCompressStatus(folderCompressStatus);
         String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
         File zipFile = new File(zipDirectory, zipFileName);
-        String zipFileAbsolutePath = zipFile.getAbsolutePath();
         if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
             String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
             if(Util.isSystemWindows()) {
                 zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
             }
+            //todo 添加压缩文件大小
             fileModel.setCompressedPath(zipFileRelativePath);
         }
     }
@@ -673,7 +679,7 @@ public class FtsService implements DisposableBean {
 
     @Override
     public void destroy() throws Exception {
-        if(shutdownListener.getWebServer() != null) {
+        if(shutdownListener.getWebServer() != null && ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled()) {
             //清理压缩文件夹
             Boolean deleteOnExit = ftsServerConfigService.getLocalFtsProperties().getZip().getDeleteOnExit();
             if (deleteOnExit != null && deleteOnExit) {
