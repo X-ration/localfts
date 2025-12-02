@@ -87,7 +87,7 @@
                 <td>
                     <a id="upload-to-current-path">上传文件</a>
                     <a th:if="${zipEnabled}" id="compress-current-path">压缩管理</a>
-                    <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}">下载文件夹(zip)</a>
+                    <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}" th:attr="compress-file-size=${ftsPage.currentPathModel.compressedFileSize}">下载文件夹(zip)</a>
                 </td>
             </tr>
             <tr th:if="${item.directory}" th:each="item:${ftsPage.data}">
@@ -99,7 +99,7 @@
                 <td>
                     <a name="upload-file" th:text="${item.fileName}">上传文件</a>
                     <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.fileName}">压缩管理</a>
-                    <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}">下载文件夹(zip)
+                    <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}" th:attr="compress-file-size=${item.compressedFileSize}">下载文件夹(zip)
                     </a>
                 </td>
             </tr>
@@ -307,7 +307,12 @@
         if(downloadFolders) {
             for(var i=0;i<downloadFolders.length;i++) {
                 downloadFolders[i].setAttribute("href", concatUrlDownload(downloadFolders[i].innerText));
+                var compressedFileSize = downloadFolders[i].getAttribute("compress-file-size");
                 downloadFolders[i].innerText = "下载文件夹(zip)";
+                if(compressedFileSize !== null) {
+                  var compressedFileSizeStr = "(" + compressedFileSize + ")";
+                  downloadFolders[i].innerText = downloadFolders[i].innerText + compressedFileSizeStr;
+                }
             }
         }
         function concatUrlCompressFolder(dirName) {

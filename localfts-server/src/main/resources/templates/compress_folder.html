@@ -56,7 +56,7 @@
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
     <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
     <button id="cancelCompressButton" type="button" th:if="${compressStatus == 'COMPRESSING'}" onclick="cancelCompress()">取消压缩</button>
-    <a id="download-zip" th:if="${compressStatus == 'COMPRESSED'}" th:text="${compressedFilePath}">下载压缩文件(zip)</a>
+    <a id="download-zip" th:if="${compressStatus == 'COMPRESSED'}" th:text="${compressedFilePath}" th:attr="compress-file-size=${compressedFileSize}">下载压缩文件(zip)</a>
     <button id="deleteCompressFileButton" type="button" th:if="${compressStatus == 'COMPRESSED'}" onclick="deleteCompressFile()">删除压缩文件</button>
 </div>
 <div th:if="${!directoryExists}">
@@ -93,6 +93,11 @@ if(compressStatus === 'COMPRESSED') {
   var downloadZip = document.getElementById("download-zip");
   downloadZip.setAttribute('href', concatUrlDownload(downloadZip.innerText));
   downloadZip.innerText = '下载压缩文件(zip)';
+  var compressedFileSize = downloadZip.getAttribute("compress-file-size");
+  if(compressedFileSize !== null) {
+    var compressedFileSizeStr = "(" + compressedFileSize + ")";
+    downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
+  }
 }
 
 if(!backgroundEnabled) {
@@ -218,11 +223,16 @@ function compressFolder() {
           }
           if(returnObject.success) {
             if(returnObject.data.status === 'COMPRESSED') {
+              var compressedFileSize = returnObject.data.zipFileSize;
               updateCompressingHint('压缩完成');
               removeElementById('download-zip', 'compressingDiv');
               removeElementById('deleteCompressFileButton', 'compressingDiv');
               var downloadZip = document.createElement('a');
               downloadZip.innerText = '下载压缩文件(zip)';
+              if(compressedFileSize !== null) {
+                var compressedFileSizeStr = "(" + compressedFileSize + ")";
+                downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
+              }
               downloadZip.setAttribute('id', 'download-zip');
               downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.zipFilePath));
               document.getElementById('compressingDiv').appendChild(downloadZip);

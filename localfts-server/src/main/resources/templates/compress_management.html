@@ -70,7 +70,7 @@
             <td name="links">
                 <a name="visit-directory" th:text="${item.path}">访问目录</a>
                 <a name="compress-folder" th:text="${item.path}">压缩管理</a>
-                <a name="download-zip" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFilePath}">下载压缩文件(zip)</a>
+                <a name="download-zip" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFilePath}" th:attr="compress-file-size=${item.zipFileSize}">下载压缩文件(zip)</a>
             </td>
             <td name="trHint" th:if="${item.status == 'COMPRESSING' and needSizeCheck}">正在检查文件夹大小并压缩</td>
             <td name="trHint" th:if="${item.status != 'COMPRESSING' or !needSizeCheck}"></td>
@@ -143,6 +143,11 @@ if(!downloadZips) {
 for(var i=0;i<downloadZips.length;i++) {
   downloadZips[i].setAttribute("href", concatUrlDownload(downloadZips[i].innerText));
   downloadZips[i].innerText = '下载压缩文件(zip)';
+  var compressedFileSize = downloadZips[i].getAttribute("compress-file-size");
+  if(compressedFileSize !== null) {
+    var compressedFileSizeStr = "(" + compressedFileSize + ")";
+    downloadZips[i].innerText = downloadZips[i].innerText + compressedFileSizeStr;
+  }
 }
 //deal with compress-folder
 var compressFolders = document.getElementsByName("compress-folder");
@@ -354,10 +359,15 @@ function compressFolder(currentPath,button) {
           if(returnObject.success) {
             changeStatus(button,returnObject.data.status);
             if(returnObject.data.status === 'COMPRESSED') {
+              var compressedFileSize = returnObject.data.zipFileSize;
               updateCmTrHint('压缩完成',button);
               removeChildrenByTdNameAndTagName(button,'operations','button','deleteCompressFileButton');
               var downloadZip = document.createElement('a');
               downloadZip.innerText = '下载压缩文件(zip)';
+              if(compressedFileSize !== null) {
+                var compressedFileSizeStr = "(" + compressedFileSize + ")";
+                downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
+              }
               downloadZip.setAttribute('name', 'download-zip');
               downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.zipFilePath));
               getTdByName(button,'links').appendChild(downloadZip);

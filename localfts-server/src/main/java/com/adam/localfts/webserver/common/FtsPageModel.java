@@ -20,5 +20,6 @@ public class FtsPageModel extends PageObject<FtsPageModel.FtsPageFileModel> {
         //private boolean compressed;
         private FolderCompressStatus compressStatus;
         private String compressedPath;
+        private String compressedFileSize;
     }
 }

@@ -137,8 +137,8 @@ public class FtsService implements DisposableBean {
             if(Util.isSystemWindows()) {
                 zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
             }
-            //todo 添加压缩文件大小
             fileModel.setCompressedPath(zipFileRelativePath);
+            fileModel.setCompressedFileSize(Util.fileLengthToStringNew(zipFile.length()));
         }
     }
 
@@ -160,7 +160,11 @@ public class FtsService implements DisposableBean {
                     folderCompressData.setPath(relativePath);
                     folderCompressData.setStatus(folderCompressStatus.name());
                     folderCompressData.setStatusDesc(folderCompressStatus.getDesc());
-                    folderCompressData.setZipFilePath(zipFileRelativePath);
+                    if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
+                        folderCompressData.setZipFilePath(zipFileRelativePath);
+                        long compressedFileSize = folderCompressingInfo.getCompressSize();
+                        folderCompressData.setZipFileSize(Util.fileLengthToStringNew(compressedFileSize));
+                    }
                     return folderCompressData;
                 })
                 .collect(Collectors.toList());
@@ -254,6 +258,7 @@ public class FtsService implements DisposableBean {
 //                data.setPath(zipFileRelativePath);
                 data.setPath(relativePath);
                 data.setZipFilePath(zipFileRelativePath);
+                data.setZipFileSize(Util.fileLengthToStringNew(zipFile.length()));
             }
             data.setStatus(folderCompressStatus.name());
             return ReturnObject.success(data);
@@ -343,10 +348,29 @@ public class FtsService implements DisposableBean {
         return zipFileRelativePath;
     }
 
+    public long getFolderCompressedFileSize(String path, boolean isAbsolute) {
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String actualFolderPath;
+        if(isAbsolute) {
+            actualFolderPath = path;
+        } else {
+            actualFolderPath = rootPath + path;
+        }
+        File folderFile = new File(actualFolderPath);
+        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
+
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
+        if(folderCompressingInfo != null) {
+            return folderCompressingInfo.getCompressSize();
+        } else {
+            return -1L;
+        }
+    }
+
     public FolderCompressStatus getFolderCompressStatus(String path, boolean isAbsolute) {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
-        long start = System.currentTimeMillis();
         String actualFolderPath;
         if(isAbsolute) {
             actualFolderPath = path;

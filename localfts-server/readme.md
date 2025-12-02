@@ -41,6 +41,7 @@
 * 列表页面生成可点击链接时不再硬编码，而是根据配置的context-path拼接链接
 * 下载文件当文件不存在时跳转到错误页面并展示404状态码
 * 支持在退出压缩页面时取消压缩操作，释放服务器资源
+* 压缩文件下载链接展示压缩文件大小
 
 ## v1.0.5 代码优化：
 - 将所有配置整理到Properties类中，向控制台输出信息的方法整理到Service类中：[LocalFtsProperties.java](src/main/java/com/adam/localfts/webserver/config/server/LocalFtsProperties.java),[FtsServerConfigService.java](src/main/java/com/adam/localfts/webserver/service/FtsServerConfigService.java)

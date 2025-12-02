@@ -16,4 +16,5 @@ public class FolderCompressData {
      * 文件夹压缩后的压缩文件相对路径
      */
     private String zipFilePath;
+    private String zipFileSize;
 }

@@ -116,6 +116,9 @@ public class WebController {
             if(compressStatus == FolderCompressStatus.COMPRESSED) {
                 String zipFileRelativePath = ftsService.getFolderCompressedZipRelativePath(relativePath, false);
                 model.addAttribute("compressedFilePath", zipFileRelativePath);
+                long compressedFileSize = ftsService.getFolderCompressedFileSize(relativePath, false);
+                String compressedFileSizeStr = Util.fileLengthToStringNew(compressedFileSize);
+                model.addAttribute("compressedFileSize", compressedFileSizeStr);
             }
             boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
             model.addAttribute("needSizeCheck", needSizeCheck);
