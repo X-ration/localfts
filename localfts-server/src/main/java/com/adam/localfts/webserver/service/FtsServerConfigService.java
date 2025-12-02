@@ -3,21 +3,25 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
 import com.adam.localfts.webserver.config.server.*;
+import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
-import com.adam.localfts.webserver.util.Assert;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import lombok.Getter;
+import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.unit.DataSize;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.PostConstruct;
 import java.io.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.*;
 import java.util.Enumeration;
 import java.util.LinkedList;
@@ -48,33 +52,25 @@ public class FtsServerConfigService {
     public void checkPropertiesAndPostConstruct() {
         //check properties
         checkSystem();
-        boolean checkRootPath = checkRootPath(localFtsProperties.getRootPath(), false);
+        boolean checkRootPath = checkRootPath();
         if(!checkRootPath) {
             String oldRootPath = localFtsProperties.getRootPath();
             String newRootPath = changeRootPathToDefault();
             LOGGER.warn("Root path '{}' does not match rules, changed to default '{}'", oldRootPath, newRootPath);
-            checkRootPath = checkRootPath(localFtsProperties.getRootPath(), true);
-            Assert.isTrue(checkRootPath, "Check root path failed", LocalFtsStartupException.class);
+            checkRootPath(LocalFtsStartupException.class);
         }
-        boolean checkZipFolderPath = checkZipFolderPath(localFtsProperties.getZip().getPath(), localFtsProperties.getRootPath(), true);
-        Assert.isTrue(checkZipFolderPath, "Check zip folder path failed", LocalFtsStartupException.class);
-        boolean checkZipMaxFolderSize = checkZipMaxFolderSize(localFtsProperties.getZip().getMaxFolderSize(), true);
-        Assert.isTrue(checkZipMaxFolderSize, "Check zip max folder size failed", LocalFtsStartupException.class);
-        Boolean zipDeleteOnExit = localFtsProperties.getZip().getDeleteOnExit();
-        if(zipDeleteOnExit == null) {
-            localFtsProperties.getZip().setDeleteOnExit(true);
+        checkZipFolderPath(LocalFtsStartupException.class);
+        checkZipMaxFolderSize(LocalFtsStartupException.class);
+        if(localFtsProperties.getLog() != null) {
+            checkLogProperties(LocalFtsStartupException.class);
         }
-        Boolean zipBackgroundEnabled = localFtsProperties.getZip().getBackgroundEnabled();
-        if(zipBackgroundEnabled == null) {
-            localFtsProperties.getZip().setBackgroundEnabled(false);
+        if(localFtsProperties.getTestLanguage() != null) {
+            checkTestLanguageAndDeleteNullKeyValue(LocalFtsStartupException.class);
         }
-
-        boolean checkLogProperties = checkLogProperties(localFtsProperties.getLog(), true);
-        Assert.isTrue(checkLogProperties, "Check log properties failed", LocalFtsStartupException.class);
-        boolean checkTestLanguage = checkTestLanguageAndDeleteNullKeyValue(localFtsProperties.getTestLanguage(), false, true);
-        Assert.isTrue(checkTestLanguage, "Check test language failed", LocalFtsStartupException.class);
 
         //post construct
+        this.setZipDeleteOnExistIfNull();
+        this.setZipBackgroundEnabledIfNull();
         this.createZipFolder(localFtsProperties.getZip().getPath(), true);
         this.rootPathInfo = new RootPathInfo(localFtsProperties.getRootPath());
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
@@ -86,7 +82,7 @@ public class FtsServerConfigService {
      * @return
      */
     public RootPathInfo changeRootPath(String rootPath) {
-        boolean checkRootPath = checkRootPath(rootPath, false);
+        boolean checkRootPath = checkRootPath(rootPath, LocalFtsRuntimeException.class);
         if(!checkRootPath) {
             LOGGER.warn("check root path '{}' failed, keeping old config '{}'", rootPath, localFtsProperties.getRootPath());
             return this.rootPathInfo;
@@ -96,7 +92,7 @@ public class FtsServerConfigService {
     }
 
     public LogProperties changeLogFilePath(String logFilePath) {
-        boolean checkLogFilePath = checkLogFilePath(logFilePath, false);
+        boolean checkLogFilePath = checkLogFilePath(logFilePath, LocalFtsRuntimeException.class);
         if(!checkLogFilePath) {
             LOGGER.warn("check log file path '{}' failed, keeping old config '{}'", logFilePath, localFtsProperties.getLog().getFilePath());
             return this.localFtsProperties.getLog();
@@ -106,7 +102,7 @@ public class FtsServerConfigService {
     }
 
     public LogProperties changeLogRootLevel(LogLevel rootLevel) {
-        boolean checkLogRootLevel = checkLogRootLevel(rootLevel, false);
+        boolean checkLogRootLevel = checkLogRootLevel(rootLevel, LocalFtsRuntimeException.class);
         if(!checkLogRootLevel) {
             LOGGER.warn("check log root level '{}' failed, keeping old config '{}'", rootLevel, localFtsProperties.getLog().getRootLevel());
             return this.localFtsProperties.getLog();
@@ -215,16 +211,18 @@ public class FtsServerConfigService {
                 .append("[Root path]").append(localFtsProperties.getRootPath()).append(System.lineSeparator())
                 .append("[Total space]").append(rootPathInfo.getTotalSpace()).append(System.lineSeparator())
                 .append("[Usable space]").append(rootPathInfo.getUsableSpace()).append(System.lineSeparator())
-                .append("[Free space]").append(rootPathInfo.getFreeSpace()).append(System.lineSeparator())
-                .append("[Log file path]").append(localFtsProperties.getLog().getFilePath()).append(System.lineSeparator())
-                .append("[Log root level]").append(localFtsProperties.getLog().getRootLevel()).append(System.lineSeparator())
-                .append("[Zip folder path]").append(localFtsProperties.getZip().getPath()).append(System.lineSeparator())
+                .append("[Free space]").append(rootPathInfo.getFreeSpace()).append(System.lineSeparator());
+        if(localFtsProperties.getLog() != null) {
+            stringBuilder.append("[Log file path]").append(localFtsProperties.getLog().getFilePath()).append(System.lineSeparator())
+                    .append("[Log root level]").append(localFtsProperties.getLog().getRootLevel()).append(System.lineSeparator());
+        }
+        stringBuilder.append("[Zip folder path]").append(localFtsProperties.getZip().getPath()).append(System.lineSeparator())
                 .append("[Zip max size of compressed folder]").append(localFtsProperties.getZip().getMaxFolderSize()).append(System.lineSeparator())
                 .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
                 .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
                 ;
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
-        if(!testLanguageMap.isEmpty()) {
+        if(!CollectionUtils.isEmpty(testLanguageMap)) {
             for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
                 TestLanguageText testLanguageText = entry.getKey();
                 Boolean enabled = entry.getValue();
@@ -269,6 +267,20 @@ public class FtsServerConfigService {
         return stringBuilder.toString();
     }
 
+    private void setZipDeleteOnExistIfNull() {
+        Boolean zipDeleteOnExit = localFtsProperties.getZip().getDeleteOnExit();
+        if(zipDeleteOnExit == null) {
+            localFtsProperties.getZip().setDeleteOnExit(true);
+        }
+    }
+
+    private void setZipBackgroundEnabledIfNull() {
+        Boolean zipBackgroundEnabled = localFtsProperties.getZip().getBackgroundEnabled();
+        if(zipBackgroundEnabled == null) {
+            localFtsProperties.getZip().setBackgroundEnabled(false);
+        }
+    }
+
     private void checkSystem() {
         if(!Util.isSystemWindows() && !Util.isSystemLinux() && !Util.isSystemMacOS()) {
             throw new LocalFtsStartupException("Unknown system:" + Util.getOsName());
@@ -279,53 +291,63 @@ public class FtsServerConfigService {
         return testLanguageText != null && enabled != null;
     }
 
-    private boolean checkTestLanguageAndDeleteNullKeyValue(Map<TestLanguageText, Boolean> testLanguageMap, boolean throwException, boolean deleteNullKeyValue) {
+    private boolean checkTestLanguageAndDeleteNullKeyValue(Class<? extends RuntimeException> exClass) {
+        return checkTestLanguageAndDeleteNullKeyValue(localFtsProperties.getTestLanguage(), exClass);
+    }
+
+    private boolean checkTestLanguageAndDeleteNullKeyValue(Map<TestLanguageText, Boolean> testLanguageMap, Class<? extends RuntimeException> exClass) {
         if(testLanguageMap == null) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Test language object is null!");
+            if(exClass != null) {
+                throwException(exClass, "Test language object is null!");
             } else {
                 return false;
             }
         }
-        boolean returnValue = true;
+        boolean hasNull = false;
         for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
             if(entry.getKey() == null || entry.getValue() == null) {
-                if(throwException) {
-                    throw new LocalFtsStartupException("Test language entry key/value is null:" + entry.getKey() + "," + entry.getValue());
-                } else {
-                    returnValue = false;
-                }
+                hasNull = true;
+                break;
             }
         }
-        if(deleteNullKeyValue) {
+        if(hasNull) {
+            List<String> nullEntryStringList = testLanguageMap.entrySet().stream()
+                    .filter(entry -> entry.getKey() == null || entry.getValue() == null)
+                    .map(entry -> "[Entry]key=" + entry.getKey() + ",value=" + entry.getValue())
+                    .collect(Collectors.toList());
+            LOGGER.warn("Found null key or values {} in testLanguageMap, prepare to remove", nullEntryStringList);
             List<TestLanguageText> nullKeyList = testLanguageMap.entrySet().stream()
                     .filter(entry -> entry.getKey() == null || entry.getValue() == null)
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
-            for(TestLanguageText key: nullKeyList) {
+            for (TestLanguageText key : nullKeyList) {
                 testLanguageMap.remove(key);
             }
         }
-        return returnValue;
+        return true;
     }
 
-    private boolean checkLogProperties(LogProperties logProperties, boolean throwException) {
+    private boolean checkLogProperties(Class<? extends RuntimeException> exClass) {
+        return checkLogProperties(localFtsProperties.getLog(), exClass);
+    }
+
+    private boolean checkLogProperties(LogProperties logProperties, Class<? extends RuntimeException> exClass) {
         if(logProperties == null) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Log properties object is null!");
+            if(exClass != null) {
+                throwException(exClass, "Log properties object is null!");
             } else {
                 return false;
             }
         }
 
         String logFilePath = logProperties.getFilePath();
-        boolean checkLogFilePath = checkLogFilePath(logFilePath, throwException);
+        boolean checkLogFilePath = checkLogFilePath(logFilePath, exClass);
         if(!checkLogFilePath) {
             return false;
         }
 
         LogLevel rootLevel = logProperties.getRootLevel();
-        boolean checkLogRootLevel = checkLogRootLevel(rootLevel, throwException);
+        boolean checkLogRootLevel = checkLogRootLevel(rootLevel, exClass);
         if(!checkLogRootLevel) {
             return false;
         }
@@ -333,10 +355,10 @@ public class FtsServerConfigService {
         return true;
     }
 
-    private boolean checkLogFilePath(String logFilePath, boolean throwException) {
+    private boolean checkLogFilePath(String logFilePath, Class<? extends RuntimeException> exClass) {
         if(logFilePath == null) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Log file path is null!");
+            if(exClass != null) {
+                throwException(exClass, "Log file path is null!");
             } else {
                 return false;
             }
@@ -350,8 +372,8 @@ public class FtsServerConfigService {
             isMatch = Constants.PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(logFilePath).matches() || Constants.PATTERN_PATH_LINUX_MACOS_RELATIVE.matcher(logFilePath).matches();
         }
         if(!isMatch) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Log file path does not match rules:" + logFilePath);
+            if(exClass != null) {
+                throwException(exClass, "Log file path does not match rules:" + logFilePath);
             } else {
                 return false;
             }
@@ -359,10 +381,10 @@ public class FtsServerConfigService {
         return true;
     }
 
-    private boolean checkLogRootLevel(LogLevel rootLevel, boolean throwException) {
+    private boolean checkLogRootLevel(LogLevel rootLevel, Class<? extends RuntimeException> exClass) {
         if(rootLevel == null) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Log root level is null!");
+            if(exClass != null) {
+                throwException(exClass, "Log root level is null!");
             } else {
                 return false;
             }
@@ -370,32 +392,33 @@ public class FtsServerConfigService {
         return true;
     }
 
-    private boolean checkZipMaxFolderSize(String zipMaxFolderSize, boolean throwException) {
-        /*if(zipMaxFolderSize == null) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Zip max folder size is null!");
-            } else {
-                return false;
-            }
-        }*/
+    private boolean checkZipMaxFolderSize() {
+        return checkZipMaxFolderSize(null);
+    }
+
+    private boolean checkZipMaxFolderSize(Class<? extends RuntimeException> exClass) {
+        return checkZipMaxFolderSize(localFtsProperties.getZip().getMaxFolderSize(), exClass);
+    }
+
+    private boolean checkZipMaxFolderSize(String zipMaxFolderSize, Class<? extends RuntimeException> exClass) {
         //allow null
         if(zipMaxFolderSize == null) {
             return true;
         }
-        DataSize dataSize;
+        DataSize dataSize = null;
         try {
             dataSize = DataSize.parse(zipMaxFolderSize);
         } catch (IllegalArgumentException e) {
-            LOGGER.error("解析Zip max folder size配置失败", e);
-            if(throwException) {
-                throw new LocalFtsStartupException("Error parsing zip max folder size '" + zipMaxFolderSize + "': " + e.getMessage());
+            LOGGER.error("解析Zip max folder size配置失败:{}", e.getMessage());
+            if(exClass != null) {
+                throwException(exClass, "Error parsing zip max folder size '" + zipMaxFolderSize + "': " + e.getMessage());
             } else {
                 return false;
             }
         }
         if(dataSize.toBytes() < 0) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Zip max folder size '" + dataSize.toBytes() + "' is negative!");
+            if(exClass != null) {
+                throwException(exClass, "Zip max folder size '" + dataSize.toBytes() + "' is negative!");
             } else {
                 return false;
             }
@@ -403,18 +426,30 @@ public class FtsServerConfigService {
         return true;
     }
 
-    private boolean checkZipFolderPath(String zipFolderPath, String rootPath, boolean throwException) {
+    private boolean checkZipFolderPath() {
+        return checkZipFolderPath(null);
+    }
+
+    private boolean checkZipFolderPath(Class<? extends RuntimeException> exClass) {
+        return checkZipFolderPath(localFtsProperties.getZip().getPath(), exClass);
+    }
+
+    private boolean checkZipFolderPath(String zipFolderPath, Class<? extends RuntimeException> exClass) {
+        return checkZipFolderPath(zipFolderPath, localFtsProperties.getRootPath(), exClass);
+    }
+
+    private boolean checkZipFolderPath(String zipFolderPath, String rootPath, Class<? extends RuntimeException> exClass) {
         if(zipFolderPath == null) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Zip folder path is null!");
+            if(exClass != null) {
+                throwException(exClass, "Zip folder path is null!");
             } else {
                 return false;
             }
         }
 
         if(!zipFolderPath.startsWith(rootPath)) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Zip folder path outside of root path!");
+            if(exClass != null) {
+                throwException(exClass, "Zip folder path outside of root path!");
             } else {
                 return false;
             }
@@ -427,8 +462,8 @@ public class FtsServerConfigService {
             isMatch = Constants.PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(zipFolderPath).matches();
         }
         if(!isMatch) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Zip folder path '" + zipFolderPath + "' does not match rules!");
+            if(exClass != null) {
+                throwException(exClass, "Zip folder path '" + zipFolderPath + "' does not match rules!");
             } else {
                 return false;
             }
@@ -436,15 +471,14 @@ public class FtsServerConfigService {
 
         File zipFolderPathFile = IOUtil.getFile(zipFolderPath);
         if(zipFolderPathFile.exists() && zipFolderPathFile.isFile()) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Zip folder path '" + zipFolderPath + "' is not a directory!");
+            if(exClass != null) {
+                throwException(exClass, "Zip folder path '" + zipFolderPath + "' is not a directory!");
             } else {
                 return false;
             }
         }
 
         return true;
-
     }
 
     private void createZipFolder(String zipFolderPath, boolean throwException) {
@@ -459,15 +493,28 @@ public class FtsServerConfigService {
         }
     }
 
-    /**
-     * 检查根路径配置
-     * @param throwException
-     * @return true:校验通过 false:校验不通过
-     */
-    private boolean checkRootPath(String rootPath, boolean throwException) {
+    private boolean checkRootPath(Class<? extends RuntimeException> exClass) {
+        return checkRootPath(localFtsProperties.getRootPath(), exClass);
+    }
+
+    private boolean checkRootPath() {
+        return checkRootPath(localFtsProperties.getRootPath());
+    }
+
+    private boolean checkRootPath(String rootPath) {
+        return checkRootPath(rootPath, null);
+    }
+
+        /**
+         * 检查根路径配置
+         * @param rootPath
+         * @param exClass
+         * @return true:校验通过 false:校验不通过
+         */
+    private boolean checkRootPath(String rootPath, Class<? extends RuntimeException> exClass) {
         if(rootPath == null) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Root path is null!");
+            if(exClass != null) {
+                throwException(exClass, "Root path is null!");
             } else {
                 return false;
             }
@@ -480,8 +527,8 @@ public class FtsServerConfigService {
             isMatch = Constants.PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(rootPath).matches();
         }
         if(!isMatch) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Root path '" + rootPath + "' does not match rules!");
+            if(exClass != null) {
+                throwException(exClass, "Root path '" + rootPath + "' does not match rules!");
             } else {
                 return false;
             }
@@ -489,15 +536,15 @@ public class FtsServerConfigService {
 
         File rootPathFile = IOUtil.getFile(rootPath);
         if(!rootPathFile.exists()) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Root path '" + rootPath + "' does not exist!");
+            if(exClass != null) {
+                throwException(exClass, "Root path '" + rootPath + "' does not exist!");
             } else {
                 return false;
             }
         }
         if(!rootPathFile.isDirectory()) {
-            if(throwException) {
-                throw new LocalFtsStartupException("Root path '" + rootPath + "' is not a directory!");
+            if(exClass != null) {
+                throwException(exClass, "Root path '" + rootPath + "' is not a directory!");
             } else {
                 return false;
             }
@@ -514,6 +561,20 @@ public class FtsServerConfigService {
         }
         localFtsProperties.setRootPath(newRootPath);
         return newRootPath;
+    }
+
+    @Contract("_, _ -> fail")
+    private <T extends RuntimeException> void throwException(Class<T> exClass, String message) {
+        try {
+            Constructor<T> constructor = exClass.getConstructor(String.class);
+            throw constructor.newInstance(message);
+        } catch (NoSuchMethodException e) {
+            LOGGER.warn("error finding exception constructor {}: no such constructor", exClass.getName());
+            throw new RuntimeException(e.getMessage());
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            LOGGER.warn("error instantiating exception {}", exClass.getName());
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     private FtsServerIpInfoModel getServerIpInfoModelImpl() {
@@ -547,8 +608,7 @@ public class FtsServerConfigService {
             }
             model.setItems(ipInfoItemList.toArray(new FtsServerIpInfoModel.IpInfoItem[0]));
         } catch (SocketException e) {
-            System.err.println("Error getting server ips: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.error("Error getting server ips:{}", e.getMessage(), e);
             model.setItems(new FtsServerIpInfoModel.IpInfoItem[0]);
         }
         return model;

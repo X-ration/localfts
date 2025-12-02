@@ -64,6 +64,13 @@
     </dependency>
 
     <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <version>16.0.3</version>
+      <scope>provided</scope> <!-- 只用于代码静态分析，运行时不需要，建议用 provided 作用域 -->
+    </dependency>
+
+    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
     </dependency>
