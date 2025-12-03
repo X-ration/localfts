@@ -92,6 +92,9 @@ if(!backgroundEnabled) {
 }
 
 function unload(e) {
+  if(compressStatus === 'NOT_COMPRESSED') {
+    return;
+  }
   //abortXhr();
   if (navigator.sendBeacon) {
     //在win11 edge/winxp ie,qq适用，不适用winxp 360
@@ -132,6 +135,7 @@ function deleteCompressFile() {
             removeElementById('deleteCompressFileButton', 'compressingDiv');
             removeElementById('download-zip', 'compressingDiv');
             updateCompressingHint('成功删除压缩文件');
+            compressStatus = 'NOT_COMPRESSED';
           } else {
             updateCompressingHint('删除失败，原因：' + returnObject.message);
           }
@@ -159,6 +163,7 @@ function cancelCompress() {
           if(returnObject.success) {
             updateCompressingHint('已取消');
             removeElementById('cancelCompressButton', 'compressingDiv');
+            compressStatus = 'NOT_COMPRESSED';
           } else {
             updateCompressingHint('取消失败，原因：' + returnObject.message);
           }
@@ -189,6 +194,7 @@ function compressFolder() {
     cancelCompressButton.onclick = cancelCompress;
     document.getElementById('compressingDiv').appendChild(cancelCompressButton);
   }
+  compressStatus = 'COMPRESSING';
   abortXhr();
   sendPostFormRequest(
     contextPath + "/compressFolder", // 目标接口 URL
@@ -205,6 +211,7 @@ function compressFolder() {
           }
           if(returnObject.success) {
             if(returnObject.data.status === 'COMPRESSED') {
+              compressStatus = returnObject.data.status;
               var compressedFileSize = returnObject.data.zipFileSize;
               updateCompressingHint('压缩完成');
               removeElementById('download-zip', 'compressingDiv');
@@ -227,17 +234,22 @@ function compressFolder() {
               removeElementById('cancelCompressButton', 'compressingDiv');
             } else if(returnObject.data.status === 'COMPRESSING') {
               updateCompressingHint(compressingHintText);
+              compressStatus = returnObject.data.status;
             } else {
               updateCompressingHint('非法状态');
             }
           } else {
+            compressStatus = 'NOT_COMPRESSED';
             updateCompressingHint('压缩失败，原因：' + returnObject.message);
+            removeElementById('cancelCompressButton', 'compressingDiv');
           }
         } else {
           if(window.console) {
             console.error("请求失败，状态码：", xhr.status);
           }
+          compressStatus = 'NOT_COMPRESSED';
           updateCompressingHint('压缩失败，状态码：' + xhr.status);
+          removeElementById('cancelCompressButton', 'compressingDiv');
         }
       }
     }
