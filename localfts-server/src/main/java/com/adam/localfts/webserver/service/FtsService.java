@@ -213,6 +213,7 @@ public class FtsService implements DisposableBean {
         String zipFileAbsolutePath = zipFile.getAbsolutePath();
         boolean needCompress = false;
         boolean interrupted = false;
+        String exMessage = null;
         if(!zipFileExists) {
             ReentrantLock lock = getZipFileLock(zipFileAbsolutePath);
             try {
@@ -229,9 +230,15 @@ public class FtsService implements DisposableBean {
                         folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
                     }
                 }
-            } catch (InterruptedException e) {
-                interrupted = true;
-                LOGGER.info("interrupt folder compressing:{} -- delete zip file:{}", folderAbsolutePath, zipFileAbsolutePath);
+            } catch (Exception e) {
+                if(e instanceof InterruptedException) {
+                    interrupted = true;
+                } else {
+                    LOGGER.error("exception occurs when compressing folder", e);
+                    exMessage = e.getMessage();
+                }
+                String fm = interrupted ? "interrupt folder compressing" : "exception occurs when compressing folder";
+                LOGGER.info(fm + ":{} -- delete zip file:{}", folderAbsolutePath, zipFileAbsolutePath);
                 boolean deletes = zipFile.delete();
                 if(!deletes) {
                     LOGGER.warn("delete zip file failed:{}", zipFileAbsolutePath);
@@ -247,11 +254,11 @@ public class FtsService implements DisposableBean {
         FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath, false);
         if(needCompress) {
             long end = System.currentTimeMillis();
-            String statusMessage = interrupted ? "被中断" : "完成";
+            String statusMessage = interrupted ? "被中断" : (exMessage == null ? "完成" : "发生异常：" + exMessage);
             LOGGER.info("压缩文件夹（路径：{}）{}，压缩文件路径：{}，耗时{}毫秒", folderAbsolutePath, statusMessage, zipFileAbsolutePath, end - start);
         }
         if(folderCompressStatus == FolderCompressStatus.NOT_COMPRESSED) {
-            String reason = interrupted ? "压缩任务被取消" : "未知原因";
+            String reason = interrupted ? "压缩任务被取消" : (exMessage == null ? "未知原因" : "发生异常：" + exMessage);
             return ReturnObject.fail(reason);
         } else {
             FolderCompressData data = new FolderCompressData();

@@ -52,6 +52,8 @@
 <div id="cmDiv">
     <h3 id="cmHint">总体统计信息</h3>
     <h4 id="cmPageHint">当前页统计信息</h4>
+    <h5 th:if="${backgroundEnabled}">后台压缩功能：已启用</h5>
+    <h5 th:if="${!backgroundEnabled}">后台压缩功能：已禁用，但关闭此页面不会取消正在进行的压缩任务</h5>
     <table style="text-align:left;border-style:solid;width:100%">
         <thead>
         <tr>

@@ -87,6 +87,8 @@ public class WebController {
         model.addAttribute("pagedList", list);
         boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
         model.addAttribute("needSizeCheck", needSizeCheck);
+        Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
+        model.addAttribute("backgroundEnabled", backgroundEnabled);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
