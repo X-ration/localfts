@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.common;
 
+import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import lombok.Getter;
 import lombok.Setter;
 

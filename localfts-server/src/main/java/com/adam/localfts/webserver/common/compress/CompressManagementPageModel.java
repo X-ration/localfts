@@ -1,5 +1,6 @@
-package com.adam.localfts.webserver.common;
+package com.adam.localfts.webserver.common.compress;
 
+import com.adam.localfts.webserver.common.PageObject;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,7 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CompressManagementPageModel extends PageObject<FolderCompressData>{
+public class CompressManagementPageModel extends PageObject<FolderCompressData> {
     private int totalCount;
     private int notCompressedCount;
     private int compressingCount;

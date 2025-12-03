@@ -1,6 +1,9 @@
 package com.adam.localfts.webserver.controller;
 
 import com.adam.localfts.webserver.common.*;
+import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
+import com.adam.localfts.webserver.common.compress.FolderCompressData;
+import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
 import com.adam.localfts.webserver.util.Util;

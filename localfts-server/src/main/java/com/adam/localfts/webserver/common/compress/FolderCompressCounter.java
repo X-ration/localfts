@@ -1,4 +1,4 @@
-package com.adam.localfts.webserver.common;
+package com.adam.localfts.webserver.common.compress;
 
 import lombok.Getter;
 import org.slf4j.Logger;
