@@ -3,27 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>局域网文件传输服务器-压缩管理</title>
-    <style>
-        .hidden {
-            display:none;
-        }
-        .show {
-           width:70%;height:auto;margin:5em 15% auto 15%;
-           background-color:white;
-           border-style:solid;border-width:0.05em;
-        }
-        table,th,td {
-            border-style:solid;
-            border-collapse:collapse;
-            border-color:black;
-        }
-        table {
-            border-width:0.1em;
-        }
-        th,td {
-            border-width:0.05em;
-        }
-    </style>
+    <link rel="stylesheet" th:href="${#request.contextPath} + '/common.css'">
 </head>
 <body>
 <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
