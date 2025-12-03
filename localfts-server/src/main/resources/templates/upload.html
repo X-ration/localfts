@@ -65,7 +65,7 @@
 <div th:if="${uploadDirRetObject != null && !uploadDirRetObject.success}">
     <h4 th:text="'上传失败：' + ${uploadDirRetObject.message}"></h4>
 </div>
-<div th:if="${directoryExists}">
+<div th:if="${directoryExists}" id="uploadDiv">
     <div style="display: none" id="uploadDirectoryHint"></div><br>
     <fieldset style="display: inline-block;*display: inline; zoom: 1;">
         <legend>上传文件</legend>
@@ -75,7 +75,7 @@
             <input type="submit" value="上传">
         </form>
     </fieldset>
-    <fieldset style="display: inline-block;*display: inline; zoom: 1;" id="uploadDirectoryFieldset">
+    <fieldset style="display: inline-block;*display: inline; zoom: 1;" id="uploadDirectoryFieldSet">
         <legend>上传文件夹</legend>
         <form th:action="@{'/uploadFilesTransfer'}" enctype="multipart/form-data" method="post">
             <input type="file" name="files" webkitdirectory directory>
@@ -121,8 +121,9 @@
     var uploadDirectoryHint = document.getElementById('uploadDirectoryHint');
     var hintHtml = null;
     if(!folderSelectionSupported.supported) {
-        var dirFieldset = document.getElementById('uploadDirectoryFieldset');
-        document.body.removeChild(dirFieldset);
+        var dirFieldSet = document.getElementById('uploadDirectoryFieldSet');
+        var uploadDiv = document.getElementById('uploadDiv');
+        uploadDiv.removeChild(dirFieldSet);
         hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器不支持上传文件夹。</h4>';
     } else {
         hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器支持上传文件夹。</h4><span style=\'color:red\'>注意：上传文件夹时，空文件夹不会上传。</span>';
