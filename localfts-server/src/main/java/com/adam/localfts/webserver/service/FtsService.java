@@ -71,12 +71,15 @@ public class FtsService implements DisposableBean {
         model.setCurrentPage(pageNo);
         model.setPageSize(pageSize);
 
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+
         String zipFileParentRelativePath = zipFolderPath.substring(rootPath.length());
         FtsPageModel.FtsPageFileModel currentPathModel = model.new FtsPageFileModel();
         currentPathModel.setFileSize(0);
         if(zipEnabled) {
             fillDirectoryModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, currentPathModel);
         }
+        currentPathModel.setLastModified(simpleDateFormat.format(new Date(directory.lastModified())));
         model.setCurrentPathModel(currentPathModel);
 
         File[] items = directory.listFiles();
@@ -117,7 +120,6 @@ public class FtsService implements DisposableBean {
                     fileModel.setFileSize(item.length());
                 }
                 fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
                 fileModel.setLastModified(simpleDateFormat.format(new Date(item.lastModified())));
                 fileModels.add(fileModel);
             }
