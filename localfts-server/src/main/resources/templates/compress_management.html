@@ -397,9 +397,11 @@ function compressFolder(currentPath,button) {
           } else {
             changeStatus(button,'NOT_COMPRESSED');
             updateCmTrHint('压缩失败，原因：' + returnObject.message,button);
+            removeChildrenByTdNameAndTagName(button,'operations','button','cancelCompressButton');
           }
         } else {
           changeStatus(button,'NOT_COMPRESSED');
+          removeChildrenByTdNameAndTagName(button,'operations','button','cancelCompressButton');
           updateCmTrHint('压缩失败，状态码：' + xhr.status,button);
           if(window.console) {
             console.error("请求失败，状态码：", xhr.status);

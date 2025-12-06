@@ -268,6 +268,7 @@ function compressFolder() {
           } else {
             compressStatus = 'NOT_COMPRESSED';
             updateCompressingHint('压缩失败，原因：' + returnObject.message);
+            removeElementById('cancelCompressButton', 'compressingDiv');
           }
         } else {
           if(window.console) {
@@ -275,6 +276,7 @@ function compressFolder() {
           }
           compressStatus = 'NOT_COMPRESSED';
           updateCompressingHint('压缩失败，状态码：' + xhr.status);
+          removeElementById('cancelCompressButton', 'compressingDiv');
         }
       }
     }
