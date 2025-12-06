@@ -230,6 +230,7 @@ function deleteCompressFile(currentPath,button) {
 }
 
 function cancelCompress(currentPath,button) {
+  var td = button.parentElement;
   updateCmTrHint('正在取消',button);
   abortXhr(currentPath);
   sendPostFormRequest(
@@ -253,9 +254,9 @@ function cancelCompress(currentPath,button) {
         if (xhr.status === 200) {
           var returnObject = JSON.parse(xhr.responseText);
           if(returnObject.success) {
-            updateCmTrHint('已取消',button);
-            changeStatus(button,'NOT_COMPRESSED');
-            removeChildrenByTdNameAndTagName(button,'operations','button','cancelCompressButton');
+            updateCmTrHintByTd('已取消',td);
+            changeStatus(td,'NOT_COMPRESSED');
+            removeChildrenByTdNameAndTagName(td,'operations','button','cancelCompressButton');
           } else {
             updateCmTrHint('取消失败，原因：' + returnObject.message,button);
           }
@@ -267,8 +268,13 @@ function cancelCompress(currentPath,button) {
   );
 }
 
+function updateCmTrHintByTd(text,td) {
+  updateCmTrHintByTr(text,td.parentElement);
+}
 function updateCmTrHint(text,button) {
-  var tr = button.parentElement.parentElement;
+  updateCmTrHintByTr(text,button.parentElement.parentElement);
+}
+function updateCmTrHintByTr(text,tr) {
   var trChildren = tr.children;
   for(var i=0;i<trChildren.length;i++) {
     var td = trChildren[i];
@@ -411,7 +417,8 @@ function compressFolder(currentPath,button) {
     }
   );
 }
-function changeStatus(button,status) {
+//兼容传入button,td,tr
+function changeStatus(element,status) {
   var statusObject = {
     'NOT_COMPRESSED': '未压缩',
     'COMPRESSING': '压缩中',
@@ -431,13 +438,13 @@ function changeStatus(button,status) {
     return;
   }
 
-  var originalStatus = getTdByName(button,'status').innerText;
+  var originalStatus = getTdByName(element,'status').innerText;
   if(originalStatus === status) {
     return;
   }
 
-  getTdByName(button,'statusDesc').innerText = statusObject[status];
-  getTdByName(button,'status').innerText = status;
+  getTdByName(element,'statusDesc').innerText = statusObject[status];
+  getTdByName(element,'status').innerText = status;
   switch(originalStatus) {
     case 'NOT_COMPRESSED':
       globalNotCompressedCount--;
@@ -483,8 +490,22 @@ function getChildElementByTagNameAndName(parentElement,tagName,name) {
   }
   return null;
 }
-function removeChildrenByTdNameAndTagName(button,tdName,tagName,name) {
-  var trChildren = button.parentElement.parentElement.children;
+//兼容传入button,td,tr
+function removeChildrenByTdNameAndTagName(element,tdName,tagName,name) {
+  //var trChildren = button.parentElement.parentElement.children;
+  var tr = null;
+  switch(element.tagName.toLowerCase()) {
+    case 'button':
+      tr = getParentTrByButton(element);
+      break;
+    case 'td':
+      tr = element.parentElement;
+      break;
+    case 'tr':
+      tr = element;
+      break;
+  }
+  var trChildren = tr.children;
   for(var i=0;i<trChildren.length;i++) {
     var td = trChildren[i];
     if(td.getAttribute('name') === tdName) {
@@ -506,11 +527,24 @@ function removeElementById(id,parentId) {
     document.getElementById(parentId).removeChild(element);
   }
 }
-function getParentTr(button) {
+function getParentTrByButton(button) {
   return button.parentElement.parentElement;
 }
-function getTdByName(button,tdName) {
-  var tr = getParentTr(button);
+
+//兼容传入button,td,tr
+function getTdByName(element,tdName) {
+  var tr = null;
+  switch(element.tagName.toLowerCase()) {
+    case 'button':
+      tr = getParentTrByButton(element);
+      break;
+    case 'td':
+      tr = element.parentElement;
+      break;
+    case 'tr':
+      tr = element;
+      break;
+  }
   var trChildren = tr.children;
   for(var i=0;i<trChildren.length;i++) {
     var td = trChildren[i];
