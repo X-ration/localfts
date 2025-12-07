@@ -2,7 +2,7 @@ package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
-import com.adam.localfts.webserver.config.server.*;
+import com.adam.localfts.webserver.config.localfts.*;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.util.IOUtil;
@@ -68,6 +68,7 @@ public class FtsServerConfigService {
             checkLogProperties(LocalFtsStartupException.class);
         }
         checkUploadProperties(LocalFtsStartupException.class);
+        checkPseudoUnloadUaContains(LocalFtsStartupException.class);
         if(localFtsProperties.getTestLanguage() != null) {
             checkTestLanguageAndDeleteNullKeyValue(LocalFtsStartupException.class);
         }
@@ -343,6 +344,21 @@ public class FtsServerConfigService {
                     .collect(Collectors.toList());
             for (TestLanguageText key : nullKeyList) {
                 testLanguageMap.remove(key);
+            }
+        }
+        return true;
+    }
+
+    private boolean checkPseudoUnloadUaContains(Class<? extends RuntimeException> exClass) {
+        return checkPseudoUnloadUaContains(localFtsProperties.getPseudoUnloadUaContains(), exClass);
+    }
+
+    private boolean checkPseudoUnloadUaContains(List<String> pseudoUnloadUaContains, Class<? extends RuntimeException> exClass) {
+        if(pseudoUnloadUaContains == null) {
+            if(exClass != null) {
+                throwException(exClass, "pseudoUnloadUaContains is null!");
+            } else {
+                return false;
             }
         }
         return true;

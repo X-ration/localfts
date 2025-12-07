@@ -1,9 +1,8 @@
-package com.adam.localfts.webserver.config.server;
+package com.adam.localfts.webserver.config.localfts;
 
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import lombok.Getter;
-import lombok.Setter;
 import org.springframework.util.Assert;
 
 import java.io.File;

@@ -103,7 +103,7 @@ public class WebController {
      * @return
      */
     @GetMapping("/compressFolder")
-    public String compressFolder(@RequestParam(value = "path") String relativePath, Model model) {
+    public String compressFolder(@RequestParam(value = "path") String relativePath, @RequestHeader(required = false, value = "User-Agent")String userAgent, Model model) {
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         if(!zipEnabled) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -129,6 +129,8 @@ public class WebController {
             model.addAttribute("needSizeCheck", needSizeCheck);
             Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
             model.addAttribute("backgroundEnabled", backgroundEnabled);
+            boolean pseudoUnload = ftsService.isPseudoUnload(userAgent);
+            model.addAttribute("pseudoUnload", pseudoUnload);
         }
         return "compress_folder";
     }

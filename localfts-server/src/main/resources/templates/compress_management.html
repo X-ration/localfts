@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>局域网文件传输服务器-全局压缩管理</title>
-    <link rel="stylesheet" th:href="${#request.contextPath} + '/common.css'">
+    <link rel="stylesheet" th:href="${#request.contextPath} + '/static/common.css'">
 </head>
 <body>
 <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
@@ -91,7 +91,7 @@
     </form>
 </div>
 </body>
-<script th:src="${#request.contextPath} + '/json2.min.js'"></script>
+<script th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
 <script type="text/javascript">
     //deal with serverIpInfo in IE
     if(!document.getElementById('serverIpInfo').getAttribute("class")) {

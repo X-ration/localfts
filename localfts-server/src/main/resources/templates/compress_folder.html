@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>局域网文件传输服务器-压缩管理</title>
-    <link rel="stylesheet" th:href="${#request.contextPath} + '/common.css'">
+    <link rel="stylesheet" th:href="${#request.contextPath} + '/static/common.css'">
 </head>
 <body>
 <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
@@ -36,6 +36,7 @@
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
     <h5 th:if="${backgroundEnabled}">后台压缩功能：已启用</h5>
     <h5 style="color:red" th:if="${!backgroundEnabled}">后台压缩功能：已禁用，关闭页面会取消正在进行的压缩任务</h5>
+    <h5 style="color:red" th:if="${!backgroundEnabled and pseudoUnload}">注意：此浏览器离开此页面时可能不会触发页面卸载事件（取消压缩任务），需要手动取消！</h5>
     <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
     <button id="cancelCompressButton" type="button" th:if="${compressStatus == 'COMPRESSING'}" onclick="cancelCompress()">取消压缩</button>
     <a id="download-zip" th:if="${compressStatus == 'COMPRESSED'}" th:text="${compressedFilePath}" th:attr="compress-file-size=${compressedFileSize}">下载压缩文件(zip)</a>
@@ -45,7 +46,7 @@
     该路径不存在！
 </div>
 </body>
-<script th:src="${#request.contextPath} + '/json2.min.js'"></script>
+<script th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
 <script type="text/javascript">
     //deal with serverIpInfo in IE
     if(!document.getElementById('serverIpInfo').getAttribute("class")) {
@@ -86,13 +87,26 @@ if(!backgroundEnabled) {
   // 监听页面关闭事件
   if (typeof window.addEventListener !== "undefined") {
     window.addEventListener('beforeunload', unload);
+    //window.addEventListener('pagehide', unload);
+    //window.addEventListener('visibilitychange', unload);
   } else {
     window.attachEvent('onbeforeunload', unload);
   }
 }
 
+var callUnloadCount = 0;
+
 function unload(e) {
-  if(compressStatus === 'NOT_COMPRESSED') {
+  // visibilitychange事件需要判断状态（变为hidden时才执行）
+  /*if (e.type === 'visibilitychange' && document.visibilityState !== 'hidden') {
+    return;
+  }*/
+
+  //确保只调用一次
+  if(callUnloadCount++ > 0) {
+    return;
+  }
+  if(compressStatus !== 'COMPRESSING') {
     return;
   }
   //abortXhr();

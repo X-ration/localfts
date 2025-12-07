@@ -645,6 +645,20 @@ public class FtsService implements DisposableBean {
         return zipFileName + ".zip";
     }
 
+    //是否在离开页面时不触发页面卸载事件
+    public boolean isPseudoUnload(String userAgent) {
+        if(userAgent == null) {
+            return false;
+        }
+        List<String> pseudoUnloadUaContains = ftsServerConfigService.getLocalFtsProperties().getPseudoUnloadUaContains();
+        for(String pseudoUnloadUaStr: pseudoUnloadUaContains) {
+            if(userAgent.contains(pseudoUnloadUaStr)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     //不允许伪支持的浏览器展示上传文件夹元素
     public boolean isDirectoryUploadPermitted(String userAgent) {
         //默认允许

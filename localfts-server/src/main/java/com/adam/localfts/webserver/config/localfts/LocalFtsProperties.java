@@ -1,4 +1,4 @@
-package com.adam.localfts.webserver.config.server;
+package com.adam.localfts.webserver.config.localfts;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -6,6 +6,7 @@ import lombok.ToString;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
+import java.util.List;
 import java.util.Map;
 
 @ConfigurationProperties(prefix = "localfts")
@@ -21,6 +22,7 @@ public class LocalFtsProperties {
     private LogProperties log;
     @NestedConfigurationProperty
     private UploadProperties upload;
+    private List<String> pseudoUnloadUaContains;
     private Map<TestLanguageText, Boolean> testLanguage;
 
 }
