@@ -652,6 +652,11 @@ public class FtsService implements DisposableBean {
         if(userAgent == null) {
             return false;
         }
+        Parser uaParser = new Parser();
+        Client uaClient = uaParser.parse(userAgent);
+        if(uaClient.userAgent.family.equalsIgnoreCase("Safari") || uaClient.device.family.equalsIgnoreCase("iPad")) {
+            return true;
+        }
         List<String> pseudoUnloadUaContains = ftsServerConfigService.getLocalFtsProperties().getPseudoUnloadUaContains();
         for(String pseudoUnloadUaStr: pseudoUnloadUaContains) {
             if(userAgent.contains(pseudoUnloadUaStr)) {

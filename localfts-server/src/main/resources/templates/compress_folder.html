@@ -35,8 +35,8 @@
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSING' and !needSizeCheck}">正在压缩</h4>
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
     <h5 th:if="${backgroundEnabled}">后台压缩功能：已启用</h5>
-    <h5 style="color:red" th:if="${!backgroundEnabled}">后台压缩功能：已禁用，关闭页面会取消正在进行的压缩任务</h5>
-    <h5 style="color:red" th:if="${!backgroundEnabled and pseudoUnload}">注意：此浏览器离开此页面时可能不会触发页面卸载事件（取消压缩任务），需要手动取消！</h5>
+    <h5 style="color:red" th:if="${!backgroundEnabled and !pseudoUnload}">后台压缩功能：已禁用，关闭页面会取消正在进行的压缩任务</h5>
+    <h5 style="color:red" th:if="${!backgroundEnabled and pseudoUnload}">后台压缩功能：已禁用，但关闭页面不会取消正在进行的压缩任务，需要手动取消！</h5>
     <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
     <button id="cancelCompressButton" type="button" th:if="${compressStatus == 'COMPRESSING'}" onclick="cancelCompress()">取消压缩</button>
     <a id="download-zip" th:if="${compressStatus == 'COMPRESSED'}" th:text="${compressedFilePath}" th:attr="compress-file-size=${compressedFileSize}">下载压缩文件(zip)</a>
