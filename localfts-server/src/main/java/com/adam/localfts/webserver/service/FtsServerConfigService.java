@@ -67,6 +67,7 @@ public class FtsServerConfigService {
         if(localFtsProperties.getLog() != null) {
             checkLogProperties(LocalFtsStartupException.class);
         }
+        checkUploadProperties(LocalFtsStartupException.class);
         if(localFtsProperties.getTestLanguage() != null) {
             checkTestLanguageAndDeleteNullKeyValue(LocalFtsStartupException.class);
         }
@@ -227,6 +228,7 @@ public class FtsServerConfigService {
                     .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
                     .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
         }
+        stringBuilder.append("[Upload directory disallow user-agent contains]").append(localFtsProperties.getUpload().getDirectory().getDisallowUaContains()).append(System.lineSeparator());
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!CollectionUtils.isEmpty(testLanguageMap)) {
             for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
@@ -341,6 +343,46 @@ public class FtsServerConfigService {
                     .collect(Collectors.toList());
             for (TestLanguageText key : nullKeyList) {
                 testLanguageMap.remove(key);
+            }
+        }
+        return true;
+    }
+
+    private boolean checkUploadProperties(Class<? extends RuntimeException> exClass) {
+        return checkUploadProperties(localFtsProperties.getUpload(), exClass);
+    }
+
+    private boolean checkUploadProperties(UploadProperties uploadProperties, Class<? extends RuntimeException> exClass) {
+        if(uploadProperties == null) {
+            if(exClass != null) {
+                throwException(exClass, "Upload properties object is null!");
+            } else {
+                return false;
+            }
+        }
+
+        UploadDirectoryProperties uploadDirectoryProperties = uploadProperties.getDirectory();
+        boolean checkUploadDirectoryProperties = checkUploadDirectoryProperties(uploadDirectoryProperties, exClass);
+        if(!checkUploadDirectoryProperties) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean checkUploadDirectoryProperties(UploadDirectoryProperties uploadDirectoryProperties, Class<? extends RuntimeException> exClass) {
+        if(uploadDirectoryProperties == null) {
+            if(exClass != null) {
+                throwException(exClass, "Upload directory properties object is null!");
+            } else {
+                return false;
+            }
+        }
+        if(uploadDirectoryProperties.getDisallowUaContains() == null) {
+            if(exClass != null) {
+                throwException(exClass, "Upload directory properties object is null!");
+            } else {
+                return false;
             }
         }
         return true;

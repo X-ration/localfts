@@ -184,15 +184,17 @@ public class WebController {
     }
 
     @GetMapping("/uploadFile")
-    public String uploadFile(Model model, @RequestParam String dirName) {
+    public String uploadFile(Model model, @RequestParam String dirName, @RequestHeader(required = false, value = "User-Agent")String userAgent) {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
         boolean directoryExists = ftsService.checkDirectoryExists(dirName);
+        model.addAttribute("directoryExists", directoryExists);
+        boolean directoryUploadPermitted = ftsService.isDirectoryUploadPermitted(userAgent);
+        model.addAttribute("directoryUploadPermitted", directoryUploadPermitted);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         model.addAttribute("currentPath", dirName);
         String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
-        model.addAttribute("directoryExists", directoryExists);
         return "upload";
     }
 

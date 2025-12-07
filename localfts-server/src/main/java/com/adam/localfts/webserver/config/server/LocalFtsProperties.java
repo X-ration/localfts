@@ -19,6 +19,8 @@ public class LocalFtsProperties {
     private ZipProperties zip;
     @NestedConfigurationProperty
     private LogProperties log;
+    @NestedConfigurationProperty
+    private UploadProperties upload;
     private Map<TestLanguageText, Boolean> testLanguage;
 
 }

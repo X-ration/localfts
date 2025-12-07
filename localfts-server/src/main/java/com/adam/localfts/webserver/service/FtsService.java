@@ -1,6 +1,8 @@
 package com.adam.localfts.webserver.service;
 
-import com.adam.localfts.webserver.common.*;
+import com.adam.localfts.webserver.common.FtsPageModel;
+import com.adam.localfts.webserver.common.HttpRangeObject;
+import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.compress.*;
 import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
@@ -643,6 +645,21 @@ public class FtsService implements DisposableBean {
         return zipFileName + ".zip";
     }
 
+    //不允许伪支持的浏览器展示上传文件夹元素
+    public boolean isDirectoryUploadPermitted(String userAgent) {
+        //默认允许
+        if(userAgent == null) {
+            return true;
+        }
+        List<String> disallowUaContains = ftsServerConfigService.getLocalFtsProperties().getUpload().getDirectory().getDisallowUaContains();
+        for(String uaStr: disallowUaContains) {
+            if(userAgent.contains(uaStr)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * 将文件写入到rootPath下的dirName路径下
      * @param rootPath
@@ -684,6 +701,9 @@ public class FtsService implements DisposableBean {
             }
             if(parentPath.contains("/")) {
                 parentPath = parentPath.substring(0, parentPath.lastIndexOf('/'));
+            } else {
+                //此处为上传文件夹特有的提示
+                return ReturnObject.fail("不允许直接上传文件！", filePath);
             }
             boolean checkMiddlePathExistsAsFile = IOUtil.checkMiddlePathExistsAsFile(directory, parentPath);
             if(checkMiddlePathExistsAsFile) {
