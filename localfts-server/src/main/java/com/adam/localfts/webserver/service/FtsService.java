@@ -20,6 +20,8 @@ import org.springframework.util.Assert;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
+import ua_parser.Client;
+import ua_parser.Parser;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -659,11 +661,16 @@ public class FtsService implements DisposableBean {
         return false;
     }
 
-    //不允许伪支持的浏览器展示上传文件夹元素
+    //伪支持的浏览器展示上传文件夹元素并给出提示
     public boolean isDirectoryUploadPermitted(String userAgent) {
         //默认允许
         if(userAgent == null) {
             return true;
+        }
+        Parser uaParser = new Parser();
+        Client uaClient = uaParser.parse(userAgent);
+        if(uaClient.userAgent.family.equalsIgnoreCase("Safari") || uaClient.device.family.equalsIgnoreCase("iPad")) {
+            return false;
         }
         List<String> disallowUaContains = ftsServerConfigService.getLocalFtsProperties().getUpload().getDirectory().getDisallowUaContains();
         for(String uaStr: disallowUaContains) {
