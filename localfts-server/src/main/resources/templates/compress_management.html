@@ -181,12 +181,16 @@ function updatePager() {
   for(var i=0;i<tagSelectOptions.length;i++) {
     if(tagSelectOptions[i].value == ftsPageSize) {
       foundOption = true;
-      tagSelectOptions[i].setAttribute("selected", "selected");
+      //tagSelectOptions[i].setAttribute("selected", "selected");
+      //tagSelectOptions[i].selected = true;
+      setOptionSelected(tagSelectOptions[i]);
       break;
     }
   }
   if(!foundOption) {
-    tagSelectOptions[0].setAttribute("selected", "selected");
+    //tagSelectOptions[0].setAttribute("selected", "selected");
+    //tagSelectOptions[0].selected = true;
+    setOptionSelected(tagSelectOptions[0]);
   }
 }
 
@@ -552,6 +556,13 @@ function getTdByName(element,tdName) {
       return td;
     }
   }
+}
+function setOptionSelected(option) {
+    if (window.navigator.userAgent.indexOf("MSIE 6.0") > -1) {
+        option.setAttribute("selected", "selected");
+    } else {
+        option.selected = true;
+    }
 }
 function concatUrlForConstant(contextPath, path) {
   return contextPath + path;
