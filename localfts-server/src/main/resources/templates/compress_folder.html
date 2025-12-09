@@ -213,6 +213,7 @@ function updateCompressingHint(text) {
 }
 
 function compressFolder() {
+  abortXhr();
   var compressingHintText = needSizeCheck ? '正在检查文件夹大小并压缩' : '正在压缩';
   var compressingWaitingHintText = compressingHintText + '(等待请求完成...)';
   updateCompressingHint(compressingWaitingHintText);
@@ -227,7 +228,6 @@ function compressFolder() {
     document.getElementById('compressingDiv').appendChild(cancelCompressButton);
   }
   compressStatus = 'COMPRESSING';
-  abortXhr();
   sendPostFormRequest(
     contextPath + "/compressFolder", // 目标接口 URL
     "path=" + encodeURIComponent(currentPath), // 表单格式数据
