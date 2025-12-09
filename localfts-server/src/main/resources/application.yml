@@ -35,6 +35,6 @@ localfts:
   upload:
     directory:
       disallow-ua-contains: ["HuaweiBrowser/16.0.7.301 Mobile", "EdgiOS"]  #上传文件页面根据浏览器User-Agent标识和此字段对伪支持上传文件夹的浏览器不展示上传文件夹元素
-  pseudo-unload-ua-contains: ["HuaweiBrowser/16.0.7.301 Mobile"]  #根据浏览器User-Agent和此字段对离开页面不触发页面卸载事件的浏览器进行提示
+  pseudo-unload-ua-contains: ["HuaweiBrowser/16.0.7.301 Mobile", "EdgiOS"]  #根据浏览器User-Agent和此字段对离开页面不触发页面卸载事件的浏览器进行提示
   test_language:
     Simplified_Chinese: true  #测试终端输出文字是否乱码(简体中文)
