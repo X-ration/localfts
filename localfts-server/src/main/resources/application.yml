@@ -26,7 +26,7 @@ localfts:
   zip:
     enabled: true  #文件夹压缩功能开关
     path: localfts_zip  #文件夹压缩文件存储路径，对根路径的相对路径
-    delete_on_exit: true  #退出服务器进程时是否清理压缩文件存储路径
+    delete_on_exit: true  #!!!退出服务器进程时是否清理压缩文件存储路径
     max-folder-size: 3GB  #限制压缩文件夹原文件夹的大小(超过此数值不能压缩)
     background-enabled: false  #后台压缩开关，不允许时关闭压缩管理页面(/compressFolder)时会结束正在进行的压缩任务
   log:

@@ -645,6 +645,7 @@ public class FtsService implements DisposableBean {
         if(processedPath.startsWith(File.separator)) {
             processedPath = processedPath.substring(File.separator.length());
         }
+        processedPath = processedPath.replaceAll("_", "__");
         String zipFileName = null;
         if(Util.isSystemWindows()) {
             zipFileName = processedPath.replaceFirst(":", "").replaceAll("\\\\", "_");

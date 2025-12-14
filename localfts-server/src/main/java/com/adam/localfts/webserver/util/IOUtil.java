@@ -58,7 +58,7 @@ public class IOUtil {
             ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream);
             BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(zipOutputStream)
         ) {
-            zipDirectory(folder, folder.getName(), true, zipOutputStream, bufferedOutputStream);
+            zipDirectory(zipFile, folder, folder.getName(), true, zipOutputStream, bufferedOutputStream);
         }
 
         LOGGER.debug("compressFolderAsZip ends,folderPath={},zipFilePath={},zipFileName={}", folderPath, zipFilePath, zipFileName);
@@ -142,7 +142,7 @@ public class IOUtil {
      * @param bufferedOutputStream
      * @throws IOException
      */
-    private static void zipDirectory(File currentFile, String parentEntryName, boolean isOuterCall, ZipOutputStream zipOutputStream, BufferedOutputStream bufferedOutputStream) throws IOException, InterruptedException {
+    private static void zipDirectory(File zipFile, File currentFile, String parentEntryName, boolean isOuterCall, ZipOutputStream zipOutputStream, BufferedOutputStream bufferedOutputStream) throws IOException, InterruptedException {
         checkAndThrowInterruptedException();
         if(currentFile.isDirectory()) {
             String entryName = "";
@@ -157,10 +157,14 @@ public class IOUtil {
             File[] files = currentFile.listFiles();
             if(files != null) {
                 for(File file: files) {
-                    zipDirectory(file, entryName + file.getName(), false, zipOutputStream, bufferedOutputStream);
+                    zipDirectory(zipFile, file, entryName + file.getName(), false, zipOutputStream, bufferedOutputStream);
                 }
             }
         } else {
+            if(zipFile.equals(currentFile)) {
+                LOGGER.warn("zipDirectory ignoring self zip file entry {}", parentEntryName);
+                return;
+            }
             LOGGER.trace("zipDirectory writing file entry {}", parentEntryName);
             ZipEntry entry = new ZipEntry(parentEntryName);
             zipOutputStream.putNextEntry(entry);
