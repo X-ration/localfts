@@ -1,0 +1,37 @@
+Copyright (c) 2025 localfts-server author.
+This project is licensed under the MIT License. For details, see the LICENSE file.
+
+This project incorporates or uses the following open-source components:
+
+1. Spring Boot Starters (spring-boot-starter-web, spring-boot-starter-thymeleaf, spring-boot-starter-test)
+   - Version: 2.1.4.RELEASE
+   - Copyright: Copyright (c) Spring.io (Pivotal Software, Inc.)
+   - License: Apache License 2.0
+   - For full license text, see: https://www.apache.org/licenses/LICENSE-2.0.txt
+   - Official repository: https://github.com/spring-projects/spring-boot
+
+2. uap-java (com.github.ua-parser:uap-java)
+   - Version: 1.6.1
+   - Copyright: Copyright (c) 2013-2023 The User Agent Parser Project
+   - License: Apache License 2.0
+   - For full license text, see: https://www.apache.org/licenses/LICENSE-2.0.txt
+
+3. SnakeYAML (org.yaml:snakeyaml)
+   - Version: 1.33
+   - Copyright: Copyright (c) 2008-2023 SnakeYAML
+   - License: Apache License 2.0
+   - For full license text, see: https://www.apache.org/licenses/LICENSE-2.0.txt
+
+4. JetBrains Annotations (org.jetbrains:annotations)
+   - Version: 16.0.3
+   - Copyright: Copyright (c) 2000-2023 JetBrains s.r.o.
+   - License: Apache License 2.0
+   - For full license text, see: https://www.apache.org/licenses/LICENSE-2.0.txt
+
+5. Project Lombok (org.projectlombok:lombok)
+   - Version: 1.18.6 (Inherited from Spring Boot parent)
+   - Copyright: Copyright (c) 2009-2023 Project Lombok
+   - License: MIT License
+   - For full license text, see: https://opensource.org/licenses/MIT
+
+For more information about these components, visit their official websites or repositories.
