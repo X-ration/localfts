@@ -2,6 +2,7 @@
 /target
 /out
 /release
+/dev
 *.iml
 log/
 logBase_IS_UNDEFINED/
