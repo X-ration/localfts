@@ -76,7 +76,7 @@ public class FtsServerConfigService {
         //post construct
         this.setZipPropertiesIfNull();
         if(localFtsProperties.getZip().getEnabled()) {
-            this.createZipFolder(localFtsProperties.getZip().getPath(), true);
+            this.createZipFolder(localFtsProperties.getZip().getPath(), LocalFtsStartupException.class);
         }
         this.rootPathInfo = new RootPathInfo(localFtsProperties.getRootPath());
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
@@ -230,6 +230,7 @@ public class FtsServerConfigService {
                     .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
         }
         stringBuilder.append("[Upload directory disallow user-agent contains]").append(localFtsProperties.getUpload().getDirectory().getDisallowUaContains()).append(System.lineSeparator());
+        stringBuilder.append("[Pseudo unload user-agent contains]").append(localFtsProperties.getPseudoUnloadUaContains()).append(System.lineSeparator());
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!CollectionUtils.isEmpty(testLanguageMap)) {
             for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
@@ -539,19 +540,11 @@ public class FtsServerConfigService {
             }
         }
 
-        if(!zipFolderPath.startsWith(rootPath)) {
-            if(exClass != null) {
-                throwException(exClass, "Zip folder path outside of root path!");
-            } else {
-                return false;
-            }
-        }
-
         boolean isMatch;
         if(Util.isSystemWindows()) {
-            isMatch = Constants.PATTERN_PATH_WINDOWS_ABSOLUTE.matcher(zipFolderPath).matches();
+            isMatch = Constants.PATTERN_PATH_WINDOWS_RELATIVE.matcher(zipFolderPath).matches();
         } else {
-            isMatch = Constants.PATTERN_PATH_LINUX_MACOS_ABSOLUTE.matcher(zipFolderPath).matches();
+            isMatch = Constants.PATTERN_PATH_LINUX_MACOS_RELATIVE.matcher(zipFolderPath).matches();
         }
         if(!isMatch) {
             if(exClass != null) {
@@ -561,7 +554,8 @@ public class FtsServerConfigService {
             }
         }
 
-        File zipFolderPathFile = IOUtil.getFile(zipFolderPath);
+        File rootFile = IOUtil.getFile(rootPath);
+        File zipFolderPathFile = new File(rootFile, zipFolderPath);
         if(zipFolderPathFile.exists() && zipFolderPathFile.isFile()) {
             if(exClass != null) {
                 throwException(exClass, "Zip folder path '" + zipFolderPath + "' is not a directory!");
@@ -573,13 +567,18 @@ public class FtsServerConfigService {
         return true;
     }
 
-    private void createZipFolder(String zipFolderPath, boolean throwException) {
-        File zipFolderPathFile = IOUtil.getFile(zipFolderPath);
+    private void createZipFolder(String zipFolderPath, Class<? extends RuntimeException> exClass) {
+        createZipFolder(zipFolderPath, localFtsProperties.getRootPath(), exClass);
+    }
+
+    private void createZipFolder(String zipFolderPath, String rootPath, Class<? extends RuntimeException> exClass) {
+        File rootFile = IOUtil.getFile(rootPath);
+        File zipFolderPathFile = new File(rootFile, zipFolderPath);
         if(!zipFolderPathFile.exists()) {
             boolean mkdirs = zipFolderPathFile.mkdirs();
             if(!mkdirs) {
-                if(throwException) {
-                    throw new LocalFtsStartupException("Create zip folder path '" + zipFolderPath + "' failed!");
+                if(exClass != null) {
+                    throwException(exClass, "Create zip folder path '" + zipFolderPath + "' failed!");
                 }
             }
         }
