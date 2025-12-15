@@ -31,7 +31,10 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 import static com.adam.localfts.webserver.common.Constants.CRLF;
@@ -48,6 +51,7 @@ public class FtsService implements DisposableBean {
     private ShutdownListener shutdownListener;
 
     private final Map<String, ReentrantLock> zipFileLockMap = new ConcurrentHashMap<>();
+    private final ReadWriteLock zipPathSelfGlobalLock = new ReentrantReadWriteLock();
     private final Map<String, FolderCompressingInfo> folderCompressingInfoMap = new ConcurrentHashMap<>();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
@@ -232,39 +236,45 @@ public class FtsService implements DisposableBean {
         boolean interrupted = false;
         String exMessage = null;
         if(!zipFileExists) {
-            ReentrantLock lock = getZipFileLock(zipFileAbsolutePath);
+            Lock zipPathSelfLock = IOUtil.equalsAbsolutePath(folderFile, zipFolderFile) ? zipPathSelfGlobalLock.writeLock() : zipPathSelfGlobalLock.readLock();
             try {
-                lock.lock();
-                if (!zipFile.exists()) {
-                    needCompress = true;
-                    FolderCompressingInfo folderCompressingInfo = new FolderCompressingInfo(-1L);
-                    folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
-                    IOUtil.compressFolderAsZip(folderAbsolutePath, zipFolderFile.getAbsolutePath(), zipFileName);
-                    folderCompressingInfo.setCompressSize(zipFile.length());
-                    folderCompressingInfo.setExecuteThread(null);
-                    if(!folderCompressingInfoMap.containsKey(folderAbsolutePath)) {
-                        LOGGER.warn("FolderCompressingInfo {} has been removed", zipFileAbsolutePath);
+                zipPathSelfLock.lock();
+                ReentrantLock zipFileLock = getZipFileLock(zipFileAbsolutePath);
+                try {
+                    zipFileLock.lock();
+                    if (!zipFile.exists()) {
+                        needCompress = true;
+                        FolderCompressingInfo folderCompressingInfo = new FolderCompressingInfo(-1L);
                         folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
+                        IOUtil.compressFolderAsZip(folderAbsolutePath, zipFolderFile.getAbsolutePath(), zipFileName);
+                        folderCompressingInfo.setCompressSize(zipFile.length());
+                        folderCompressingInfo.setExecuteThread(null);
+                        if (!folderCompressingInfoMap.containsKey(folderAbsolutePath)) {
+                            LOGGER.warn("FolderCompressingInfo {} has been removed", zipFileAbsolutePath);
+                            folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
+                        }
                     }
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) {
+                        interrupted = true;
+                    } else {
+                        LOGGER.error("exception occurs when compressing folder", e);
+                        exMessage = e.getMessage();
+                    }
+                    String fm = interrupted ? "interrupt folder compressing" : "exception occurs when compressing folder";
+                    LOGGER.info(fm + ":{} -- delete zip file:{}", folderAbsolutePath, zipFileAbsolutePath);
+                    boolean deletes = zipFile.delete();
+                    if (!deletes) {
+                        LOGGER.warn("delete zip file failed:{}", zipFileAbsolutePath);
+                    } else {
+                        LOGGER.info("successfully deleted zip file:{}", zipFileAbsolutePath);
+                    }
+                    folderCompressingInfoMap.remove(folderAbsolutePath);
+                } finally {
+                    zipFileLock.unlock();
                 }
-            } catch (Exception e) {
-                if(e instanceof InterruptedException) {
-                    interrupted = true;
-                } else {
-                    LOGGER.error("exception occurs when compressing folder", e);
-                    exMessage = e.getMessage();
-                }
-                String fm = interrupted ? "interrupt folder compressing" : "exception occurs when compressing folder";
-                LOGGER.info(fm + ":{} -- delete zip file:{}", folderAbsolutePath, zipFileAbsolutePath);
-                boolean deletes = zipFile.delete();
-                if(!deletes) {
-                    LOGGER.warn("delete zip file failed:{}", zipFileAbsolutePath);
-                } else {
-                    LOGGER.info("successfully deleted zip file:{}", zipFileAbsolutePath);
-                }
-                folderCompressingInfoMap.remove(folderAbsolutePath);
             } finally {
-                lock.unlock();
+                zipPathSelfLock.unlock();
             }
         }
 

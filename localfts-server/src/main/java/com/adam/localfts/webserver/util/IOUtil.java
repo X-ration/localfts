@@ -161,7 +161,7 @@ public class IOUtil {
                 }
             }
         } else {
-            if(zipFile.equals(currentFile)) {
+            if(equalsAbsolutePath(zipFile, currentFile)) {
                 LOGGER.warn("zipDirectory ignoring self zip file entry {}", parentEntryName);
                 return;
             }
@@ -330,6 +330,16 @@ public class IOUtil {
             }
         }
         return false;
+    }
+
+    public static boolean equalsAbsolutePath(File file1, File file2) {
+        if(file1 == null && file2 == null) {
+            return true;
+        } else if(file1 == null || file2 == null) {
+            return false;
+        } else {
+            return file1.getAbsolutePath().equals(file2.getAbsolutePath());
+        }
     }
 
     public static void deleteDirectory(String absolutePath, final boolean ignoreFailure) throws IOException{
