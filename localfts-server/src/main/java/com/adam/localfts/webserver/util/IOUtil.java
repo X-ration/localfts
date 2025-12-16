@@ -10,6 +10,7 @@ import java.io.*;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Enumeration;
+import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -161,7 +162,7 @@ public class IOUtil {
                 }
             }
         } else {
-            if(equalsAbsolutePath(zipFile, currentFile)) {
+            if(equals(zipFile, currentFile)) {
                 LOGGER.warn("zipDirectory ignoring self zip file entry {}", parentEntryName);
                 return;
             }
@@ -332,7 +333,7 @@ public class IOUtil {
         return false;
     }
 
-    public static boolean equalsAbsolutePath(File file1, File file2) {
+    public static boolean equals(File file1, File file2) {
         if(file1 == null && file2 == null) {
             return true;
         } else if(file1 == null || file2 == null) {
@@ -340,6 +341,16 @@ public class IOUtil {
         } else {
             return file1.getAbsolutePath().equals(file2.getAbsolutePath());
         }
+    }
+
+    public static boolean isSubPath(File file1, File file2) {
+        Objects.requireNonNull(file1);
+        Objects.requireNonNull(file2);
+        return file2.getAbsolutePath().startsWith(file1.getAbsolutePath());
+    }
+
+    public static boolean equalsOrSubPath(File file1, File file2) {
+        return equals(file1, file2) || isSubPath(file1, file2);
     }
 
     public static void deleteDirectory(String absolutePath, final boolean ignoreFailure) throws IOException{

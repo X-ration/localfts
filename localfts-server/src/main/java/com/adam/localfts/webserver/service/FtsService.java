@@ -236,7 +236,7 @@ public class FtsService implements DisposableBean {
         boolean interrupted = false;
         String exMessage = null;
         if(!zipFileExists) {
-            Lock zipPathSelfLock = IOUtil.equalsAbsolutePath(folderFile, zipFolderFile) ? zipPathSelfGlobalLock.writeLock() : zipPathSelfGlobalLock.readLock();
+            Lock zipPathSelfLock = IOUtil.equalsOrSubPath(folderFile, zipFolderFile) ? zipPathSelfGlobalLock.writeLock() : zipPathSelfGlobalLock.readLock();
             try {
                 zipPathSelfLock.lock();
                 ReentrantLock zipFileLock = getZipFileLock(zipFileAbsolutePath);
