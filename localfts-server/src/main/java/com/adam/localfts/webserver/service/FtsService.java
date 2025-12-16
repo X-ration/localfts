@@ -4,14 +4,12 @@ import com.adam.localfts.webserver.common.FtsPageModel;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.compress.*;
-import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -41,14 +39,12 @@ import static com.adam.localfts.webserver.common.Constants.CRLF;
 import static com.adam.localfts.webserver.common.Constants.DATE_FORMAT_FILE_STANDARD;
 
 @Service
-public class FtsService implements DisposableBean {
+public class FtsService {
 
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
     @Value("${server.error.path:${error.path:/error}}")
     private String errorPath;
-    @Autowired
-    private ShutdownListener shutdownListener;
 
     private final Map<String, ReentrantLock> zipFileLockMap = new ConcurrentHashMap<>();
     private final ReadWriteLock zipPathSelfGlobalLock = new ReentrantReadWriteLock();
@@ -778,26 +774,4 @@ public class FtsService implements DisposableBean {
         }
     }
 
-    @Override
-    public void destroy() throws Exception {
-        if(shutdownListener.getWebServer() != null && ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled()) {
-            //清理压缩文件夹
-            Boolean deleteOnExit = ftsServerConfigService.getLocalFtsProperties().getZip().getDeleteOnExit();
-            if (deleteOnExit != null && deleteOnExit) {
-                String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
-                String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
-                File rootFile = new File(rootPath);
-                File zipFolderFile = new File(rootFile, zipFolderPath);
-                String zipFolderAbsolutePath = zipFolderFile.getAbsolutePath();
-                if (zipFolderFile.exists() && zipFolderFile.isDirectory()) {
-//                FileUtils.deleteDirectory(zipFolderFile);
-                    LOGGER.info("Deleting zip file folder {}", zipFolderAbsolutePath);
-                    IOUtil.deleteDirectory(zipFolderAbsolutePath, true);
-                } else if (zipFolderFile.exists()) {
-                    LOGGER.info("Deleting zip file {}", zipFolderAbsolutePath);
-                    zipFolderFile.delete();
-                }
-            }
-        }
-    }
 }

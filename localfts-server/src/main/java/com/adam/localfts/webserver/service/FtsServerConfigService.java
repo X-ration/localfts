@@ -2,6 +2,7 @@ package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
+import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.config.localfts.*;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
@@ -11,6 +12,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -23,21 +25,16 @@ import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.*;
-import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
 @Service
 @Getter
-public class FtsServerConfigService {
+public class FtsServerConfigService implements DisposableBean {
 
     @Autowired
     private LocalFtsProperties localFtsProperties;
-    private RootPathInfo rootPathInfo;
-    private FtsServerIpInfoModel ftsServerIpInfoModel;
     @Value("${server.port}")
     private int serverPort;
     @Value("${server.servlet.context-path}")
@@ -46,7 +43,12 @@ public class FtsServerConfigService {
     private String maxFileSize;
     @Value("${spring.servlet.multipart.max-request-size}")
     private String maxRequestSize;
+    @Autowired
+    private ShutdownListener shutdownListener;
 
+    private RootPathInfo rootPathInfo;
+    private FtsServerIpInfoModel ftsServerIpInfoModel;
+    private final Stack<File> createZipFolderStack = new Stack<>();
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsServerConfigService.class);
 
     public void checkPropertiesAndPostConstruct() {
@@ -575,10 +577,71 @@ public class FtsServerConfigService {
         File rootFile = IOUtil.getFile(rootPath);
         File zipFolderPathFile = new File(rootFile, zipFolderPath);
         if(!zipFolderPathFile.exists()) {
-            boolean mkdirs = zipFolderPathFile.mkdirs();
-            if(!mkdirs) {
-                if(exClass != null) {
-                    throwException(exClass, "Create zip folder path '" + zipFolderPath + "' failed!");
+            createFolderHierarchically(zipFolderPathFile, createZipFolderStack, exClass);
+        }
+    }
+
+    /**
+     * 先创建父文件夹，再创建子文件夹，并将File对象添加到栈中
+     * @param folderFile
+     * @param stack
+     * @param exClass
+     */
+    private void createFolderHierarchically(File folderFile, Stack<File> stack, Class<? extends RuntimeException> exClass) {
+        if(folderFile == null) {
+            throwException(exClass, "folderFile is null!");
+        }
+
+        boolean folderExists = folderFile.exists();
+        if(folderExists && folderFile.isFile()) {
+            throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!");
+        } else if(folderExists) {
+            return;
+        }
+
+        File parentFile = folderFile.getParentFile();
+        if(parentFile != null) {
+            boolean parentFileExists = parentFile.exists();
+            if (parentFileExists && parentFile.isFile()) {
+                throwException(exClass, "parentFile[" + parentFile.getAbsolutePath() + "] is a file!");
+            }
+            if (!parentFileExists) {
+                createFolderHierarchically(parentFile, stack, exClass);
+            }
+        } else {
+            LOGGER.warn("parentFile[{}] is null, ignoring", folderFile.getAbsolutePath());
+        }
+
+        try {
+            LOGGER.info("Creating folder {}", folderFile.getAbsolutePath());
+            boolean mkdir = folderFile.mkdir();
+            if (!mkdir) {
+                if (!folderFile.exists()) {
+                    throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] failed!");
+                } else if(folderFile.isFile()) {
+                    throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!(when mkdir)");
+                }
+            }
+        } catch (SecurityException e) {
+            LOGGER.error("Error creating folder {}", folderFile.getAbsolutePath(), e);
+            throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
+        }
+
+        stack.push(folderFile);
+    }
+
+    private void clearCreatedFolders() {
+        while(!createZipFolderStack.isEmpty()) {
+            File file = createZipFolderStack.pop();
+            if(file.exists()) {
+                try {
+                    LOGGER.info("Deleting {}", file.getAbsolutePath());
+                    boolean delete = file.delete();
+                    if (!delete) {
+                        LOGGER.warn("failed to delete {}", file.getAbsolutePath());
+                    }
+                } catch (SecurityException e) {
+                    LOGGER.error("{}'s deletion encountered SecurityException", file.getAbsolutePath(), e);
                 }
             }
         }
@@ -705,4 +768,14 @@ public class FtsServerConfigService {
         return model;
     }
 
+    @Override
+    public void destroy() throws Exception {
+        if(shutdownListener.getWebServer() != null && getLocalFtsProperties().getZip().getEnabled()) {
+            //清理压缩文件夹
+            Boolean deleteOnExit = getLocalFtsProperties().getZip().getDeleteOnExit();
+            if (deleteOnExit != null && deleteOnExit) {
+                clearCreatedFolders();
+            }
+        }
+    }
 }
