@@ -48,7 +48,7 @@ public class FtsServerConfigService implements DisposableBean {
 
     private RootPathInfo rootPathInfo;
     private FtsServerIpInfoModel ftsServerIpInfoModel;
-    private final Stack<File> createZipFolderStack = new Stack<>();
+    private final Stack<File> zipFolderStack = new Stack<>();
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsServerConfigService.class);
 
     public void checkPropertiesAndPostConstruct() {
@@ -577,7 +577,9 @@ public class FtsServerConfigService implements DisposableBean {
         File rootFile = IOUtil.getFile(rootPath);
         File zipFolderPathFile = new File(rootFile, zipFolderPath);
         if(!zipFolderPathFile.exists()) {
-            createFolderHierarchically(zipFolderPathFile, createZipFolderStack, exClass);
+            createFolderHierarchically(zipFolderPathFile, zipFolderStack, exClass);
+        } else {
+            zipFolderStack.push(zipFolderPathFile);
         }
     }
 
@@ -595,53 +597,50 @@ public class FtsServerConfigService implements DisposableBean {
         boolean folderExists = folderFile.exists();
         if(folderExists && folderFile.isFile()) {
             throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!");
-        } else if(folderExists) {
-            return;
         }
 
-        File parentFile = folderFile.getParentFile();
-        if(parentFile != null) {
-            boolean parentFileExists = parentFile.exists();
-            if (parentFileExists && parentFile.isFile()) {
-                throwException(exClass, "parentFile[" + parentFile.getAbsolutePath() + "] is a file!");
-            }
-            if (!parentFileExists) {
-                createFolderHierarchically(parentFile, stack, exClass);
-            }
-        } else {
-            LOGGER.warn("parentFile[{}] is null, ignoring", folderFile.getAbsolutePath());
-        }
-
-        try {
-            LOGGER.info("Creating folder {}", folderFile.getAbsolutePath());
-            boolean mkdir = folderFile.mkdir();
-            if (!mkdir) {
-                if (!folderFile.exists()) {
-                    throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] failed!");
-                } else if(folderFile.isFile()) {
-                    throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!(when mkdir)");
+        if(!folderExists) {
+            File parentFile = folderFile.getParentFile();
+            if (parentFile != null) {
+                boolean parentFileExists = parentFile.exists();
+                if (parentFileExists && parentFile.isFile()) {
+                    throwException(exClass, "parentFile[" + parentFile.getAbsolutePath() + "] is a file!");
                 }
+                if (!parentFileExists) {
+                    createFolderHierarchically(parentFile, stack, exClass);
+                }
+            } else {
+                LOGGER.warn("parentFile[{}] is null, ignoring", folderFile.getAbsolutePath());
             }
-        } catch (SecurityException e) {
-            LOGGER.error("Error creating folder {}", folderFile.getAbsolutePath(), e);
-            throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
+
+            try {
+                LOGGER.info("Creating folder {}", folderFile.getAbsolutePath());
+                boolean mkdir = folderFile.mkdir();
+                if (!mkdir) {
+                    if (!folderFile.exists()) {
+                        throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] failed!");
+                    } else if (folderFile.isFile()) {
+                        throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!(when mkdir)");
+                    }
+                }
+            } catch (SecurityException e) {
+                LOGGER.error("Error creating folder {}", folderFile.getAbsolutePath(), e);
+                throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
+            }
         }
 
         stack.push(folderFile);
     }
 
     private void clearCreatedFolders() {
-        while(!createZipFolderStack.isEmpty()) {
-            File file = createZipFolderStack.pop();
+        while(!zipFolderStack.isEmpty()) {
+            File file = zipFolderStack.pop();
             if(file.exists()) {
                 try {
                     LOGGER.info("Deleting {}", file.getAbsolutePath());
-                    boolean delete = file.delete();
-                    if (!delete) {
-                        LOGGER.warn("failed to delete {}", file.getAbsolutePath());
-                    }
-                } catch (SecurityException e) {
-                    LOGGER.error("{}'s deletion encountered SecurityException", file.getAbsolutePath(), e);
+                    IOUtil.deleteDirectory(file.getAbsolutePath(), true);
+                } catch (SecurityException | IOException e) {
+                    LOGGER.error("{}'s deletion encountered SecurityException | IOException", file.getAbsolutePath(), e);
                 }
             }
         }
