@@ -10,5 +10,5 @@ import java.util.List;
 @Setter
 @ToString
 public class UploadDirectoryProperties {
-    private List<String> disallowUaContains;
+    private List<String> pseudoUaContains;
 }

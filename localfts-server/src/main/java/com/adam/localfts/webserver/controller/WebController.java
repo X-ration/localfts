@@ -190,8 +190,8 @@ public class WebController {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
         boolean directoryExists = ftsService.checkDirectoryExists(dirName);
         model.addAttribute("directoryExists", directoryExists);
-        boolean directoryUploadPermitted = ftsService.isDirectoryUploadPermitted(userAgent);
-        model.addAttribute("directoryUploadPermitted", directoryUploadPermitted);
+        boolean pseudoDirectoryUpload = ftsService.isPseudoDirectoryUpload(userAgent);
+        model.addAttribute("pseudoDirectoryUpload", pseudoDirectoryUpload);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         model.addAttribute("currentPath", dirName);

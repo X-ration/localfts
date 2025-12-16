@@ -688,7 +688,7 @@ public class FtsService implements DisposableBean {
     }
 
     //伪支持的浏览器展示上传文件夹元素并给出提示
-    public boolean isDirectoryUploadPermitted(String userAgent) {
+    public boolean isPseudoDirectoryUpload(String userAgent) {
         //默认允许
         if(userAgent == null) {
             return true;
@@ -698,8 +698,8 @@ public class FtsService implements DisposableBean {
         if(uaClient.userAgent.family.equalsIgnoreCase("Safari") || uaClient.device.family.equalsIgnoreCase("iPad")) {
             return false;
         }
-        List<String> disallowUaContains = ftsServerConfigService.getLocalFtsProperties().getUpload().getDirectory().getDisallowUaContains();
-        for(String uaStr: disallowUaContains) {
+        List<String> pseudoUaContains = ftsServerConfigService.getLocalFtsProperties().getUpload().getDirectory().getPseudoUaContains();
+        for(String uaStr: pseudoUaContains) {
             if(userAgent.contains(uaStr)) {
                 return false;
             }

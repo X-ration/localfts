@@ -229,7 +229,7 @@ public class FtsServerConfigService {
                     .append("[Zip folder delete on exit]").append(localFtsProperties.getZip().getDeleteOnExit()).append(System.lineSeparator())
                     .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
         }
-        stringBuilder.append("[Upload directory disallow user-agent contains]").append(localFtsProperties.getUpload().getDirectory().getDisallowUaContains()).append(System.lineSeparator());
+        stringBuilder.append("[Upload directory pseudo user-agent contains]").append(localFtsProperties.getUpload().getDirectory().getPseudoUaContains()).append(System.lineSeparator());
         stringBuilder.append("[Pseudo unload user-agent contains]").append(localFtsProperties.getPseudoUnloadUaContains()).append(System.lineSeparator());
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!CollectionUtils.isEmpty(testLanguageMap)) {
@@ -395,7 +395,7 @@ public class FtsServerConfigService {
                 return false;
             }
         }
-        if(uploadDirectoryProperties.getDisallowUaContains() == null) {
+        if(uploadDirectoryProperties.getPseudoUaContains() == null) {
             if(exClass != null) {
                 throwException(exClass, "Upload directory properties object is null!");
             } else {

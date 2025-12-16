@@ -82,7 +82,7 @@
 <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
     var contextPath = [[${#request.contextPath}]];
     var URL_LIST = concatUrlForConstant(contextPath, '/list');
-    var directoryUploadPermitted = [[${directoryUploadPermitted}]];
+    var pseudoDirectoryUpload = [[${pseudoDirectoryUpload}]];
 
     var visitDirectory = document.getElementById("visit-directory");
     visitDirectory.setAttribute('href', concatUrlList(visitDirectory.innerText));
@@ -114,7 +114,7 @@
         uploadDiv.removeChild(dirFieldSet);
         hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器不支持上传文件夹。</h4>';
     } else {
-        if(directoryUploadPermitted) {
+        if(pseudoDirectoryUpload) {
             hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器支持上传文件夹。</h4><span style=\'color:red\'>注意：上传文件夹时，空文件夹不会上传。</span>';
         } else {
             hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器不支持上传文件夹，（伪支持）您可以自主尝试。</h4>';
