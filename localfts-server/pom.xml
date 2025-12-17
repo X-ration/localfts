@@ -6,7 +6,7 @@
 
   <groupId>com.adam</groupId>
   <artifactId>localfts-server</artifactId>
-  <version>1.0.5</version>
+  <version>1.1.0</version>
 
   <parent>
     <groupId>org.springframework.boot</groupId>
@@ -55,6 +55,13 @@
       <groupId>org.yaml</groupId>
       <artifactId>snakeyaml</artifactId>
       <version>1.33</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <version>16.0.3</version>
+      <scope>provided</scope> <!-- 只用于代码静态分析，运行时不需要，建议用 provided 作用域 -->
     </dependency>
 
     <dependency>

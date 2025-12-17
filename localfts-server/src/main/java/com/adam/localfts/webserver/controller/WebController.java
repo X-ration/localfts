@@ -1,26 +1,30 @@
 package com.adam.localfts.webserver.controller;
 
-import com.adam.localfts.webserver.common.FtsPageModel;
-import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
-import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.common.*;
+import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
+import com.adam.localfts.webserver.common.compress.FolderCompressData;
+import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
 import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriUtils;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 @Controller
 @RequestMapping("")
@@ -31,7 +35,7 @@ public class WebController {
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final static Logger LOGGER = LoggerFactory.getLogger(WebController.class);
 
     @GetMapping("")
     public String index(Model model, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
@@ -40,8 +44,21 @@ public class WebController {
 
     @GetMapping("/list")
     public String list(Model model, @RequestParam(name = "path") String relativePath, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
-        FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
-        model.addAttribute("ftsPage", ftsPageModel);
+        model.addAttribute("currentPath", relativePath);
+        boolean directoryExists = ftsService.checkDirectoryExists(relativePath);
+        model.addAttribute("directoryExists", directoryExists);
+        if(pageNo <= 0) {
+            pageNo = 1;
+        }
+        if(pageSize <= 0) {
+            pageSize = 20;
+        }
+        if(directoryExists) {
+            FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
+            model.addAttribute("ftsPage", ftsPageModel);
+        }
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        model.addAttribute("zipEnabled", zipEnabled);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
@@ -49,8 +66,115 @@ public class WebController {
         return "list";
     }
 
+    /**
+     * 全局压缩管理页面
+     * @param model
+     * @return
+     */
+    @GetMapping("/compressManagement")
+    public String compressManagement(@RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "10") int pageSize, Model model) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if(pageNo <= 0) {
+            pageNo = 1;
+        }
+        if(pageSize <= 0) {
+            pageSize = 10;
+        }
+        CompressManagementPageModel list = ftsService.listCompressTask(pageNo, pageSize);
+        model.addAttribute("pagedList", list);
+        boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
+        model.addAttribute("needSizeCheck", needSizeCheck);
+        Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
+        model.addAttribute("backgroundEnabled", backgroundEnabled);
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
+        String serverTime = Util.getServerTimeFormattedString();
+        model.addAttribute("serverTime", serverTime);
+        return "compress_management";
+    }
+
+    /**
+     * 文件夹压缩管理页面
+     * @param relativePath
+     * @param model
+     * @return
+     */
+    @GetMapping("/compressFolder")
+    public String compressFolder(@RequestParam(value = "path") String relativePath, @RequestHeader(required = false, value = "User-Agent")String userAgent, Model model) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
+        String serverTime = Util.getServerTimeFormattedString();
+        model.addAttribute("serverTime", serverTime);
+        boolean directoryExists = ftsService.checkDirectoryExists(relativePath);
+        model.addAttribute("directoryExists", directoryExists);
+        model.addAttribute("currentPath", relativePath);
+        if(directoryExists) {
+            FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
+            model.addAttribute("compressStatus", compressStatus.name());
+            if(compressStatus == FolderCompressStatus.COMPRESSED) {
+                String zipFileRelativePath = ftsService.getFolderCompressedZipRelativePath(relativePath, false);
+                model.addAttribute("compressedFilePath", zipFileRelativePath);
+                long compressedFileSize = ftsService.getFolderCompressedFileSize(relativePath, false);
+                String compressedFileSizeStr = Util.fileLengthToStringNew(compressedFileSize);
+                model.addAttribute("compressedFileSize", compressedFileSizeStr);
+            }
+            boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
+            model.addAttribute("needSizeCheck", needSizeCheck);
+            Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
+            model.addAttribute("backgroundEnabled", backgroundEnabled);
+            boolean pseudoUnload = ftsService.isPseudoUnload(userAgent);
+            model.addAttribute("pseudoUnload", pseudoUnload);
+        }
+        return "compress_folder";
+    }
+
+    @PostMapping("/compressFolder")
+    @ResponseBody
+    public ReturnObject<FolderCompressData> compressFolder(@RequestParam(value = "path") String relativePath) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        try {
+            return ftsService.compressFolder(relativePath);
+        } catch (IOException e) {
+            LOGGER.error("压缩文件夹'{}'时出错", relativePath, e);
+            return ReturnObject.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/cancelCompress")
+    @ResponseBody
+    public ReturnObject<Void> cancelCompress(@RequestParam(value = "path") String relativePath) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        return ftsService.cancelCompress(relativePath);
+    }
+
+    @PostMapping("/deleteCompressFile")
+    @ResponseBody
+    public ReturnObject<Void> deleteCompressFile(@RequestParam(value = "path") String relativePath) {
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(!zipEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        return ftsService.deleteCompressFile(relativePath);
+    }
+
     @GetMapping("/downloadFile")
-    public void downloadFile(@RequestParam(value = "fileName") String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void downloadFile(@RequestParam(value = "fileName") String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         Assert.isTrue(null != filePath & !"".equals(filePath), "非法请求参数");
         ftsService.downloadFile(filePath, request, response);
     }
@@ -62,17 +186,15 @@ public class WebController {
     }
 
     @GetMapping("/uploadFile")
-    public String uploadFile(Model model, @RequestParam String dirName, @RequestParam(required = false) Boolean uploadStatus,
-                             @RequestParam(required = false) String uploadMessage) {
+    public String uploadFile(Model model, @RequestParam String dirName, @RequestHeader(required = false, value = "User-Agent")String userAgent) {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
-        ftsService.ensureDirectoryExists(dirName);
+        boolean directoryExists = ftsService.checkDirectoryExists(dirName);
+        model.addAttribute("directoryExists", directoryExists);
+        boolean pseudoDirectoryUpload = ftsService.isPseudoDirectoryUpload(userAgent);
+        model.addAttribute("pseudoDirectoryUpload", pseudoDirectoryUpload);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         model.addAttribute("currentPath", dirName);
-        if(uploadStatus != null) {
-            model.addAttribute("uploadStatus", uploadStatus);
-            model.addAttribute("uploadMessage", uploadMessage);
-        }
         String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
         return "upload";
@@ -86,11 +208,19 @@ public class WebController {
      * @return
      */
     @PostMapping("/uploadFileTransfer")
-    public String uploadFileTransfer(MultipartFile file, @RequestParam String dirName, RedirectAttributes redirectAttributes) throws UnsupportedEncodingException {
+    public String uploadFileTransfer(MultipartFile file, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
         Assert.isTrue(file != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
-        ReturnObject<Void> returnObject = ftsService.uploadFile(dirName, file);
-        redirectAttributes.addFlashAttribute("uploadStatus", returnObject.isSuccess());
-        redirectAttributes.addFlashAttribute("uploadMessage", returnObject.getMessage());
+        ReturnObject<String> returnObject = ftsService.uploadFile(dirName, file);
+        redirectAttributes.addFlashAttribute("uploadFileRetObject", returnObject);
+        return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
+    }
+
+    @PostMapping("/uploadFilesTransfer")
+    public String uploadFilesTransfer(MultipartFile[] files, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
+        LOGGER.debug("uploadFilesTransfer files count={}, dirName={}", files.length, dirName);
+        Assert.isTrue(files != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
+        ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files);
+        redirectAttributes.addFlashAttribute("uploadDirRetObject", returnObject);
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
     }
 }

@@ -1,44 +1,26 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head lang="cn">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
     <meta charset="UTF-8">
     <title>局域网文件传输服务器</title>
-    <style>
-        .hidden {
-            display:none;
-        }
-        .show {
-           width:70%;height:auto;margin:5em 15% auto 15%;
-           background-color:white;
-           border-style:solid;border-width:0.05em;
-        }
-        table,th,td {
-            border-style:solid;
-            border-collapse:collapse;
-            border-color:black;
-        }
-        table {
-            border-width:0.1em;
-        }
-        th,td {
-            border-width:0.05em;
-        }
-    </style>
+    <link rel="stylesheet" th:href="${#request.contextPath} + '/static/common.css'">
 </head>
 <body>
 <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
 <hr>
-<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" href="/localfts">返回首页</a><br><br>
+<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" id="visit-directory" th:text="${currentPath}">访问目录</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><br><br>
 <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
     <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
     <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
+        <thead>
         <tr>
             <th style="padding-left:2em;padding-right:2em">网卡显示名称</th>
             <th style="padding-left:2em;padding-right:2em">网卡名称</th>
             <th style="padding-left:2em;padding-right:2em">Ipv4地址</th>
         </tr>
-        <tbody th:each="item:${serverIpInfo.items}">
-        <tr>
+        </thead>
+        <tbody>
+        <tr th:each="item:${serverIpInfo.items}">
             <td th:text="${item.displayName}">displayName</td>
             <td th:text="${item.name}">name</td>
             <td th:text="${{item.addresses}}">addresses</td>
@@ -47,23 +29,107 @@
     </table>
     <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
 </div>
-<div th:if="${uploadStatus != null && uploadStatus}">
-    <h4 th:text="${uploadMessage}"></h4>
+<div th:if="${uploadFileRetObject != null && uploadFileRetObject.success}">
+    <h4 th:text="|'${uploadFileRetObject.data}'上传成功！|"></h4>
 </div>
-<div th:if="${uploadStatus != null && !uploadStatus}">
-    <h4 th:text="|上传失败，报错信息：${uploadMessage}|"></h4>
+<div th:if="${uploadFileRetObject != null && !uploadFileRetObject.success}">
+    <h4 th:text="(${uploadFileRetObject.data}? '\'' + ${uploadFileRetObject.data} + '\'' : '') + '上传失败：' + ${uploadFileRetObject.message}"></h4>
 </div>
-<form th:action="@{'/uploadFileTransfer'}" enctype="multipart/form-data" method="post">
-    <input type="file" name="file">
-    <input type="hidden" name="dirName" th:value="${currentPath}">
-    <input type="submit" value="上传">
-</form>
+<div th:if="${uploadDirRetObject != null && uploadDirRetObject.success}">
+    <h4 th:text="${uploadDirRetObject.message}"></h4>
+    <ul>
+        <li th:each="retObject:${uploadDirRetObject.data}" th:text="'\'' + ${retObject.data} + '\'' + (${retObject.success}?  '上传成功' : '上传失败:' + ${retObject.message})">
+        </li>
+    </ul>
+</div>
+<div th:if="${uploadDirRetObject != null && !uploadDirRetObject.success}">
+    <h4 th:text="'上传失败：' + ${uploadDirRetObject.message}"></h4>
+</div>
+<div th:if="${directoryExists}" id="uploadDiv">
+    <div style="display: none" id="uploadDirectoryHint"></div><br>
+    <fieldset style="display: inline-block;*display: inline; zoom: 1;">
+        <legend>上传文件</legend>
+        <form th:action="@{'/uploadFileTransfer'}" enctype="multipart/form-data" method="post">
+            <input type="file" name="file">
+            <input type="hidden" name="dirName" th:value="${currentPath}">
+            <input type="submit" value="上传">
+        </form>
+    </fieldset>
+    <fieldset style="display: inline-block;*display: inline; zoom: 1;" id="uploadDirectoryFieldSet">
+        <legend>上传文件夹</legend>
+        <form th:action="@{'/uploadFilesTransfer'}" enctype="multipart/form-data" method="post">
+            <input type="file" name="files" webkitdirectory directory>
+            <input type="hidden" name="dirName" th:value="${currentPath}">
+            <input type="submit" value="上传">
+        </form>
+    </fieldset>
+</div>
+<div th:if="${!directoryExists}">
+    该路径不存在！
+</div>
 </body>
 <script type="text/javascript">
     //deal with serverIpInfo in IE
     if(!document.getElementById('serverIpInfo').getAttribute("class")) {
-        document.getElementById('serverIpInfoShowButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','show')};
-        document.getElementById('serverIpInfoHideButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','hidden')};
+        document.getElementById('serverIpInfoShowButton').onclick = function() {
+            document.getElementById('serverIpInfo').setAttribute('className','show')
+        };
+        document.getElementById('serverIpInfoHideButton').onclick = function() {
+            document.getElementById('serverIpInfo').setAttribute('className','hidden')
+        };
+    }
+</script>
+<script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
+    var contextPath = [[${#request.contextPath}]];
+    var URL_LIST = concatUrlForConstant(contextPath, '/list');
+    var pseudoDirectoryUpload = [[${pseudoDirectoryUpload}]];
+
+    var visitDirectory = document.getElementById("visit-directory");
+    visitDirectory.setAttribute('href', concatUrlList(visitDirectory.innerText));
+    visitDirectory.innerText = '访问目录';
+
+    function isFolderSelectionSupported() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        // 检测 webkitdirectory 支持
+        var webkitSupport = 'webkitdirectory' in input;
+        // 检测 directory 支持
+        var directorySupport = 'directory' in input;
+        return {
+            webkitdirectory: webkitSupport,
+            directory: directorySupport,
+            supported: webkitSupport || directorySupport
+        };
+    }
+
+    var folderSelectionSupported = isFolderSelectionSupported();
+    var alertString = '支持：' + folderSelectionSupported.supported + '\r\n'
+            + 'webkitdirectory:' + folderSelectionSupported.webkitdirectory + '\r\n'
+            + 'directory:' + folderSelectionSupported.directory;
+    var uploadDirectoryHint = document.getElementById('uploadDirectoryHint');
+    var hintHtml = null;
+    if(!folderSelectionSupported.supported) {
+        var dirFieldSet = document.getElementById('uploadDirectoryFieldSet');
+        var uploadDiv = document.getElementById('uploadDiv');
+        uploadDiv.removeChild(dirFieldSet);
+        hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器不支持上传文件夹。</h4>';
+    } else {
+        if(pseudoDirectoryUpload) {
+            hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器支持上传文件夹。</h4><span style=\'color:red\'>注意：上传文件夹时，空文件夹不会上传。</span>';
+        } else {
+            hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器不支持上传文件夹，（伪支持）您可以自主尝试。</h4>';
+        }
+    }
+    uploadDirectoryHint.innerHTML = hintHtml;
+    uploadDirectoryHint.style.display = 'block';  //for ie
+    //uploadDirectoryHint.setAttribute('style', 'display: block');
+    //alert(alertString);
+
+    function concatUrlForConstant(contextPath, path) {
+      return contextPath + path;
+    }
+    function concatUrlList(path, pageNo, pageSize) {
+      return URL_LIST + "?path=" + encodeURIComponent(path);
     }
 </script>
 </html>

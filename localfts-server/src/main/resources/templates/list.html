@@ -1,44 +1,27 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head lang="cn">
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
     <meta charset="UTF-8">
     <title>局域网文件传输服务器</title>
-    <style>
-        .hidden {
-            display:none;
-        }
-        .show {
-           width:70%;height:auto;margin:5em 15% auto 15%;
-           background-color:white;
-           border-style:solid;border-width:0.05em;
-        }
-        table,th,td {
-            border-style:solid;
-            border-collapse:collapse;
-            border-color:black;
-        }
-        table {
-            border-width:0.1em;
-        }
-        th,td {
-            border-width:0.05em;
-        }
-    </style>
+    <link rel="stylesheet" th:href="${#request.contextPath} + '/static/common.css'">
 </head>
 <body>
     <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
     <hr>
-    <br>当前路径：<span id="page-path" th:text="${ftsPage.path}">path</span><a style="margin-left:1em" href="/localfts">返回首页</a><br><br>
+    <br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:if=${zipEnabled} th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><br><br>
+<!--    <strong style="color: red">注意：下载文件夹前需要压缩，否则会报404 Not Found错误。</strong>-->
     <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
         <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
         <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
+            <thead>
             <tr>
                 <th style="padding-left:2em;padding-right:2em">网卡显示名称</th>
                 <th style="padding-left:2em;padding-right:2em">网卡名称</th>
                 <th style="padding-left:2em;padding-right:2em">Ipv4地址</th>
             </tr>
-            <tbody th:each="item:${serverIpInfo.items}">
-            <tr>
+            </thead>
+            <tbody>
+            <tr th:each="item:${serverIpInfo.items}">
                 <td th:text="${item.displayName}">displayName</td>
                 <td th:text="${item.name}">name</td>
                 <td th:text="${{item.addresses}}">addresses</td>
@@ -47,71 +30,113 @@
         </table>
         <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
-    <table style="text-align:left;border-style:solid">
-        <tr>
-            <th style="width:60%">文件名</th>
-            <th style="width:10%">类型</th>
-            <th style="width:10%">大小</th>
-            <th style="width:10%">修改时间</th>
-            <th style="width:10%">操作</th>
-        </tr>
-        <tr>
-            <td><a id="up-path">返回上一级</a></td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-        </tr>
-        <tbody th:each="item:${ftsPage.fileList}">
-            <tr th:if="${item.directory}">
+    <div th:if="${directoryExists}">
+        <table class="left-head-table" style="text-align:left;border-style:solid">
+            <thead>
+            <tr th:if="${zipEnabled}">
+                <th style="width:60%">文件名</th>
+                <th style="width:8%">类型</th>
+                <th style="width:8%">大小</th>
+                <th style="width:8%">文件夹压缩状态</th>
+                <th style="width:8%">修改时间</th>
+                <th style="width:8%">操作</th>
+            </tr>
+            <tr th:if="${!zipEnabled}">
+                <th style="width:60%">文件名</th>
+                <th style="width:10%">类型</th>
+                <th style="width:10%">大小</th>
+                <th style="width:10%">修改时间</th>
+                <th style="width:10%">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><a id="return-to-up-path">返回上一级</a></td>
+                <td>-</td>
+                <td>-</td>
+                <td th:if="${zipEnabled}">-</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td><a id="return-to-current-path">当前目录</a></td>
+                <td>文件夹</td>
+                <td>-</td>
+                <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}"></td>
+                <td th:text="${ftsPage.currentPathModel.lastModified}"></td>
+                <td>
+                    <a id="upload-to-current-path">上传文件</a>
+                    <a th:if="${zipEnabled}" id="compress-current-path">压缩管理</a>
+                    <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}" th:attr="compress-file-size=${ftsPage.currentPathModel.compressedFileSize}">下载文件夹(zip)</a>
+                </td>
+            </tr>
+            <tr th:if="${item.directory}" th:each="item:${ftsPage.data}">
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
                 <td>文件夹</td>
                 <td>-</td>
+                <td th:if="${zipEnabled}" th:text="${item.compressStatus.desc}"></td>
                 <td th:text="${item.lastModified}">last modified</td>
-                <td><a name="upload-file" th:text="${item.fileName}">上传文件</a></td>
+                <td>
+                    <a name="upload-file" th:text="${item.fileName}">上传文件</a>
+                    <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.fileName}">压缩管理</a>
+                    <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}" th:attr="compress-file-size=${item.compressedFileSize}">下载文件夹(zip)
+                    </a>
+                </td>
             </tr>
-            <tr th:if="!${item.directory}">
+            <tr th:if="!${item.directory}" th:each="item:${ftsPage.data}">
                 <td th:text="${item.fileName}">fileName</td>
                 <td>文件</td>
                 <td th:text="${item.fileSizeStr}">0</td>
+                <td th:if="${zipEnabled}">-</td>
                 <td th:text="${item.lastModified}">last modified</td>
                 <td><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
             </tr>
-        </tbody>
-    </table>
-    <br>
+            </tbody>
+        </table>
+        <br>
 
-    <p>
-        第<span id="current-page" th:text="${ftsPage.currentPage}">page no</span>页 <span id="current-size" th:text="${ftsPage.currentSize}">page size</span>条
-        总<span id="total-page" th:text="${ftsPage.totalPage}">total page</span>页 <span id="total-size" th:text="${ftsPage.totalSize}">total size</span>条
-    </p>
+        <p>
+            第<span id="current-page" th:text="${ftsPage.currentPage}">page no</span>页 <span id="current-size" th:text="${ftsPage.currentSize}">page size</span>条
+            总<span id="total-page" th:text="${ftsPage.totalPage}">total page</span>页 <span id="total-size" th:text="${ftsPage.totalSize}">total size</span>条
+        </p>
 
-    <a id="first-page">首页</a>
-    <a id="previous-page">上一页</a>
-    <a id="next-page">下一页</a>
-    <a id="last-page">尾页</a>
+        <a id="first-page">首页</a>
+        <a id="previous-page">上一页</a>
+        <a id="next-page">下一页</a>
+        <a id="last-page">尾页</a>
 
-    <form th:action="@{'/list'}" enctype="application/x-www-form-urlencoded">
-        <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
-        <input type="hidden" name="path" th:value="${ftsPage.path}">
-        <input type="text" size="2" id="page-no" name="pageNo" th:value="${ftsPage.currentPage}">
-        <select name="pageSize" id="page-size-select">
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-        </select>
-        <input type="submit" value="跳转">
-    </form>
-    <script type="text/javascript">
-        var URL_LIST = "/localfts/list";
+        <form th:action="@{'/list'}" enctype="application/x-www-form-urlencoded">
+            <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
+            <input type="hidden" name="path" th:value="${ftsPage.path}">
+            <label for="page-no">页数:</label>
+            <input type="text" size="2" id="page-no" name="pageNo" th:value="${ftsPage.currentPage}">
+            <label for="page-size-select">每页数量:</label>
+            <select name="pageSize" id="page-size-select">
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select>
+            <input type="submit" value="跳转">
+        </form>
+    </div>
+    <div th:if="${!directoryExists}">
+        该路径不存在！
+    </div>
+    <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
+        var contextPath = [[${#request.contextPath}]];
+        var ftsPagePath = [[${currentPath}]];
+        /*var URL_LIST = "/localfts/list";
         var URL_DOWNLOAD = "/localfts/downloadFile";
-        var URL_UPLOAD = "/localfts/uploadFile";
+        var URL_UPLOAD = "/localfts/uploadFile";*/
+        var URL_LIST = concatUrlForConstant(contextPath, '/list');
+        var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
+        var URL_UPLOAD = concatUrlForConstant(contextPath, '/uploadFile');
 
         main();
 
         function main()
         {
-            var ftsPagePath = document.getElementById("page-path").innerText;
             var ftsPageNo = Number(document.getElementById("page-no").value);
             var ftsPageSize = Number(document.getElementById("page-size").value);
             var ftsPageCurrentPage = Number(document.getElementById("current-page").innerText);
@@ -121,27 +146,39 @@
 
             //deal with serverIpInfo in IE
             if(!document.getElementById('serverIpInfo').getAttribute("class")) {
-                document.getElementById('serverIpInfoShowButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','show')};
-                document.getElementById('serverIpInfoHideButton').onclick = function() {document.getElementById('serverIpInfo').setAttribute('className','hidden')};
+                document.getElementById('serverIpInfoShowButton').onclick = function() {
+                    document.getElementById('serverIpInfo').setAttribute('className','show')
+                };
+                document.getElementById('serverIpInfoHideButton').onclick = function() {
+                    document.getElementById('serverIpInfo').setAttribute('className','hidden')
+                };
             }
 
 
             //deal with up-path
             //   /->/   ;   /a->/   ;   /a/b->/a
-            var upPath = ftsPagePath;
-            var lastIdxOfSlash = upPath.lastIndexOf("/");
+            var upUrl = ftsPagePath;
+            var lastIdxOfSlash = upUrl.lastIndexOf("/");
             if(lastIdxOfSlash == 0) {
-                upPath = "/";
+                upUrl = "/";
             } else {
-                upPath = upPath.substring(0, lastIdxOfSlash);
+                upUrl = upUrl.substring(0, lastIdxOfSlash);
             }
-            upPath = concatUrlList(upPath, 1, ftsPageSize);
-            document.getElementById("up-path").setAttribute("href", upPath);
+            upUrl = concatUrlList(upUrl, 1, ftsPageSize);
+            document.getElementById("return-to-up-path").setAttribute("href", upUrl);
+
+            //deal with current-path
+            var currentUrl = concatUrlList(ftsPagePath, 1, ftsPageSize);
+            document.getElementById("return-to-current-path").setAttribute("href", currentUrl);
+
+            //deal with upload-to-current-path
+            var uploadToCurrentUrl = concatUrlUpload(ftsPagePath);
+            document.getElementById("upload-to-current-path").setAttribute("href", uploadToCurrentUrl);
 
             //deal with directory-path
             var directoryPaths = document.getElementsByName("directory-path");
             if(!directoryPaths) {
-                directoryPaths = getElementsByName("directory-path");
+                directoryPaths = getElementsByName("a", "directory-path");
             }
             for(var i=0;i<directoryPaths.length;i++) {
                 directoryPaths[i].setAttribute("href", concatUrlList(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + directoryPaths[i].innerText, 1, ftsPageSize));
@@ -150,7 +187,7 @@
             //deal with download-file
             var downloadFiles = document.getElementsByName("download-file");
             if(!downloadFiles) {
-                downloadFiles = getElementsByName("download-file");
+                downloadFiles = getElementsByName("a", "download-file");
             }
             for(var i=0;i<downloadFiles.length;i++) {
                 downloadFiles[i].setAttribute("href", concatUrlDownload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + downloadFiles[i].innerText));
@@ -160,7 +197,7 @@
             //deal with upload-file
             var uploadFiles = document.getElementsByName("upload-file");
             if(!uploadFiles) {
-                uploadFiles = getElementsByName("upload-file");
+                uploadFiles = getElementsByName("a", "upload-file");
             }
             for(var i=0;i<uploadFiles.length;i++) {
                 uploadFiles[i].setAttribute("href", concatUrlUpload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + uploadFiles[i].innerText));
@@ -187,14 +224,31 @@
             for(var i=0;i<tagSelectOptions.length;i++) {
                 if(tagSelectOptions[i].value == ftsPageSize) {
                     foundOption = true;
-                    tagSelectOptions[i].setAttribute("selected", "selected");
+                    //tagSelectOptions[i].setAttribute("selected", "selected");
+                    //tagSelectOptions[i].selected = true;
+                    setOptionSelected(tagSelectOptions[i]);
                     break;
                 }
             }
+            //alert('foundOption='+foundOption);
             if(!foundOption) {
-                tagSelectOptions[0].setAttribute("selected", "selected");
+                //tagSelectOptions[0].setAttribute("selected", "selected");
+                //tagSelectOptions[0].selected = true;
+                setOptionSelected(tagSelectOptions[0]);
             }
             
+        }
+
+        function setOptionSelected(option) {
+            if (window.navigator.userAgent.indexOf("MSIE 6.0") > -1) {
+                option.setAttribute("selected", "selected");
+            } else {
+                option.selected = true;
+            }
+        }
+
+        function concatUrlForConstant(contextPath, path) {
+            return contextPath + path;
         }
 
         function concatUrlList(path, pageNo, pageSize) {
@@ -219,6 +273,43 @@
                 }
             }
             return result;
+        }
+    </script>
+    <script type="text/javascript" th:if="${directoryExists and zipEnabled}">
+        var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
+
+        //deal with compress-current-path
+        var compressCurrentUrl = concatUrlCompressFolder(ftsPagePath);
+        document.getElementById("compress-current-path").setAttribute("href", compressCurrentUrl);
+
+        //deal with compress-folder
+        var compressFolders = document.getElementsByName("compress-folder");
+        if(!compressFolders) {
+            compressFolders = getElementsByName("a", "compress-folder");
+        }
+        for(var i=0;i<compressFolders.length;i++) {
+            compressFolders[i].setAttribute("href", concatUrlCompressFolder(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + compressFolders[i].innerText));
+            compressFolders[i].innerText = "压缩管理";
+        }
+
+        //deal with download-folder
+        var downloadFolders = document.getElementsByName("download-folder");
+        if(!downloadFolders) {
+            downloadFolders = getElementsByName("a", "download-folder");
+        }
+        if(downloadFolders) {
+            for(var i=0;i<downloadFolders.length;i++) {
+                downloadFolders[i].setAttribute("href", concatUrlDownload(downloadFolders[i].innerText));
+                var compressedFileSize = downloadFolders[i].getAttribute("compress-file-size");
+                downloadFolders[i].innerText = "下载文件夹(zip)";
+                if(compressedFileSize !== null) {
+                  var compressedFileSizeStr = "(" + compressedFileSize + ")";
+                  downloadFolders[i].innerText = downloadFolders[i].innerText + compressedFileSizeStr;
+                }
+            }
+        }
+        function concatUrlCompressFolder(dirName) {
+            return URL_COMPRESS_FOLDER + "?path=" + encodeURIComponent(dirName);
         }
     </script>
 </body>

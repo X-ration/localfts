@@ -67,9 +67,18 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
         modifiableModel.put("status", realStatus.value());
         modifiableModel.put("error", realStatus.getReasonPhrase());
         modifiableModel.put("timestamp", Util.getServerTimeFormattedString(Locale.US));
+        dealWithResponseStatusException(modifiableModel);
         Map<String, Object> model = Collections.unmodifiableMap(modifiableModel);
         ModelAndView modelAndView = resolveErrorView(request, response, status, model);
         return (modelAndView != null) ? modelAndView : new ModelAndView("error", model);
+    }
+
+    private void dealWithResponseStatusException(Map<String, Object> modifiableModel) {
+        if("org.springframework.web.server.ResponseStatusException".equals(modifiableModel.get("exception"))) {
+            modifiableModel.remove("exception");
+            modifiableModel.put("message", "No message available");
+            modifiableModel.remove("trace");
+        }
     }
 
     private HttpStatus getStatus(HttpServletRequest request) {

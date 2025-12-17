@@ -1,12 +1,67 @@
 package com.adam.junit;
 
+import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.springframework.util.unit.DataSize;
 
 import java.io.File;
+import java.io.IOException;
 
+@Ignore
 public class FileTest {
+
+//    @Test
+    public void testDeleteDirectory() throws IOException {
+        IOUtil.deleteDirectory("D:\\Users\\Adam\\Documents\\localfts_zip", true);
+    }
+
+//    @Test
+    public void testCheckFolderSizeGe() {
+        long time1 = System.currentTimeMillis();
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 1024L));
+        long time2= System.currentTimeMillis();
+        System.out.println("耗时" + (time2-time1) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 102400L));
+        time1 = System.currentTimeMillis();
+        System.out.println("耗时" + (time1-time2) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 1024000L));
+        time2 = System.currentTimeMillis();
+        System.out.println("耗时" + (time2-time1) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", 10240000L));
+        time1 = System.currentTimeMillis();
+        System.out.println("耗时" + (time1-time2) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents\\Ebook", DataSize.parse("2GB").toBytes()));
+        time2 = System.currentTimeMillis();
+        System.out.println("耗时" + (time2-time1) + "毫秒");
+        Assert.assertTrue(IOUtil.isDirectorySizeGeIterative("D:\\Users\\Adam\\Documents", DataSize.parse("10GB").toBytes()));
+        time1 = System.currentTimeMillis();
+        System.out.println("耗时" + (time1-time2) + "毫秒");
+    }
+
+//    @Test
+    public void testCompressFolderAsZip() throws IOException, InterruptedException {
+//        IOUtil.compressFolderAsZip("D:\\Users\\Adam\\Documents\\测试文件夹\\测试文件夹（有文件）", "D:\\Users\\Adam\\Documents\\测试文件夹", "D:\\Users\\Adam\\Documents");
+        IOUtil.compressFolderAsZip("D:\\Users\\Adam\\Documents\\测试文件夹\\测试文件夹（有文件）", "D:\\Users\\Adam\\Documents\\测试文件夹", "D:\\Users\\Adam\\Documents\\");
+    }
+
+    @Test
+    public void testCheckMiddlePathExistsAsFile() {
+        testCheckMiddlePathExistsAsFile("D:\\Users\\Adam\\Documents", "测试文件夹（有文件）/头像", false);
+        testCheckMiddlePathExistsAsFile("D:\\Users\\Adam\\Documents", "测试文件夹（有文件）/头像/IMG_0702.JPG", true);
+        testCheckMiddlePathExistsAsFile("D:\\Users\\Adam\\Documents", "/测试文件夹（有文件）/头像", false);
+        testCheckMiddlePathExistsAsFile("D:\\Users\\Adam\\Documents", "/测试文件夹（有文件）/头像/IMG_0702.JPG", true);
+    }
+
+    private void testCheckMiddlePathExistsAsFile(String directoryPath, String childPath, boolean result) {
+        File directory = new File(directoryPath);
+        Assert.assertTrue(directory.exists() && directory.isDirectory());
+        boolean check = IOUtil.checkMiddlePathExistsAsFile(directory, childPath);
+        System.out.println("Directory:" + directoryPath + ",childPath:" + childPath + ",result:" + check);
+        Assert.assertEquals(check, result);
+    }
 
     @Test
     public void testFile() {

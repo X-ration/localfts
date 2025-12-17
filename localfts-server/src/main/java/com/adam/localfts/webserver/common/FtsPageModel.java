@@ -1,74 +1,14 @@
 package com.adam.localfts.webserver.common;
 
+import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
-
-public class FtsPageModel {
+@Getter
+@Setter
+public class FtsPageModel extends PageObject<FtsPageModel.FtsPageFileModel> {
     private String path;
-    private int pageSize;
-    private int currentPage;
-    private int currentSize;
-    private int totalPage;
-    private int totalSize;
-    private List<FtsPageFileModel> fileList;
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public int getPageSize() {
-        return pageSize;
-    }
-
-    public void setPageSize(int pageSize) {
-        this.pageSize = pageSize;
-    }
-
-    public int getCurrentPage() {
-        return currentPage;
-    }
-
-    public void setCurrentPage(int currentPage) {
-        this.currentPage = currentPage;
-    }
-
-    public int getCurrentSize() {
-        return currentSize;
-    }
-
-    public void setCurrentSize(int currentSize) {
-        this.currentSize = currentSize;
-    }
-
-    public int getTotalPage() {
-        return totalPage;
-    }
-
-    public void setTotalPage(int totalPage) {
-        this.totalPage = totalPage;
-    }
-
-    public int getTotalSize() {
-        return totalSize;
-    }
-
-    public void setTotalSize(int totalSize) {
-        this.totalSize = totalSize;
-    }
-
-    public List<FtsPageFileModel> getFileList() {
-        return fileList;
-    }
-
-    public void setFileList(List<FtsPageFileModel> fileList) {
-        this.fileList = fileList;
-    }
+    private FtsPageFileModel currentPathModel;
 
     @Getter
     @Setter
@@ -78,5 +18,9 @@ public class FtsPageModel {
         private long fileSize;
         private String lastModified;
         private String fileSizeStr;
+        //private boolean compressed;
+        private FolderCompressStatus compressStatus;
+        private String compressedPath;
+        private String compressedFileSize;
     }
 }

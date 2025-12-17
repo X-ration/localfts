@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.util;
 
+import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,6 +11,7 @@ public class Assert {
 
     private static Logger LOGGER = LoggerFactory.getLogger(Assert.class);
 
+    @Contract("_, _, _ -> fail")
     public static <EX extends RuntimeException> void isTrue(boolean expression, String message, Class<EX> clazz) {
         if(!expression) {
             try {

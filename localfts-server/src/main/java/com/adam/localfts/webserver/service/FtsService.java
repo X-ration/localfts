@@ -1,6 +1,9 @@
 package com.adam.localfts.webserver.service;
 
-import com.adam.localfts.webserver.common.*;
+import com.adam.localfts.webserver.common.FtsPageModel;
+import com.adam.localfts.webserver.common.HttpRangeObject;
+import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.common.compress.*;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
@@ -8,21 +11,29 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
+import ua_parser.Client;
+import ua_parser.Parser;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 import static com.adam.localfts.webserver.common.Constants.CRLF;
 import static com.adam.localfts.webserver.common.Constants.DATE_FORMAT_FILE_STANDARD;
@@ -32,20 +43,30 @@ public class FtsService {
 
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
+    @Value("${server.error.path:${error.path:/error}}")
+    private String errorPath;
 
-    private FtsServerIpInfoModel serverIpInfoModel;
+    private final Map<String, ReentrantLock> zipFileLockMap = new ConcurrentHashMap<>();
+    private final ReadWriteLock zipPathSelfGlobalLock = new ReentrantReadWriteLock();
+    private final Map<String, FolderCompressingInfo> folderCompressingInfoMap = new ConcurrentHashMap<>();
+
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
 
-    public void ensureDirectoryExists(String relativePath) {
+    public boolean checkDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         File directory = IOUtil.getFile(rootPath + relativePath);
-        Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
+        return directory.exists() && directory.isDirectory();
     }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        File rootDirectory = new File(rootPath);
+        Assert.isTrue(rootDirectory.exists() && rootDirectory.isDirectory(), "根路径不存在或不是文件夹");
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        File zipDirectory = new File(rootDirectory, zipFolderPath);
         String actualPath = rootPath + relativePath;
         File directory = IOUtil.getFile(actualPath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
@@ -53,19 +74,32 @@ public class FtsService {
         model.setPath(relativePath);
         model.setCurrentPage(pageNo);
         model.setPageSize(pageSize);
+
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+
+        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
+        FtsPageModel.FtsPageFileModel currentPathModel = model.new FtsPageFileModel();
+        currentPathModel.setFileSize(0);
+        if(zipEnabled) {
+            fillDirectoryModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, currentPathModel);
+        }
+        currentPathModel.setLastModified(simpleDateFormat.format(new Date(directory.lastModified())));
+        model.setCurrentPathModel(currentPathModel);
+
         File[] items = directory.listFiles();
         if(items == null || items.length == 0) {
             model.setCurrentSize(0);
             model.setTotalPage(0);
             model.setTotalSize(0);
-            model.setFileList(null);
+            model.setData(null);
             return model;
         }
-        int totalSize = items.length, totalPage = totalSize / pageSize + 1;
+        int totalSize = items.length, totalPage = totalSize / pageSize + (totalSize % pageSize > 0 ? 1 : 0);
         model.setTotalSize(totalSize);
         model.setTotalPage(totalPage);
         if(pageNo > totalPage) {
             model.setCurrentSize(0);
+            model.setData(null);
             return model;
         }
 
@@ -83,17 +117,334 @@ public class FtsService {
                 fileModel.setFileName(item.getName());
                 if(isDirectory) {
                     fileModel.setFileSize(0);
+                    if(zipEnabled) {
+                        fillDirectoryModelCompress(item, zipDirectory, rootPath, zipFileParentRelativePath, fileModel);
+                    }
                 } else {
                     fileModel.setFileSize(item.length());
                 }
                 fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
                 fileModel.setLastModified(simpleDateFormat.format(new Date(item.lastModified())));
                 fileModels.add(fileModel);
             }
         }
-        model.setFileList(fileModels);
+        model.setData(fileModels);
         return model;
+    }
+
+    private void fillDirectoryModelCompress(File directory, File zipDirectory, String rootPath, String zipFileParentRelativePath, FtsPageModel.FtsPageFileModel fileModel) {
+        String folderAbsolutePath = directory.getAbsolutePath();
+        //添加压缩文件标识
+        FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
+        fileModel.setCompressStatus(folderCompressStatus);
+        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
+        File zipFile = new File(zipDirectory, zipFileName);
+        if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
+            String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
+            if(Util.isSystemWindows()) {
+                zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
+            }
+            fileModel.setCompressedPath(zipFileRelativePath);
+            fileModel.setCompressedFileSize(Util.fileLengthToStringNew(zipFile.length()));
+        }
+    }
+
+    private String getZipFileParentRelativePath(String zipFolderPath) {
+        if(Util.isSystemWindows() && !zipFolderPath.startsWith("\\")) {
+            return "\\" + zipFolderPath;
+        } else if((Util.isSystemMacOS() || Util.isSystemLinux()) && !zipFolderPath.startsWith("/")) {
+            return "/" + zipFolderPath;
+        } else {
+            return zipFolderPath;
+        }
+    }
+
+    public CompressManagementPageModel listCompressTask(int pageNo, int pageSize) {
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        FolderCompressCounter counter = new FolderCompressCounter();
+        List<FolderCompressData> allList = folderCompressingInfoMap.entrySet().stream()
+                .map(entry -> {
+                    String folderAbsolutePath = entry.getKey();
+                    FolderCompressingInfo folderCompressingInfo = entry.getValue();
+                    String relativePath = folderAbsolutePath.substring(rootPath.length());
+                    if(Util.isSystemWindows()) {
+                        relativePath = relativePath.replaceAll("\\\\", "/");
+                    }
+                    FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
+                    counter.countFolder(folderCompressStatus);
+                    FolderCompressData folderCompressData = new FolderCompressData();
+                    String zipFileRelativePath = getFolderCompressedZipRelativePath(folderAbsolutePath, true);
+                    folderCompressData.setPath(relativePath);
+                    folderCompressData.setStatus(folderCompressStatus.name());
+                    folderCompressData.setStatusDesc(folderCompressStatus.getDesc());
+                    if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
+                        folderCompressData.setZipFilePath(zipFileRelativePath);
+                        long compressedFileSize = folderCompressingInfo.getCompressSize();
+                        folderCompressData.setZipFileSize(Util.fileLengthToStringNew(compressedFileSize));
+                    }
+                    return folderCompressData;
+                })
+                .collect(Collectors.toList());
+        CompressManagementPageModel pageModel = new CompressManagementPageModel(pageNo, pageSize, allList);
+        pageModel.setTotalCount(counter.getTotalCount());
+        pageModel.setNotCompressedCount(counter.getNotCompressedCount());
+        pageModel.setCompressingCount(counter.getCompressingCount());
+        pageModel.setCompressedCount(counter.getCompressedCount());
+        return pageModel;
+    }
+
+    /**
+     * 下载文件夹（zip压缩文件）
+     * @param relativePath 相对于根路径的相对路径
+     * @return zip压缩文件的相对路径
+     */
+    public ReturnObject<FolderCompressData> compressFolder(String relativePath) throws IOException {
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String zipMaxFolderSizeStr = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize();
+        long start = System.currentTimeMillis();
+        String actualFolderPath = rootPath + relativePath;
+        File folderFile = new File(actualFolderPath);
+        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
+
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+        if(zipMaxFolderSizeStr != null) {
+            DataSize zipMaxFolderSize = DataSize.parse(zipMaxFolderSizeStr);
+            boolean checkFolderSizeGeLimit = IOUtil.isDirectorySizeGeIterative(folderAbsolutePath, zipMaxFolderSize.toBytes());
+            if (checkFolderSizeGeLimit) {
+                return ReturnObject.fail("待压缩的文件夹大小超过" + zipMaxFolderSizeStr + "限制，无法压缩");
+            }
+        }
+        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
+        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
+        String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
+        if(Util.isSystemWindows()) {
+            zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
+        }
+        File rootPathFile = new File(rootPath);
+        File zipFile = new File(rootPathFile, zipFileRelativePath);
+        File zipFolderFile = new File(rootPathFile, zipFolderPath);
+        boolean zipFileExists = zipFile.exists();
+        Assert.isTrue(!zipFileExists || zipFile.isFile(), "压缩文件路径下存在同名文件夹，无法压缩到指定位置");
+
+        String zipFileAbsolutePath = zipFile.getAbsolutePath();
+        boolean needCompress = false;
+        boolean interrupted = false;
+        String exMessage = null;
+        if(!zipFileExists) {
+            Lock zipPathSelfLock = IOUtil.equalsOrSubPath(folderFile, zipFolderFile) ? zipPathSelfGlobalLock.writeLock() : zipPathSelfGlobalLock.readLock();
+            try {
+                zipPathSelfLock.lock();
+                ReentrantLock zipFileLock = getZipFileLock(zipFileAbsolutePath);
+                try {
+                    zipFileLock.lock();
+                    if (!zipFile.exists()) {
+                        needCompress = true;
+                        FolderCompressingInfo folderCompressingInfo = new FolderCompressingInfo(-1L);
+                        folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
+                        IOUtil.compressFolderAsZip(folderAbsolutePath, zipFolderFile.getAbsolutePath(), zipFileName);
+                        folderCompressingInfo.setCompressSize(zipFile.length());
+                        folderCompressingInfo.setExecuteThread(null);
+                        if (!folderCompressingInfoMap.containsKey(folderAbsolutePath)) {
+                            LOGGER.warn("FolderCompressingInfo {} has been removed", zipFileAbsolutePath);
+                            folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
+                        }
+                    }
+                } catch (Exception e) {
+                    if (e instanceof InterruptedException) {
+                        interrupted = true;
+                    } else {
+                        LOGGER.error("exception occurs when compressing folder", e);
+                        exMessage = e.getMessage();
+                    }
+                    String fm = interrupted ? "interrupt folder compressing" : "exception occurs when compressing folder";
+                    LOGGER.info(fm + ":{} -- delete zip file:{}", folderAbsolutePath, zipFileAbsolutePath);
+                    boolean deletes = zipFile.delete();
+                    if (!deletes) {
+                        LOGGER.warn("delete zip file failed:{}", zipFileAbsolutePath);
+                    } else {
+                        LOGGER.info("successfully deleted zip file:{}", zipFileAbsolutePath);
+                    }
+                    folderCompressingInfoMap.remove(folderAbsolutePath);
+                } finally {
+                    zipFileLock.unlock();
+                }
+            } finally {
+                zipPathSelfLock.unlock();
+            }
+        }
+
+        FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath, false);
+        if(needCompress) {
+            long end = System.currentTimeMillis();
+            String statusMessage = interrupted ? "被中断" : (exMessage == null ? "完成" : "发生异常：" + exMessage);
+            LOGGER.info("压缩文件夹（路径：{}）{}，压缩文件路径：{}，耗时{}毫秒", folderAbsolutePath, statusMessage, zipFileAbsolutePath, end - start);
+        }
+        if(folderCompressStatus == FolderCompressStatus.NOT_COMPRESSED) {
+            String reason = interrupted ? "压缩任务被取消" : (exMessage == null ? "未知原因" : "发生异常：" + exMessage);
+            return ReturnObject.fail(reason);
+        } else {
+            FolderCompressData data = new FolderCompressData();
+            if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
+//                data.setPath(zipFileRelativePath);
+                data.setPath(relativePath);
+                data.setZipFilePath(zipFileRelativePath);
+                data.setZipFileSize(Util.fileLengthToStringNew(zipFile.length()));
+            }
+            data.setStatus(folderCompressStatus.name());
+            return ReturnObject.success(data);
+        }
+    }
+
+    public ReturnObject<Void> cancelCompress(String relativePath) {
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String actualFolderPath = rootPath + relativePath;
+        File folderFile = new File(actualFolderPath);
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+
+        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
+        if(folderCompressingInfo == null) {
+            LOGGER.warn("FolderCompressingInfo not found for {}, no need to cancel", folderAbsolutePath);
+            return ReturnObject.success();
+        }
+
+        boolean interrupt = folderCompressingInfo.interruptThread();
+        if(interrupt) {
+            return ReturnObject.success();
+        } else {
+            return ReturnObject.fail("取消压缩失败，可能已完成压缩");
+        }
+    }
+
+    public ReturnObject<Void> deleteCompressFile(String relativePath) {
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String actualFolderPath = rootPath + relativePath;
+        File folderFile = new File(actualFolderPath);
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
+        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
+        String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
+
+        File rootPathFile = new File(rootPath);
+        File zipFile = new File(rootPathFile, zipFileRelativePath);
+        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
+        if(folderCompressingInfo == null) {
+            LOGGER.warn("folder {} zip task does not exist, no need to delete", folderAbsolutePath);
+            return ReturnObject.success();
+        }
+
+        FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath, false);
+        boolean interrupt = false;
+        if(folderCompressStatus == FolderCompressStatus.COMPRESSING) {
+            interrupt = folderCompressingInfo.interruptThread();
+            if(!interrupt) {
+                return ReturnObject.fail("取消压缩任务失败");
+            }
+        }
+
+        if(!zipFile.exists()) {
+            LOGGER.warn("(folder={})zip file {} does not exist, no need to delete", folderAbsolutePath, zipFile.getAbsolutePath());
+            return ReturnObject.success();
+        }
+
+        boolean deletes = zipFile.delete();
+        if(deletes) {
+            folderCompressingInfoMap.remove(folderAbsolutePath);
+            return ReturnObject.success();
+        } else {
+            return ReturnObject.fail("文件可能正在被占用");
+        }
+    }
+
+    public String getFolderCompressedZipRelativePath(String path, boolean isAbsolute) {
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        long start = System.currentTimeMillis();
+        String actualFolderPath = path;
+        if(!isAbsolute) {
+            actualFolderPath = rootPath + path;
+        }
+        File folderFile = new File(actualFolderPath);
+        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
+
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
+        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
+        String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
+        if(Util.isSystemWindows()) {
+            zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
+        }
+        return zipFileRelativePath;
+    }
+
+    public long getFolderCompressedFileSize(String path, boolean isAbsolute) {
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String actualFolderPath;
+        if(isAbsolute) {
+            actualFolderPath = path;
+        } else {
+            actualFolderPath = rootPath + path;
+        }
+        File folderFile = new File(actualFolderPath);
+        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
+
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
+        if(folderCompressingInfo != null) {
+            return folderCompressingInfo.getCompressSize();
+        } else {
+            return -1L;
+        }
+    }
+
+    public FolderCompressStatus getFolderCompressStatus(String path, boolean isAbsolute) {
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String actualFolderPath;
+        if(isAbsolute) {
+            actualFolderPath = path;
+        } else {
+            actualFolderPath = rootPath + path;
+        }
+        File folderFile = new File(actualFolderPath);
+        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
+
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
+        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
+        String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
+        if(Util.isSystemWindows()) {
+            zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
+        }
+        File rootPathFile = new File(rootPath);
+        File zipFile = new File(rootPathFile, zipFileRelativePath);
+        boolean zipFileExists = zipFile.exists();
+
+        if(!zipFileExists) {
+            return FolderCompressStatus.NOT_COMPRESSED;
+        } else {
+            FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
+            long recordSize = folderCompressingInfo != null ? folderCompressingInfo.getCompressSize() : -1L;
+            long zipFileSize = zipFile.length();
+            if(recordSize == zipFileSize) {
+                return FolderCompressStatus.COMPRESSED;
+            } else {
+                return FolderCompressStatus.COMPRESSING;
+            }
+        }
+    }
+
+    private ReentrantLock getZipFileLock(String zipFileAbsolutePath) {
+        ReentrantLock lock = zipFileLockMap.get(zipFileAbsolutePath);
+        if (lock == null) {
+            lock = new ReentrantLock();
+            ReentrantLock existingLock = zipFileLockMap.putIfAbsent(zipFileAbsolutePath, lock);
+            if (existingLock != null) {
+                lock = existingLock; // 若并发插入，使用已存在的锁
+            }
+        }
+        return lock;
     }
 
     public void headDownloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -111,13 +462,19 @@ public class FtsService {
         response.addHeader("Content-Length", String.valueOf(file.length()));
     }
 
-    public void downloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void downloadFile(String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         long start = System.currentTimeMillis();
         IOUtil.debugPrintSelectedRequestHeaders(request, LOGGER, "downloadFile");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String actualFilePath = rootPath + filePath;
         File file = IOUtil.getFile(actualFilePath);
-        Assert.isTrue(file.exists() && file.isFile() && file.canRead(), "非法的请求路径:" + actualFilePath);
+        if(!file.exists()) {
+            response.setStatus(HttpStatus.NOT_FOUND.value());
+            request.setAttribute("javax.servlet.error.status_code", HttpStatus.NOT_FOUND.value());
+            request.getRequestDispatcher(errorPath).forward(request, response);
+            return;
+        }
+        Assert.isTrue(file.isFile() && file.canRead(), "非法的请求路径:" + actualFilePath);
         String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
         long fileLength = file.length();
         long fileLastModified = file.lastModified();
@@ -246,52 +603,175 @@ public class FtsService {
         }
     }
 
-    public ReturnObject<Void> uploadFile(String dirName, MultipartFile file) {
-        long start = System.currentTimeMillis();
+    public ReturnObject<String> uploadFile(String dirName, MultipartFile file) {
         Assert.isTrue(dirName != null && dirName.startsWith("/") && file != null, "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         File directory = IOUtil.getFile(rootPath + dirName);
-        ReturnObject<Void> returnObject = new ReturnObject<>();
         if(!directory.exists()) {
-            returnObject.setSuccess(false);
-            returnObject.setMessage("请求路径不存在");
-            return returnObject;
+            return ReturnObject.fail("请求路径不存在");
         }
         if(!directory.isDirectory()) {
-            returnObject.setSuccess(false);
-            returnObject.setMessage("请求路径不是文件夹");
-            return returnObject;
+            return ReturnObject.fail("请求路径不是文件夹");
         }
-        String fileName = file.getOriginalFilename() == null ? "未知文件" : file.getOriginalFilename();
+        return transferFile(rootPath, dirName, file, true);
+    }
+
+    public ReturnObject<List<ReturnObject<String>>> uploadFiles(String dirName, MultipartFile[] files) {
+        long start = System.currentTimeMillis();
+        Assert.isTrue(dirName != null && dirName.startsWith("/") && files != null, "非法请求参数");
+
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        File directory = IOUtil.getFile(rootPath + dirName);
+        if(!directory.exists()) {
+            return ReturnObject.fail("请求路径不存在");
+        }
+        if(!directory.isDirectory()) {
+            return ReturnObject.fail("请求路径不是文件夹");
+        }
+
+        List<ReturnObject<String>> returnObjectList = new LinkedList<>();
+        int successCount = 0;
+        for(MultipartFile file: files) {
+            ReturnObject<String> innerReturnObject = transferFile(rootPath, dirName, file, false);
+            returnObjectList.add(innerReturnObject);
+            if(innerReturnObject.isSuccess()) {
+                successCount++;
+            }
+        }
+        String returnObjectMessage = "上传" + files.length + "个文件，" + successCount + "个成功，" + (files.length - successCount) + "个失败";
+        LOGGER.info("上传{}个文件到路径'{}'完成!总耗时{}毫秒", files.length, dirName, (System.currentTimeMillis() - start));
+        return ReturnObject.success(returnObjectMessage, returnObjectList);
+    }
+
+    private String folderPathToZipFileName(String folderPath, String rootPath) {
+        String processedPath = folderPath;
+        if(processedPath.startsWith(rootPath)) {
+            processedPath = processedPath.substring(rootPath.length());
+        }
+        if(processedPath.startsWith(File.separator)) {
+            processedPath = processedPath.substring(File.separator.length());
+        }
+        processedPath = processedPath.replaceAll("_", "__");
+        String zipFileName = null;
+        if(Util.isSystemWindows()) {
+            zipFileName = processedPath.replaceFirst(":", "").replaceAll("\\\\", "_");
+        } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
+            if(processedPath.startsWith("/")) {
+                processedPath = processedPath.substring(1);
+            }
+            zipFileName = processedPath.replaceAll("/", "_");
+        }
+        return zipFileName + ".zip";
+    }
+
+    //是否在离开页面时不触发页面卸载事件
+    public boolean isPseudoUnload(String userAgent) {
+        if(userAgent == null) {
+            return false;
+        }
+        Parser uaParser = new Parser();
+        Client uaClient = uaParser.parse(userAgent);
+        if(uaClient.userAgent.family.equalsIgnoreCase("Safari") || uaClient.device.family.equalsIgnoreCase("iPad")) {
+            return true;
+        }
+        List<String> pseudoUnloadUaContains = ftsServerConfigService.getLocalFtsProperties().getPseudoUnloadUaContains();
+        for(String pseudoUnloadUaStr: pseudoUnloadUaContains) {
+            if(userAgent.contains(pseudoUnloadUaStr)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //伪支持的浏览器展示上传文件夹元素并给出提示
+    public boolean isPseudoDirectoryUpload(String userAgent) {
+        //默认允许
+        if(userAgent == null) {
+            return true;
+        }
+        Parser uaParser = new Parser();
+        Client uaClient = uaParser.parse(userAgent);
+        if(uaClient.userAgent.family.equalsIgnoreCase("Safari") || uaClient.device.family.equalsIgnoreCase("iPad")) {
+            return false;
+        }
+        List<String> pseudoUaContains = ftsServerConfigService.getLocalFtsProperties().getUpload().getDirectory().getPseudoUaContains();
+        for(String uaStr: pseudoUaContains) {
+            if(userAgent.contains(uaStr)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 将文件写入到rootPath下的dirName路径下
+     * @param rootPath
+     * @param dirName
+     * @param file
+     * @param createFileDirectly true:略过中间文件夹创建，直接在dirName路径创建文件
+     * @return
+     */
+    private ReturnObject<String> transferFile(final String rootPath, final String dirName, final MultipartFile file, boolean createFileDirectly) {
+        long start = System.currentTimeMillis();
+        File directory = IOUtil.getFile(rootPath + dirName);
+        Assert.isTrue(directory.exists() && directory.isDirectory(), "Invalid dirName '" + dirName + "' in root path '" + rootPath + "'");
+
+        String originalFilename = file.getOriginalFilename() == null ? "未知文件" : file.getOriginalFilename();
 //        if(file.getSize() > uploadFileLimit) {
 //            returnObject.setSuccess(false);
 //            returnObject.setMessage("待上传的文件大小超过系统限制");
 //            return returnObject;
 //        }
-        if(fileName.contains("\\")) {
-            fileName = fileName.substring(fileName.lastIndexOf('\\') + 1);
-        } else if(fileName.contains("/")) {
-            fileName = fileName.substring(fileName.lastIndexOf('/') + 1);
+
+        String filePath = originalFilename;
+        if(createFileDirectly) {
+            if(filePath.startsWith("/")) {
+                filePath = filePath.substring(1);
+            }
+            if(filePath.contains("/")) {
+                filePath = filePath.substring(filePath.lastIndexOf('/') + 1);
+            }
+        }
+        File actualFile = new File(directory, filePath);
+        if(actualFile.exists()) {
+            return ReturnObject.fail("请求路径下已存在同名文件", filePath);
         }
 
-        File actualFile = new File(directory, fileName);
-        if(actualFile.exists()) {
-            returnObject.setSuccess(false);
-            returnObject.setMessage("请求路径下已存在同名文件");
-            return returnObject;
+        if(!createFileDirectly) {
+            String parentPath = originalFilename;
+            if(parentPath.startsWith("/")) {
+                parentPath = parentPath.substring(1);
+            }
+            if(parentPath.contains("/")) {
+                parentPath = parentPath.substring(0, parentPath.lastIndexOf('/'));
+            } else {
+                //此处为上传文件夹特有的提示
+                return ReturnObject.fail("不允许直接上传文件！", filePath);
+            }
+            boolean checkMiddlePathExistsAsFile = IOUtil.checkMiddlePathExistsAsFile(directory, parentPath);
+            if(checkMiddlePathExistsAsFile) {
+                return ReturnObject.fail("请求路径下的子路径存在同名文件，无法创建文件夹", filePath);
+            }
+
+            File actualParentDirectory = new File(directory, parentPath);
+            if(!actualParentDirectory.exists()) {
+                boolean mkdirs = actualParentDirectory.mkdirs();
+                if (!mkdirs) {
+                    return ReturnObject.fail("在请求路径下创建文件夹失败", filePath);
+                } else {
+                    LOGGER.info("成功在根路径'{}'下的路径'{}'中创建父级文件夹'{}'", rootPath, dirName, parentPath);
+                }
+            }
         }
-        LOGGER.info("开始上传文件{}到路径{}", fileName, dirName);
+        LOGGER.info("开始上传文件'{}'到路径'{}'", filePath, dirName);
         try {
             file.transferTo(actualFile);
-            returnObject.setSuccess(true);
-            returnObject.setMessage(fileName + "上传成功！");
-            LOGGER.info("上传文件{}到路径{}成功!耗时{}毫秒", fileName, dirName, (System.currentTimeMillis() - start));
+            LOGGER.info("上传文件'{}'到路径'{}'成功!耗时{}毫秒", filePath, dirName, (System.currentTimeMillis() - start));
+            return ReturnObject.success(filePath);
         } catch (IOException e) {
-            LOGGER.error("上传文件{}到路径{}时出错", fileName, dirName, e);
-            returnObject.setSuccess(false);
-            returnObject.setMessage(e.getMessage());
+            LOGGER.error("上传文件'{}'到路径'{}'时出错", filePath, dirName, e);
+            return ReturnObject.fail(e.getMessage(), filePath);
         }
-        return returnObject;
     }
 
 }

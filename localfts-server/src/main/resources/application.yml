@@ -1,7 +1,7 @@
 server:
-  port: 80
+  port: 80  #服务器端口号
   servlet:
-    context-path: /localfts
+    context-path: /localfts  #服务器上下文路径
   error:
     includeException: true
     includeStackTrace: ALWAYS
@@ -11,20 +11,30 @@ spring:
   thymeleaf:
     cache: false
   mvc:
-    static-path-pattern: /**
+    static-path-pattern: /static/**
   web:
     resources:
       static-locations: classpath:/resources
   servlet:
     multipart:
-      max-file-size: 2GB
-      max-request-size: 2GB
+      max-file-size: 2GB  #上传最大文件大小
+      max-request-size: 2GB  #上传最大请求大小
       #resolve-lazily: true
       #file-size-threshold: 0
 localfts:
-  root_path: D:\Users\Adam\Documents
+  root_path: D:\Users\Adam\Documents  #服务器根路径映射地址
+  zip:
+    enabled: true  #文件夹压缩功能开关
+    path: localfts_zip  #文件夹压缩文件存储路径，对根路径的相对路径
+    delete_on_exit: true  #!!!退出服务器进程时是否清理压缩文件存储路径
+    max-folder-size: 3GB  #限制压缩文件夹原文件夹的大小(超过此数值不能压缩)
+    background-enabled: false  #后台压缩开关，不允许时关闭压缩管理页面(/compressFolder)时会结束正在进行的压缩任务
   log:
-    file_path: log
-    root_level: DEBUG
+    file_path: log  #日志文件存储相对路径(相对进程工作目录，而非相对根路径)
+    root_level: DEBUG  #日志默认级别
+  upload:
+    directory:
+      pseudo-ua-contains: ["HuaweiBrowser/16.0.7.301 Mobile", "EdgiOS"]  #上传文件页面根据浏览器User-Agent标识和此字段对伪支持上传文件夹的浏览器不展示上传文件夹元素
+  pseudo-unload-ua-contains: ["HuaweiBrowser/16.0.7.301 Mobile", "EdgiOS"]  #根据浏览器User-Agent和此字段对离开页面不触发页面卸载事件的浏览器进行提示
   test_language:
-    Simplified_Chinese: true
+    Simplified_Chinese: true  #测试终端输出文字是否乱码(简体中文)
