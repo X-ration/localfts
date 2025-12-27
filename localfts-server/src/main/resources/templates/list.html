@@ -34,11 +34,12 @@
         <table class="left-head-table" style="text-align:left;border-style:solid">
             <thead>
             <tr th:if="${zipEnabled}">
-                <th style="width:60%">文件名</th>
+                <th style="width:52%">文件名</th>
                 <th style="width:8%">类型</th>
                 <th style="width:8%">大小</th>
-                <th style="width:8%">文件夹压缩状态</th>
                 <th style="width:8%">修改时间</th>
+                <th style="width:8%">文件夹压缩状态</th>
+                <th style="width:8%">压缩文件修改时间</th>
                 <th style="width:8%">操作</th>
             </tr>
             <tr th:if="${!zipEnabled}">
@@ -54,16 +55,19 @@
                 <td><a id="return-to-up-path">返回上一级</a></td>
                 <td>-</td>
                 <td>-</td>
-                <td th:if="${zipEnabled}">-</td>
                 <td>-</td>
+                <td th:if="${zipEnabled}">-</td>
+                <td th:if="${zipEnabled}">-</td>
                 <td>-</td>
             </tr>
             <tr>
                 <td><a id="return-to-current-path">当前目录</a></td>
                 <td>文件夹</td>
                 <td>-</td>
-                <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}"></td>
                 <td th:text="${ftsPage.currentPathModel.lastModified}"></td>
+                <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}"></td>
+                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModified}"></td>
+                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}">-</td>
                 <td>
                     <a id="upload-to-current-path">上传文件</a>
                     <a th:if="${zipEnabled}" id="compress-current-path">压缩管理</a>
@@ -74,8 +78,10 @@
                 <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
                 <td>文件夹</td>
                 <td>-</td>
-                <td th:if="${zipEnabled}" th:text="${item.compressStatus.desc}"></td>
                 <td th:text="${item.lastModified}">last modified</td>
+                <td th:if="${zipEnabled}" th:text="${item.compressStatus.desc}"></td>
+                <td th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModified}"></td>
+                <td th:if="${zipEnabled and item.compressStatus.name() != 'COMPRESSED'}">-</td>
                 <td>
                     <a name="upload-file" th:text="${item.fileName}">上传文件</a>
                     <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.fileName}">压缩管理</a>
@@ -87,8 +93,9 @@
                 <td th:text="${item.fileName}">fileName</td>
                 <td>文件</td>
                 <td th:text="${item.fileSizeStr}">0</td>
-                <td th:if="${zipEnabled}">-</td>
                 <td th:text="${item.lastModified}">last modified</td>
+                <td th:if="${zipEnabled}">-</td>
+                <td th:if="${zipEnabled}">-</td>
                 <td><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
             </tr>
             </tbody>

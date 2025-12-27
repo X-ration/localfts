@@ -81,7 +81,7 @@ public class FtsService {
         FtsPageModel.FtsPageFileModel currentPathModel = model.new FtsPageFileModel();
         currentPathModel.setFileSize(0);
         if(zipEnabled) {
-            fillDirectoryModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, currentPathModel);
+            fillDirectoryModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, currentPathModel, simpleDateFormat);
         }
         currentPathModel.setLastModified(simpleDateFormat.format(new Date(directory.lastModified())));
         model.setCurrentPathModel(currentPathModel);
@@ -118,7 +118,7 @@ public class FtsService {
                 if(isDirectory) {
                     fileModel.setFileSize(0);
                     if(zipEnabled) {
-                        fillDirectoryModelCompress(item, zipDirectory, rootPath, zipFileParentRelativePath, fileModel);
+                        fillDirectoryModelCompress(item, zipDirectory, rootPath, zipFileParentRelativePath, fileModel, simpleDateFormat);
                     }
                 } else {
                     fileModel.setFileSize(item.length());
@@ -132,7 +132,8 @@ public class FtsService {
         return model;
     }
 
-    private void fillDirectoryModelCompress(File directory, File zipDirectory, String rootPath, String zipFileParentRelativePath, FtsPageModel.FtsPageFileModel fileModel) {
+    private void fillDirectoryModelCompress(File directory, File zipDirectory, String rootPath, String zipFileParentRelativePath,
+                                            FtsPageModel.FtsPageFileModel fileModel, SimpleDateFormat simpleDateFormat) {
         String folderAbsolutePath = directory.getAbsolutePath();
         //添加压缩文件标识
         FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
@@ -146,6 +147,7 @@ public class FtsService {
             }
             fileModel.setCompressedPath(zipFileRelativePath);
             fileModel.setCompressedFileSize(Util.fileLengthToStringNew(zipFile.length()));
+            fileModel.setCompressedFileLastModified(simpleDateFormat.format(new Date(zipFile.lastModified())));
         }
     }
 
