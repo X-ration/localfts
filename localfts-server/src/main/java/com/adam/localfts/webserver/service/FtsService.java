@@ -36,7 +36,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 import static com.adam.localfts.webserver.common.Constants.CRLF;
-import static com.adam.localfts.webserver.common.Constants.DATE_FORMAT_FILE_STANDARD;
 
 @Service
 public class FtsService {
@@ -75,7 +74,7 @@ public class FtsService {
         model.setCurrentPage(pageNo);
         model.setPageSize(pageSize);
 
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+        SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
 
         String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
         FtsPageModel.FtsPageFileModel currentPathModel = model.new FtsPageFileModel();
@@ -292,6 +291,8 @@ public class FtsService {
                 folderCompressDTO.setPath(relativePath);
                 folderCompressDTO.setZipFilePath(zipFileRelativePath);
                 folderCompressDTO.setZipFileSize(Util.fileLengthToStringNew(zipFile.length()));
+                SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
+                folderCompressDTO.setZipFileLastModified(simpleDateFormat.format(new Date(zipFile.lastModified())));
             }
             folderCompressDTO.setStatus(folderCompressStatus.name());
             return ReturnObject.success(folderCompressDTO);
@@ -359,10 +360,47 @@ public class FtsService {
         }
     }
 
+    public FolderCompressInfo getFolderCompressInfo(String path, boolean isAbsolute) {
+        FolderCompressInfo folderCompressInfo = new FolderCompressInfo();
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String actualFolderPath = path;
+        if(!isAbsolute) {
+            actualFolderPath = rootPath + path;
+        }
+        File folderFile = new File(actualFolderPath);
+        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
+
+        String folderAbsolutePath = folderFile.getAbsolutePath();
+        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
+        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
+        String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
+        if(Util.isSystemWindows()) {
+            zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
+        }
+        folderCompressInfo.setZipFileRelativePath(zipFileRelativePath);
+
+        FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingInfoMap.get(folderAbsolutePath);
+        long compressedFileSize = -1L;
+        if(folderCompressingContextHolder != null) {
+            compressedFileSize = folderCompressingContextHolder.getCompressSize();
+        }
+        folderCompressInfo.setCompressedFileSize(compressedFileSize);
+
+        File rootPathFile = new File(rootPath);
+        File zipFile = new File(rootPathFile, zipFileRelativePath);
+        long zipFileLastModified = 0;
+        if(zipFile.exists() && zipFile.isFile()) {
+            zipFileLastModified = zipFile.lastModified();
+        }
+        folderCompressInfo.setCompressedFileLastModified(zipFileLastModified);
+
+        return folderCompressInfo;
+    }
+
     public String getFolderCompressedZipRelativePath(String path, boolean isAbsolute) {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
-        long start = System.currentTimeMillis();
         String actualFolderPath = path;
         if(!isAbsolute) {
             actualFolderPath = rootPath + path;
@@ -378,26 +416,6 @@ public class FtsService {
             zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
         }
         return zipFileRelativePath;
-    }
-
-    public long getFolderCompressedFileSize(String path, boolean isAbsolute) {
-        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
-        String actualFolderPath;
-        if(isAbsolute) {
-            actualFolderPath = path;
-        } else {
-            actualFolderPath = rootPath + path;
-        }
-        File folderFile = new File(actualFolderPath);
-        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
-
-        String folderAbsolutePath = folderFile.getAbsolutePath();
-        FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingInfoMap.get(folderAbsolutePath);
-        if(folderCompressingContextHolder != null) {
-            return folderCompressingContextHolder.getCompressSize();
-        } else {
-            return -1L;
-        }
     }
 
     public FolderCompressStatus getFolderCompressStatus(String path, boolean isAbsolute) {

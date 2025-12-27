@@ -17,4 +17,5 @@ public class FolderCompressDTO {
      */
     private String zipFilePath;
     private String zipFileSize;
+    private String zipFileLastModified;
 }

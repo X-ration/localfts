@@ -35,6 +35,9 @@
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSING' and !needSizeCheck}">正在压缩</h4>
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
     <h5 th:if="${backgroundEnabled}">后台压缩功能：已启用</h5>
+    <div id="compressedFileInfoDiv">
+        <h4 th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩文件大小:' + ${compressedFileSize} + ',修改时间:' + ${compressedFileLastModified}"></h4>
+    </div>
     <h5 style="color:red" th:if="${!backgroundEnabled and !pseudoUnload}">后台压缩功能：已禁用，关闭页面会取消正在进行的压缩任务</h5>
     <h5 style="color:red" th:if="${!backgroundEnabled and pseudoUnload}">后台压缩功能：已禁用，但关闭页面不会取消正在进行的压缩任务，需要手动取消！</h5>
     <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
@@ -157,6 +160,7 @@ function deleteCompressFile() {
           if(returnObject.success) {
             removeElementById('deleteCompressFileButton', 'compressingDiv');
             removeElementById('download-zip', 'compressingDiv');
+            removeChildrenByIdAndTagName('compressedFileInfoDiv','h4');
             updateCompressingHint('成功删除压缩文件');
             compressStatus = 'NOT_COMPRESSED';
           } else {
@@ -195,6 +199,7 @@ function cancelCompress() {
           if(returnObject.success) {
             updateCompressingHint('已取消');
             removeElementById('cancelCompressButton', 'compressingDiv');
+            removeChildrenByIdAndTagName('compressedFileInfoDiv','h4');
             compressStatus = 'NOT_COMPRESSED';
           } else {
             updateCompressingHint('取消失败，原因：' + returnObject.message);
@@ -254,6 +259,7 @@ function compressFolder() {
             if(returnObject.data.status === 'COMPRESSED') {
               compressStatus = returnObject.data.status;
               var compressedFileSize = returnObject.data.zipFileSize;
+              var compressedFileLastModified = returnObject.data.zipFileLastModified;
               updateCompressingHint('压缩完成');
               removeElementById('download-zip', 'compressingDiv');
               removeElementById('deleteCompressFileButton', 'compressingDiv');
@@ -272,6 +278,12 @@ function compressFolder() {
               deleteCompressFileButton.setAttribute('type', 'button');
               deleteCompressFileButton.onclick = deleteCompressFile;
               document.getElementById('compressingDiv').appendChild(deleteCompressFileButton);
+              removeChildrenByIdAndTagName('compressedFileInfoDiv','h4');
+              if(compressedFileLastModified !== null && compressedFileSize !== null) {
+                var infoTitle = document.createElement('h4');
+                infoTitle.innerText = '压缩文件大小:' + compressedFileSize + ',修改时间:' + compressedFileLastModified;
+                document.getElementById('compressedFileInfoDiv').appendChild(infoTitle);
+              }
               removeElementById('cancelCompressButton', 'compressingDiv');
             } else if(returnObject.data.status === 'COMPRESSING') {
               updateCompressingHint(compressingHintText);

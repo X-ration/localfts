@@ -16,6 +16,10 @@ import static com.adam.localfts.webserver.common.Constants.*;
 
 public class Util {
 
+    public static SimpleDateFormat getSimpleDateFormat() {
+        return new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
+    }
+
     public static String getServerTimeFormattedString() {
         return getServerTimeFormattedString(Locale.SIMPLIFIED_CHINESE);
     }
