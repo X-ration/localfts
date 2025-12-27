@@ -5,11 +5,11 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class FolderCompressingInfo {
+public class FolderCompressingContextHolder {
     private Long compressSize;
     private Thread executeThread;
 
-    public FolderCompressingInfo(Long compressSize) {
+    public FolderCompressingContextHolder(Long compressSize) {
         this.compressSize = compressSize;
         this.executeThread = Thread.currentThread();
     }

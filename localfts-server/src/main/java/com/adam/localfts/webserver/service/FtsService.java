@@ -48,7 +48,7 @@ public class FtsService {
 
     private final Map<String, ReentrantLock> zipFileLockMap = new ConcurrentHashMap<>();
     private final ReadWriteLock zipPathSelfGlobalLock = new ReentrantReadWriteLock();
-    private final Map<String, FolderCompressingInfo> folderCompressingInfoMap = new ConcurrentHashMap<>();
+    private final Map<String, FolderCompressingContextHolder> folderCompressingInfoMap = new ConcurrentHashMap<>();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
 
@@ -164,27 +164,27 @@ public class FtsService {
     public CompressManagementPageModel listCompressTask(int pageNo, int pageSize) {
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         FolderCompressCounter counter = new FolderCompressCounter();
-        List<FolderCompressData> allList = folderCompressingInfoMap.entrySet().stream()
+        List<FolderCompressDTO> allList = folderCompressingInfoMap.entrySet().stream()
                 .map(entry -> {
                     String folderAbsolutePath = entry.getKey();
-                    FolderCompressingInfo folderCompressingInfo = entry.getValue();
+                    FolderCompressingContextHolder folderCompressingContextHolder = entry.getValue();
                     String relativePath = folderAbsolutePath.substring(rootPath.length());
                     if(Util.isSystemWindows()) {
                         relativePath = relativePath.replaceAll("\\\\", "/");
                     }
                     FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
                     counter.countFolder(folderCompressStatus);
-                    FolderCompressData folderCompressData = new FolderCompressData();
+                    FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
                     String zipFileRelativePath = getFolderCompressedZipRelativePath(folderAbsolutePath, true);
-                    folderCompressData.setPath(relativePath);
-                    folderCompressData.setStatus(folderCompressStatus.name());
-                    folderCompressData.setStatusDesc(folderCompressStatus.getDesc());
+                    folderCompressDTO.setPath(relativePath);
+                    folderCompressDTO.setStatus(folderCompressStatus.name());
+                    folderCompressDTO.setStatusDesc(folderCompressStatus.getDesc());
                     if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
-                        folderCompressData.setZipFilePath(zipFileRelativePath);
-                        long compressedFileSize = folderCompressingInfo.getCompressSize();
-                        folderCompressData.setZipFileSize(Util.fileLengthToStringNew(compressedFileSize));
+                        folderCompressDTO.setZipFilePath(zipFileRelativePath);
+                        long compressedFileSize = folderCompressingContextHolder.getCompressSize();
+                        folderCompressDTO.setZipFileSize(Util.fileLengthToStringNew(compressedFileSize));
                     }
-                    return folderCompressData;
+                    return folderCompressDTO;
                 })
                 .collect(Collectors.toList());
         CompressManagementPageModel pageModel = new CompressManagementPageModel(pageNo, pageSize, allList);
@@ -200,7 +200,7 @@ public class FtsService {
      * @param relativePath 相对于根路径的相对路径
      * @return zip压缩文件的相对路径
      */
-    public ReturnObject<FolderCompressData> compressFolder(String relativePath) throws IOException {
+    public ReturnObject<FolderCompressDTO> compressFolder(String relativePath) throws IOException {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String zipMaxFolderSizeStr = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize();
@@ -242,14 +242,14 @@ public class FtsService {
                     zipFileLock.lock();
                     if (!zipFile.exists()) {
                         needCompress = true;
-                        FolderCompressingInfo folderCompressingInfo = new FolderCompressingInfo(-1L);
-                        folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
+                        FolderCompressingContextHolder folderCompressingContextHolder = new FolderCompressingContextHolder(-1L);
+                        folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingContextHolder);
                         IOUtil.compressFolderAsZip(folderAbsolutePath, zipFolderFile.getAbsolutePath(), zipFileName);
-                        folderCompressingInfo.setCompressSize(zipFile.length());
-                        folderCompressingInfo.setExecuteThread(null);
+                        folderCompressingContextHolder.setCompressSize(zipFile.length());
+                        folderCompressingContextHolder.setExecuteThread(null);
                         if (!folderCompressingInfoMap.containsKey(folderAbsolutePath)) {
                             LOGGER.warn("FolderCompressingInfo {} has been removed", zipFileAbsolutePath);
-                            folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingInfo);
+                            folderCompressingInfoMap.put(folderAbsolutePath, folderCompressingContextHolder);
                         }
                     }
                 } catch (Exception e) {
@@ -286,15 +286,15 @@ public class FtsService {
             String reason = interrupted ? "压缩任务被取消" : (exMessage == null ? "未知原因" : "发生异常：" + exMessage);
             return ReturnObject.fail(reason);
         } else {
-            FolderCompressData data = new FolderCompressData();
+            FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
             if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
 //                data.setPath(zipFileRelativePath);
-                data.setPath(relativePath);
-                data.setZipFilePath(zipFileRelativePath);
-                data.setZipFileSize(Util.fileLengthToStringNew(zipFile.length()));
+                folderCompressDTO.setPath(relativePath);
+                folderCompressDTO.setZipFilePath(zipFileRelativePath);
+                folderCompressDTO.setZipFileSize(Util.fileLengthToStringNew(zipFile.length()));
             }
-            data.setStatus(folderCompressStatus.name());
-            return ReturnObject.success(data);
+            folderCompressDTO.setStatus(folderCompressStatus.name());
+            return ReturnObject.success(folderCompressDTO);
         }
     }
 
@@ -304,13 +304,13 @@ public class FtsService {
         File folderFile = new File(actualFolderPath);
         String folderAbsolutePath = folderFile.getAbsolutePath();
 
-        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
-        if(folderCompressingInfo == null) {
+        FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingInfoMap.get(folderAbsolutePath);
+        if(folderCompressingContextHolder == null) {
             LOGGER.warn("FolderCompressingInfo not found for {}, no need to cancel", folderAbsolutePath);
             return ReturnObject.success();
         }
 
-        boolean interrupt = folderCompressingInfo.interruptThread();
+        boolean interrupt = folderCompressingContextHolder.interruptThread();
         if(interrupt) {
             return ReturnObject.success();
         } else {
@@ -330,8 +330,8 @@ public class FtsService {
 
         File rootPathFile = new File(rootPath);
         File zipFile = new File(rootPathFile, zipFileRelativePath);
-        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
-        if(folderCompressingInfo == null) {
+        FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingInfoMap.get(folderAbsolutePath);
+        if(folderCompressingContextHolder == null) {
             LOGGER.warn("folder {} zip task does not exist, no need to delete", folderAbsolutePath);
             return ReturnObject.success();
         }
@@ -339,7 +339,7 @@ public class FtsService {
         FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath, false);
         boolean interrupt = false;
         if(folderCompressStatus == FolderCompressStatus.COMPRESSING) {
-            interrupt = folderCompressingInfo.interruptThread();
+            interrupt = folderCompressingContextHolder.interruptThread();
             if(!interrupt) {
                 return ReturnObject.fail("取消压缩任务失败");
             }
@@ -392,9 +392,9 @@ public class FtsService {
         Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
 
         String folderAbsolutePath = folderFile.getAbsolutePath();
-        FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
-        if(folderCompressingInfo != null) {
-            return folderCompressingInfo.getCompressSize();
+        FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingInfoMap.get(folderAbsolutePath);
+        if(folderCompressingContextHolder != null) {
+            return folderCompressingContextHolder.getCompressSize();
         } else {
             return -1L;
         }
@@ -426,8 +426,8 @@ public class FtsService {
         if(!zipFileExists) {
             return FolderCompressStatus.NOT_COMPRESSED;
         } else {
-            FolderCompressingInfo folderCompressingInfo = folderCompressingInfoMap.get(folderAbsolutePath);
-            long recordSize = folderCompressingInfo != null ? folderCompressingInfo.getCompressSize() : -1L;
+            FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingInfoMap.get(folderAbsolutePath);
+            long recordSize = folderCompressingContextHolder != null ? folderCompressingContextHolder.getCompressSize() : -1L;
             long zipFileSize = zipFile.length();
             if(recordSize == zipFileSize) {
                 return FolderCompressStatus.COMPRESSED;

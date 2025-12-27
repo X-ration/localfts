@@ -2,7 +2,7 @@ package com.adam.localfts.webserver.controller;
 
 import com.adam.localfts.webserver.common.*;
 import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
-import com.adam.localfts.webserver.common.compress.FolderCompressData;
+import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
@@ -137,7 +137,7 @@ public class WebController {
 
     @PostMapping("/compressFolder")
     @ResponseBody
-    public ReturnObject<FolderCompressData> compressFolder(@RequestParam(value = "path") String relativePath) {
+    public ReturnObject<FolderCompressDTO> compressFolder(@RequestParam(value = "path") String relativePath) {
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         if(!zipEnabled) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);

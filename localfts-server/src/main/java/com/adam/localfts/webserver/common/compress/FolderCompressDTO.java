@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class FolderCompressData {
+public class FolderCompressDTO {
     /**
      * 文件夹相对路径
      */
