@@ -163,6 +163,7 @@ public class FtsService {
     public CompressManagementPageModel listCompressTask(int pageNo, int pageSize) {
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         FolderCompressCounter counter = new FolderCompressCounter();
+        SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
         List<FolderCompressDTO> allList = folderCompressingInfoMap.entrySet().stream()
                 .map(entry -> {
                     String folderAbsolutePath = entry.getKey();
@@ -174,14 +175,17 @@ public class FtsService {
                     FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
                     counter.countFolder(folderCompressStatus);
                     FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
-                    String zipFileRelativePath = getFolderCompressedZipRelativePath(folderAbsolutePath, true);
                     folderCompressDTO.setPath(relativePath);
                     folderCompressDTO.setStatus(folderCompressStatus.name());
                     folderCompressDTO.setStatusDesc(folderCompressStatus.getDesc());
                     if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
-                        folderCompressDTO.setZipFilePath(zipFileRelativePath);
-                        long compressedFileSize = folderCompressingContextHolder.getCompressSize();
+                        FolderCompressInfo folderCompressInfo = getFolderCompressInfo(folderAbsolutePath, true);
+                        folderCompressDTO.setZipFilePath(folderCompressInfo.getZipFileRelativePath());
+                        long compressedFileSize = folderCompressInfo.getCompressedFileSize();
                         folderCompressDTO.setZipFileSize(Util.fileLengthToStringNew(compressedFileSize));
+                        long compressedFileLastModified = folderCompressInfo.getCompressedFileLastModified();
+                        String lastModifiedString = simpleDateFormat.format(new Date(compressedFileLastModified));
+                        folderCompressDTO.setZipFileLastModified(lastModifiedString);
                     }
                     return folderCompressDTO;
                 })
@@ -396,26 +400,6 @@ public class FtsService {
         folderCompressInfo.setCompressedFileLastModified(zipFileLastModified);
 
         return folderCompressInfo;
-    }
-
-    public String getFolderCompressedZipRelativePath(String path, boolean isAbsolute) {
-        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
-        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
-        String actualFolderPath = path;
-        if(!isAbsolute) {
-            actualFolderPath = rootPath + path;
-        }
-        File folderFile = new File(actualFolderPath);
-        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
-
-        String folderAbsolutePath = folderFile.getAbsolutePath();
-        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
-        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
-        String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
-        if(Util.isSystemWindows()) {
-            zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
-        }
-        return zipFileRelativePath;
     }
 
     public FolderCompressStatus getFolderCompressStatus(String path, boolean isAbsolute) {

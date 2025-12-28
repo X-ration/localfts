@@ -37,11 +37,13 @@
     <table class="left-head-table" style="text-align:left;border-style:solid;width:100%" id="cmTable">
         <thead>
         <tr>
-            <th style="width:60%">文件夹</th>
-            <th style="width:10%">压缩状态</th>
-            <th style="width:10%">链接</th>
-            <th style="width:10%">提示信息</th>
-            <th style="width:10%">操作</th>
+            <th style="width:52%">文件夹</th>
+            <th style="width:8%">压缩状态</th>
+            <th style="width:8%">压缩文件大小</th>
+            <th style="width:8%">压缩文件修改时间</th>
+            <th style="width:8%">链接</th>
+            <th style="width:8%">提示信息</th>
+            <th style="width:8%">操作</th>
             <th style="display:none">压缩状态</th>
         </tr>
         </thead>
@@ -49,6 +51,10 @@
         <tr th:each="item:${pagedList.data}">
             <td th:text="${item.path}">path</td>
             <td name="statusDesc" th:text="${item.statusDesc}">status</td>
+            <td name="fileSize" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFileSize}">file size</td>
+            <td name="fileSize" th:if="${item.status != 'COMPRESSED'}">-</td>
+            <td name="lastModified" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFileLastModified}">last modified</td>
+            <td name="lastModified" th:if="${item.status != 'COMPRESSED'}">-</td>
             <td name="links">
                 <a name="visit-directory" th:text="${item.path}">访问目录</a>
                 <a name="compress-folder" th:text="${item.path}">压缩管理</a>
@@ -125,11 +131,11 @@ if(!downloadZips) {
 for(var i=0;i<downloadZips.length;i++) {
   downloadZips[i].setAttribute("href", concatUrlDownload(downloadZips[i].innerText));
   downloadZips[i].innerText = '下载压缩文件(zip)';
-  var compressedFileSize = downloadZips[i].getAttribute("compress-file-size");
+  /*var compressedFileSize = downloadZips[i].getAttribute("compress-file-size");
   if(compressedFileSize !== null) {
     var compressedFileSizeStr = "(" + compressedFileSize + ")";
     downloadZips[i].innerText = downloadZips[i].innerText + compressedFileSizeStr;
-  }
+  }*/
 }
 //deal with compress-folder
 var compressFolders = document.getElementsByName("compress-folder");
@@ -221,6 +227,8 @@ function deleteCompressFile(currentPath,button) {
             removeChildrenByTdNameAndTagName(button,'links','a','download-zip');
             updateCmTrHint('成功删除压缩文件',button);
             changeStatus(button,'NOT_COMPRESSED');
+            getTdByName(button,'lastModified').innerText = '-';
+            getTdByName(button,'fileSize').innerText = '-';
             removeChildrenByTdNameAndTagName(button,'operations','button','deleteCompressFileButton');
           } else {
             updateCmTrHint('删除失败，原因：' + returnObject.message,button);
@@ -260,6 +268,8 @@ function cancelCompress(currentPath,button) {
           if(returnObject.success) {
             updateCmTrHintByTd('已取消',td);
             changeStatus(td,'NOT_COMPRESSED');
+            getTdByName(td,'lastModified').innerText = '-';
+            getTdByName(td,'fileSize').innerText = '-';
             removeChildrenByTdNameAndTagName(td,'operations','button','cancelCompressButton');
           } else {
             updateCmTrHint('取消失败，原因：' + returnObject.message,button);
@@ -352,6 +362,8 @@ function compressFolder(currentPath,button) {
     };
     button.parentElement.appendChild(cancelCompressButton);
   }
+  getTdByName(button,'lastModified').innerText = '-';
+  getTdByName(button,'fileSize').innerText = '-';
   sendPostFormRequest(
     contextPath + "/compressFolder", // 目标接口 URL
     "path=" + encodeURIComponent(currentPath), // 表单格式数据
@@ -379,14 +391,15 @@ function compressFolder(currentPath,button) {
             changeStatus(button,returnObject.data.status);
             if(returnObject.data.status === 'COMPRESSED') {
               var compressedFileSize = returnObject.data.zipFileSize;
+              var compressedFileLastModified = returnObject.data.zipFileLastModified;
               updateCmTrHint('压缩完成',button);
               removeChildrenByTdNameAndTagName(button,'operations','button','deleteCompressFileButton');
               var downloadZip = document.createElement('a');
               downloadZip.innerText = '下载压缩文件(zip)';
-              if(compressedFileSize !== null) {
+              /*if(compressedFileSize !== null) {
                 var compressedFileSizeStr = "(" + compressedFileSize + ")";
                 downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
-              }
+              }*/
               downloadZip.setAttribute('name', 'download-zip');
               downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.zipFilePath));
               getTdByName(button,'links').appendChild(downloadZip);
@@ -398,6 +411,8 @@ function compressFolder(currentPath,button) {
                 deleteCompressFile(currentPath,deleteCompressFileButton);
               };
               getTdByName(button,'operations').appendChild(deleteCompressFileButton);
+              getTdByName(button,'fileSize').innerText = compressedFileSize;
+              getTdByName(button,'lastModified').innerText = compressedFileLastModified;
               removeChildrenByTdNameAndTagName(button,'operations','button','cancelCompressButton');
             } else if(returnObject.data.status === 'COMPRESSING') {
               updateCmTrHint(compressingHintText,button);

@@ -79,11 +79,11 @@ if(compressStatus === 'COMPRESSED') {
   var downloadZip = document.getElementById("download-zip");
   downloadZip.setAttribute('href', concatUrlDownload(downloadZip.innerText));
   downloadZip.innerText = '下载压缩文件(zip)';
-  var compressedFileSize = downloadZip.getAttribute("compress-file-size");
+  /*var compressedFileSize = downloadZip.getAttribute("compress-file-size");
   if(compressedFileSize !== null) {
     var compressedFileSizeStr = "(" + compressedFileSize + ")";
     downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
-  }
+  }*/
 }
 
 if(!backgroundEnabled) {
@@ -232,6 +232,7 @@ function compressFolder() {
     cancelCompressButton.onclick = cancelCompress;
     document.getElementById('compressingDiv').appendChild(cancelCompressButton);
   }
+  removeChildrenByIdAndTagName('compressedFileInfoDiv','h4');
   compressStatus = 'COMPRESSING';
   sendPostFormRequest(
     contextPath + "/compressFolder", // 目标接口 URL
@@ -265,10 +266,10 @@ function compressFolder() {
               removeElementById('deleteCompressFileButton', 'compressingDiv');
               var downloadZip = document.createElement('a');
               downloadZip.innerText = '下载压缩文件(zip)';
-              if(compressedFileSize !== null) {
+              /*if(compressedFileSize !== null) {
                 var compressedFileSizeStr = "(" + compressedFileSize + ")";
                 downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
-              }
+              }*/
               downloadZip.setAttribute('id', 'download-zip');
               downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.zipFilePath));
               document.getElementById('compressingDiv').appendChild(downloadZip);
