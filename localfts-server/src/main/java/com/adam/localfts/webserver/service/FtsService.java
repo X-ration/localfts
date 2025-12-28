@@ -620,7 +620,7 @@ public class FtsService {
         return transferFile(rootPath, dirName, file, true);
     }
 
-    public ReturnObject<List<ReturnObject<String>>> uploadFiles(String dirName, MultipartFile[] files) {
+    public ReturnObject<List<ReturnObject<String>>> uploadFiles(String dirName, MultipartFile[] files, boolean isFolderUpload) {
         long start = System.currentTimeMillis();
         Assert.isTrue(dirName != null && dirName.startsWith("/") && files != null, "非法请求参数");
 
@@ -636,7 +636,7 @@ public class FtsService {
         List<ReturnObject<String>> returnObjectList = new LinkedList<>();
         int successCount = 0;
         for(MultipartFile file: files) {
-            ReturnObject<String> innerReturnObject = transferFile(rootPath, dirName, file, false);
+            ReturnObject<String> innerReturnObject = transferFile(rootPath, dirName, file, !isFolderUpload);
             returnObjectList.add(innerReturnObject);
             if(innerReturnObject.isSuccess()) {
                 successCount++;

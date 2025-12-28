@@ -46,7 +46,9 @@
     <h4 th:text="'上传失败：' + ${uploadDirRetObject.message}"></h4>
 </div>
 <div th:if="${directoryExists}" id="uploadDiv">
-    <div style="display: none" id="uploadDirectoryHint"></div><br>
+    <div style="display: none" id="uploadMultipleHint"></div>
+    <div style="display: none" id="uploadDirectoryHint"></div>
+    <br>
     <fieldset style="display: inline-block;*display: inline; zoom: 1;">
         <legend>上传文件</legend>
         <form th:action="@{'/uploadFileTransfer'}" enctype="multipart/form-data" method="post">
@@ -55,9 +57,17 @@
             <input type="submit" value="上传">
         </form>
     </fieldset>
+    <fieldset style="display: inline-block;*display: inline; zoom: 1;" id="uploadMultipleFieldSet">
+        <legend>上传多文件</legend>
+        <form th:action="@{'/uploadFilesTransfer'}" enctype="multipart/form-data" method="post">
+            <input type="file" name="files" multiple>
+            <input type="hidden" name="dirName" th:value="${currentPath}">
+            <input type="submit" value="上传">
+        </form>
+    </fieldset>
     <fieldset style="display: inline-block;*display: inline; zoom: 1;" id="uploadDirectoryFieldSet">
         <legend>上传文件夹</legend>
-        <form th:action="@{'/uploadFilesTransfer'}" enctype="multipart/form-data" method="post">
+        <form th:action="@{'/uploadFolderTransfer'}" enctype="multipart/form-data" method="post">
             <input type="file" name="files" webkitdirectory directory>
             <input type="hidden" name="dirName" th:value="${currentPath}">
             <input type="submit" value="上传">
@@ -88,27 +98,29 @@
     visitDirectory.setAttribute('href', concatUrlList(visitDirectory.innerText));
     visitDirectory.innerText = '访问目录';
 
-    function isFolderSelectionSupported() {
+    function selectionSupported() {
         var input = document.createElement('input');
         input.type = 'file';
         // 检测 webkitdirectory 支持
         var webkitSupport = 'webkitdirectory' in input;
         // 检测 directory 支持
         var directorySupport = 'directory' in input;
+        var multipleSupport = 'multiple' in input;
         return {
             webkitdirectory: webkitSupport,
             directory: directorySupport,
-            supported: webkitSupport || directorySupport
+            multiple: multipleSupport,
+            folderSupported: webkitSupport || directorySupport
         };
     }
 
-    var folderSelectionSupported = isFolderSelectionSupported();
-    var alertString = '支持：' + folderSelectionSupported.supported + '\r\n'
-            + 'webkitdirectory:' + folderSelectionSupported.webkitdirectory + '\r\n'
-            + 'directory:' + folderSelectionSupported.directory;
+    var selectionSupported = selectionSupported();
+    var alertString = '支持：' + selectionSupported.folderSupported + '\r\n'
+            + 'webkitdirectory:' + selectionSupported.webkitdirectory + '\r\n'
+            + 'directory:' + selectionSupported.directory;
     var uploadDirectoryHint = document.getElementById('uploadDirectoryHint');
     var hintHtml = null;
-    if(!folderSelectionSupported.supported) {
+    if(!selectionSupported.folderSupported) {
         var dirFieldSet = document.getElementById('uploadDirectoryFieldSet');
         var uploadDiv = document.getElementById('uploadDiv');
         uploadDiv.removeChild(dirFieldSet);
@@ -123,6 +135,20 @@
     uploadDirectoryHint.innerHTML = hintHtml;
     uploadDirectoryHint.style.display = 'block';  //for ie
     //uploadDirectoryHint.setAttribute('style', 'display: block');
+
+    var uploadMultipleHint = document.getElementById('uploadMultipleHint');
+    hintHtml = null;
+    if(!selectionSupported.multiple) {
+        var dirFieldSet = document.getElementById('uploadMultipleFieldSet');
+        var uploadDiv = document.getElementById('uploadDiv');
+        uploadDiv.removeChild(dirFieldSet);
+        hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器不支持多文件上传。</h4>';
+    } else {
+        hintHtml = '<h4 style="margin-top:0;margin-bottom:0">此浏览器支持多文件上传。</h4>';
+    }
+    uploadMultipleHint.innerHTML = hintHtml;
+    uploadMultipleHint.style.display = 'block';  //for ie
+
     //alert(alertString);
 
     function concatUrlForConstant(contextPath, path) {

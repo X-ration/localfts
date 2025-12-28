@@ -225,7 +225,16 @@ public class WebController {
     public String uploadFilesTransfer(MultipartFile[] files, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
         LOGGER.debug("uploadFilesTransfer files count={}, dirName={}", files.length, dirName);
         Assert.isTrue(files != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
-        ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files);
+        ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files, false);
+        redirectAttributes.addFlashAttribute("uploadDirRetObject", returnObject);
+        return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
+    }
+
+    @PostMapping("/uploadFolderTransfer")
+    public String uploadFolderTransfer(MultipartFile[] files, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
+        LOGGER.debug("uploadFolderTransfer files count={}, dirName={}", files.length, dirName);
+        Assert.isTrue(files != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
+        ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files, true);
         redirectAttributes.addFlashAttribute("uploadDirRetObject", returnObject);
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
     }
