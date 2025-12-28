@@ -20,6 +20,31 @@ public class IOUtil {
     private static final String[] SELECTED_HTTP_REQUEST_HEADERS = new String[]{"range", "if-range", "user-agent"};
     private static final Logger LOGGER = LoggerFactory.getLogger(IOUtil.class);
 
+    public static void rewriteFile(File file, String content) throws IOException {
+        Assert.notNull(file, "File is null!");
+        Assert.notNull(content, "Content is null!");
+        Assert.isTrue(file.exists(), "File '" + file.getAbsolutePath() + "' does not exist!");
+        Assert.isTrue(file.isFile(), "File '" + file.getAbsolutePath() + "' is not a file!");
+        try (FileWriter fileWriter = new FileWriter(file)){
+            fileWriter.write(content);
+            fileWriter.flush();
+        } catch (IOException e) {
+            LOGGER.error("Writing to file {} encountered IOException:{}", file.getAbsolutePath(), e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    public static boolean createFile(File directory, String fileName) throws IOException {
+        Assert.notNull(directory, "Directory is null!");
+        Assert.notNull(fileName, "File name is null!");
+        Assert.isTrue(directory.exists(), "Directory '" + directory.getAbsolutePath() + "' does not exist!");
+        Assert.isTrue(directory.isDirectory(), "Directory '" + directory.getAbsolutePath() + "' is not a directory!");
+        Assert.isTrue(!fileName.contains(File.separator), "File name '" + fileName + "' contains separator!");
+
+        File file = new File(directory, fileName);
+        return file.createNewFile();
+    }
+
     /**
      * 压缩文件夹为zip文件
      * @param folderPath 要压缩的文件夹绝对路径

@@ -1,5 +1,6 @@
 package com.adam.junit;
 
+import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.junit.Assert;
@@ -9,9 +10,31 @@ import org.springframework.util.unit.DataSize;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 @Ignore
 public class FileTest {
+
+    @Test
+    public void testCreateAndRewriteFile() throws IOException {
+        File directory = new File("D:\\Users\\Adam\\Documents\\测试文件夹");
+        Assert.assertTrue(directory.exists() && directory.isDirectory());
+        String fileName = UUID.randomUUID() + ".txt";
+        boolean createFile = IOUtil.createFile(directory, fileName);
+        Assert.assertTrue(createFile);
+        File file = new File(directory, fileName);
+        String content = Constants.FOLDER_DELETE_ON_EXIT_HINT;
+        IOUtil.rewriteFile(file, content);
+        IOUtil.rewriteFile(file, content);
+    }
+
+    @Test
+    public void testCreateFile() throws IOException {
+        File directory = new File("D:\\Users\\Adam\\Documents\\测试文件夹");
+        Assert.assertTrue(directory.exists() && directory.isDirectory());
+        String fileName = UUID.randomUUID().toString();
+        IOUtil.createFile(directory, fileName);
+    }
 
 //    @Test
     public void testDeleteDirectory() throws IOException {
