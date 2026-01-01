@@ -143,6 +143,15 @@ public class WebController {
         return "compress_folder";
     }
 
+    @PostMapping("/createFolder")
+    @ResponseBody
+    public ReturnObject<Void> createFolder(@RequestParam(value = "path") String relativePath,
+                                           @RequestParam(value = "name") String folderName) {
+        Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数(path)");
+        Assert.isTrue(null != folderName && !"".equals(folderName), "非法请求参数(name)");
+        return ftsService.createFolder(relativePath, folderName);
+    }
+
     @PostMapping("/compressFolder")
     @ResponseBody
     public ReturnObject<FolderCompressDTO> compressFolder(@RequestParam(value = "path") String relativePath) {

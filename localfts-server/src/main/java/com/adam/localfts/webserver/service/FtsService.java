@@ -53,6 +53,46 @@ public class FtsService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
 
+    public ReturnObject<Void> createFolder(String relativePath, String folderName) {
+        Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数(relativePath)");
+        Assert.notNull(folderName, "非法请求参数(folderName:null)");
+
+        String fileInvalidCharacterString = getFileInvalidCharacterString();
+        String[] ficsArr = fileInvalidCharacterString.split(" ");
+        for(String fics: ficsArr) {
+            if(folderName.contains(fics)) {
+                return ReturnObject.fail("文件夹名称包含非法字符" + fics);
+            }
+        }
+
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        File rootDirectory = IOUtil.getFile(rootPath);
+        File directory = new File(rootDirectory, relativePath);
+        if(!directory.exists()) {
+            return ReturnObject.fail("目标路径不存在");
+        }
+        if(directory.isFile()) {
+            return ReturnObject.fail("目标路径不是文件夹");
+        }
+
+        File newDirectory = new File(directory, folderName);
+        if(newDirectory.exists()) {
+            return ReturnObject.fail("目标路径下已存在同名文件或文件夹");
+        }
+
+        try {
+            boolean mkdir = newDirectory.mkdir();
+            if (mkdir) {
+                return ReturnObject.success();
+            } else {
+                return ReturnObject.fail("创建文件夹失败");
+            }
+        } catch (SecurityException e) {
+            LOGGER.error("Creating folder '{}' under '{}' encountered SecurityException", folderName, relativePath, e);
+            return ReturnObject.fail("创建文件夹失败(SecurityException)");
+        }
+    }
+
     public boolean checkDirectoryExists(String relativePath) {
         Assert.isTrue(relativePath != null && relativePath.startsWith("/"), "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();

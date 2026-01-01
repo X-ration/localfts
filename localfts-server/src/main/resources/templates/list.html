@@ -35,12 +35,13 @@
     <div th:if="${directoryExists}">
         <div id="mkdirDiv" class="hidden" style="text-align:center;">
             <div class="dialogTitle">创建文件夹</div>
+            <h4 id="mkdirHint" style="display:none"></h4>
             <label for="mkdirPathInput">路径</label><br>
             <input type="text" id="mkdirPathInput"><br>
             <label for="mkdirNameInput" th:text="'文件夹名称（不能包含' + ${fileInvalidCharacterString} + '）'">文件夹名称</label><br>
             <input type="text" id="mkdirNameInput">
             <div style="padding-bottom:1em;padding-top:2em;">
-                <button id="mkdirButton" type="button" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确认创建</button>
+                <button id="mkdirButton" type="button" onclick="mkdir()" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确认创建</button>
                 <button id="mkdirDivHideButton" onclick="hideMkdirDiv()" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">关闭</button>
             </div>
         </div>
@@ -145,6 +146,8 @@
         该路径不存在！
     </div>
     <script th:src="${#request.contextPath} + '/static/common.js'"></script>
+    <script th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
+    <script th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
         var contextPath = [[${#request.contextPath}]];
         var ftsPagePath = [[${currentPath}]];
@@ -263,8 +266,68 @@
             
         }
 
+        var ficsArr = [[${fileInvalidCharacterString}]].split(' ');
+
+        function mkdir() {
+            var path = document.getElementById('mkdirPathInput').value;
+            var name = document.getElementById('mkdirNameInput').value;
+            var mkdirHint = document.getElementById('mkdirHint');
+
+            if(path === null || path === '') {
+                updateTitle('mkdirHint', '目标路径为空', 'red');
+                return;
+            }
+            if(!path.startsWith('/')) {
+                updateTitle('mkdirHint', '非法的目标路径', 'red');
+                return;
+            }
+            if(name === null || name === '') {
+                updateTitle('mkdirHint', '文件夹名称为空', 'red');
+                return;
+            }
+            for(var i=0;i<ficsArr.length;i++) {
+                var fics = ficsArr[i];
+                if(name.indexOf(fics) !== -1) {
+                    updateTitle('mkdirHint', '文件夹名称包含非法字符' + fics, 'red');
+                    return;
+                }
+            }
+            updateTitle('mkdirHint', '正在创建文件夹');
+            abortXhr();
+            sendPostFormRequest(
+                contextPath + '/createFolder',
+                'path=' + encodeURIComponent(path) + '&name=' + encodeURIComponent(name),
+                true,
+                function (xhr) {
+                    if (xhr.readyState === 4) {
+                        //兼容IE9
+                        try {
+                            var xhrStatus = xhr.status;
+                        } catch(e) {
+                            if(window.console) {
+                                console.error('获取XMLHttpRequest状态码时发生异常:', e);
+                            }
+                            return;
+                        }
+                        if (xhr.status === 200) {
+                            var returnObject = JSON.parse(xhr.responseText);
+                            if(returnObject.success) {
+                                updateTitle('mkdirHint', '创建文件夹成功！');
+                            } else {
+                                updateTitle('mkdirHint', '创建文件夹失败:' + returnObject.message, 'red');
+                            }
+                        } else {
+                            updateTitle('mkdirHint', '创建文件夹失败，状态码:' + xhr.status, 'red');
+                        }
+                    }
+                }
+            );
+        }
+
         function showMkdirDiv(path) {
             document.getElementById('mkdirPathInput').value = path;
+            document.getElementById('mkdirHint').innerText = '';
+            document.getElementById('mkdirHint').style.display = 'none';
             setClass('mkdirDiv', 'show');
         }
 
