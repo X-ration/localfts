@@ -1,10 +1,12 @@
 package com.adam.localfts.webserver.service;
 
+import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsPageModel;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.compress.*;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
+import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.apache.catalina.connector.ClientAbortException;
@@ -666,6 +668,17 @@ public class FtsService {
             zipFileName = processedPath.replaceAll("/", "_");
         }
         return zipFileName + ".zip";
+    }
+
+    public String getFileInvalidCharacterString() {
+        if(Util.isSystemWindows()) {
+            return Constants.FILE_INVALID_CHARACTER_WINDOWS;
+        } else if(Util.isSystemMacOS() || Util.isSystemLinux()) {
+            return Constants.FILE_INVALID_CHARACTER_LINUX_MACOS;
+        } else {
+            LOGGER.warn("Invalid os name:{}", Util.getOsName());
+            throw new LocalFtsRuntimeException("Invalid os name:" + Util.getOsName());
+        }
     }
 
     //是否在离开页面时不触发页面卸载事件

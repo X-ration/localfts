@@ -21,6 +21,8 @@ public class Constants {
     public static final Pattern PATTERN_HTTP_HEADER_RANGE_COMMON = Pattern.compile("(-?[0-9]+)-(-?[0-9]+)?");
     public static final Pattern PATTERN_HTTP_HEADER_RANGE_LAST_N = Pattern.compile("-[0-9]+");
     public static final String DATE_FORMAT_FILE_STANDARD = "yyyy-MM-dd HH:mm:ss";
+    public static final String FILE_INVALID_CHARACTER_WINDOWS = "\\ / : * ? \" < > |";
+    public static final String FILE_INVALID_CHARACTER_LINUX_MACOS = "/";
 
     public static final String FOLDER_DELETE_ON_EXIT_HINT = "【删除文件夹提示】此文件夹将在局域网文件传输服务器应用(pid-${pid})退出后删除，请及时保存重要文件！";
 

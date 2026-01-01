@@ -2,10 +2,18 @@
     display:none;
 }
 .show {
-    width:70%;height:auto;margin:5em 15% auto 15%;
+    position:fixed;top:0;left:0;
     background-color:white;
+    width:70%;height:auto;margin:5em 15% auto 15%;
     border-style:solid;border-width:0.05em;
+    z-index:1;
 }
+.dialogTitle {
+    text-align:center;
+    padding-bottom:1em;padding-top:1em;
+    font-size:1.5em;font-weight:bold;
+}
+
 table,th,td {
     border-style:solid;
     border-collapse:collapse;
