@@ -65,6 +65,10 @@ public class FtsService {
             }
         }
 
+        if(folderName.length() > 200) {
+            return ReturnObject.fail("文件夹名称长度超过200");
+        }
+
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         File rootDirectory = IOUtil.getFile(rootPath);
         File directory = new File(rootDirectory, relativePath);
@@ -73,6 +77,9 @@ public class FtsService {
         }
         if(directory.isFile()) {
             return ReturnObject.fail("目标路径不是文件夹");
+        }
+        if((directory.getAbsolutePath() + File.separator + folderName).length() > 240) {
+            return ReturnObject.fail("待创建的文件夹全路径名长度超过240");
         }
 
         File newDirectory = new File(directory, folderName);

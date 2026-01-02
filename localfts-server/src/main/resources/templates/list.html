@@ -361,6 +361,10 @@
                 updateTitle('mkdirHint', '文件夹名称为空', 'red');
                 return;
             }
+            if(name.length > 200) {
+                updateTitle('mkdirHint', '文件夹名称长度超过200', 'red');
+                return;
+            }
             for(var i=0;i<ficsArr.length;i++) {
                 var fics = ficsArr[i];
                 if(name.indexOf(fics) !== -1) {
