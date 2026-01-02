@@ -13,6 +13,10 @@
     padding-bottom:1em;padding-top:1em;
     font-size:1.5em;font-weight:bold;
 }
+.inputDefault {
+    text-align: center;
+    width: 80%;
+}
 
 table,th,td {
     border-style:solid;

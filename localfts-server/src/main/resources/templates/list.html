@@ -37,9 +37,9 @@
             <div class="dialogTitle">创建文件夹</div>
             <h4 id="mkdirHint" style="display:none"></h4>
             <label for="mkdirPathInput">路径</label><br>
-            <input type="text" id="mkdirPathInput"><br>
+            <input type="text" class="inputDefault" id="mkdirPathInput"><br>
             <label for="mkdirNameInput" th:text="'文件夹名称（不能包含' + ${fileInvalidCharacterString} + '）'">文件夹名称</label><br>
-            <input type="text" id="mkdirNameInput">
+            <input type="text" class="inputDefault" id="mkdirNameInput">
             <div style="padding-bottom:1em;padding-top:2em;">
                 <button id="mkdirButton" type="button" onclick="mkdir()" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确认创建</button>
                 <button id="mkdirDivHideButton" onclick="hideMkdirDiv()" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">关闭</button>
