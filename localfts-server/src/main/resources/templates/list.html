@@ -89,29 +89,31 @@
                     <button type="button" style="margin-left:1em" th:if="${mkdirEnabled}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
                 </td>
             </tr>
-            <tr th:if="${item.directory}" th:each="item:${ftsPage.data}">
-                <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
-                <td>文件夹</td>
-                <td>-</td>
+            <tr th:each="item:${ftsPage.data}">
+                <td th:if="${item.directory}"><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
+                <td th:if="${!item.directory}" th:text="${item.fileName}">fileName</td>
+
+                <td th:if="${item.directory}">文件夹</td>
+                <td th:if="${!item.directory}">文件</td>
+
+                <td th:if="${item.directory}">-</td>
+                <td th:if="${!item.directory}" th:text="${item.fileSizeStr}">0</td>
+
                 <td th:text="${item.lastModified}">last modified</td>
-                <td th:if="${zipEnabled}" th:text="${item.compressStatus.desc}"></td>
-                <td th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModified}"></td>
-                <td th:if="${zipEnabled and item.compressStatus.name() != 'COMPRESSED'}">-</td>
-                <td>
+
+                <td th:if="${zipEnabled and item.directory}" th:text="${item.compressStatus.desc}"></td>
+                <td th:if="${zipEnabled and !item.directory}">-</td>
+
+                <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModified}"></td>
+                <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
+
+                <td th:if="${item.directory}">
                     <a name="upload-file" th:text="${item.fileName}">上传文件</a>
                     <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.fileName}">压缩管理</a>
                     <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}" th:attr="compress-file-size=${item.compressedFileSize}">下载文件夹(zip)</a>
                     <button name="mkdir" type="button" style="margin-left:1em" th:if="${mkdirEnabled}" th:text="${item.fileName}">创建文件夹</button>
                 </td>
-            </tr>
-            <tr th:if="!${item.directory}" th:each="item:${ftsPage.data}">
-                <td th:text="${item.fileName}">fileName</td>
-                <td>文件</td>
-                <td th:text="${item.fileSizeStr}">0</td>
-                <td th:text="${item.lastModified}">last modified</td>
-                <td th:if="${zipEnabled}">-</td>
-                <td th:if="${zipEnabled}">-</td>
-                <td><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
+                <td th:if="${!item.directory}"><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
             </tr>
             </tbody>
         </table>
