@@ -26,6 +26,8 @@ public class Constants {
 
     public static final String FOLDER_DELETE_ON_EXIT_HINT_FILE_NAME = "【删除文件夹提示】此文件夹将在局域网文件传输服务器应用(pid-${pid})退出后删除，请及时保存重要文件！";
     public static final String FOLDER_DELETE_ON_EXIT_HINT_FILE_CONTENT = "【删除文件夹提示】此文件夹将在局域网文件传输服务器应用(pid-${pid})退出后删除，请及时保存重要文件！" + System.lineSeparator()
-            + "如不希望退出应用时删除文件夹，可通过taskkill /PID ${pid} /F命令强制结束进程。";
+            + "如不希望退出应用时删除文件夹，可通过如下命令强制结束进程：" + System.lineSeparator()
+            + "● Windows: taskkill /PID ${pid} /F" + System.lineSeparator()
+            + "● MacOS/Linux: kill -9 ${pid}" + System.lineSeparator();
 
 }
