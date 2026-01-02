@@ -62,6 +62,8 @@ public class WebController {
         }
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         model.addAttribute("zipEnabled", zipEnabled);
+        boolean mkdirEnabled = ftsServerConfigService.getLocalFtsProperties().getMkdir().getEnabled();
+        model.addAttribute("mkdirEnabled", mkdirEnabled);
         String fileInvalidCharacterString = ftsService.getFileInvalidCharacterString();
         model.addAttribute("fileInvalidCharacterString", fileInvalidCharacterString);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();

@@ -9,7 +9,7 @@
     <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="setClass('serverIpInfo','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
     <hr>
     <br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:if=${zipEnabled} th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a>
-    <button type="button" style="margin-left:1em" th:if="${directoryExists}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
+    <button type="button" style="margin-left:1em" th:if="${directoryExists} and ${mkdirEnabled}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
     <br><br>
 <!--    <strong style="color: red">注意：下载文件夹前需要压缩，否则会报404 Not Found错误。</strong>-->
     <div id="serverIpInfo" class="hidden">
@@ -33,7 +33,7 @@
         <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="setClass('serverIpInfo','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
     <div th:if="${directoryExists}">
-        <div id="mkdirDiv" class="hidden" style="text-align:center;">
+        <div id="mkdirDiv" th:if="${mkdirEnabled}" class="hidden" style="text-align:center;">
             <div class="dialogTitle">创建文件夹</div>
             <h4 id="mkdirHint" style="display:none"></h4>
             <label for="mkdirPathInput">路径</label><br>
@@ -86,7 +86,7 @@
                     <a id="upload-to-current-path">上传文件</a>
                     <a th:if="${zipEnabled}" id="compress-current-path">压缩管理</a>
                     <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}" th:attr="compress-file-size=${ftsPage.currentPathModel.compressedFileSize}">下载文件夹(zip)</a>
-                    <button type="button" style="margin-left:1em" th:if="${directoryExists}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
+                    <button type="button" style="margin-left:1em" th:if="${mkdirEnabled}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
                 </td>
             </tr>
             <tr th:if="${item.directory}" th:each="item:${ftsPage.data}">
@@ -101,7 +101,7 @@
                     <a name="upload-file" th:text="${item.fileName}">上传文件</a>
                     <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.fileName}">压缩管理</a>
                     <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}" th:attr="compress-file-size=${item.compressedFileSize}">下载文件夹(zip)</a>
-                    <button name="mkdir" type="button" style="margin-left:1em" th:if="${directoryExists}" th:text="${item.fileName}">创建文件夹</button>
+                    <button name="mkdir" type="button" style="margin-left:1em" th:if="${mkdirEnabled}" th:text="${item.fileName}">创建文件夹</button>
                 </td>
             </tr>
             <tr th:if="!${item.directory}" th:each="item:${ftsPage.data}">
@@ -146,8 +146,8 @@
         该路径不存在！
     </div>
     <script th:src="${#request.contextPath} + '/static/common.js'"></script>
-    <script th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
-    <script th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
+    <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
+    <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
         var contextPath = [[${#request.contextPath}]];
         var ftsPagePath = [[${currentPath}]];
@@ -218,19 +218,6 @@
                 uploadFiles[i].innerText = "上传文件";
             }
 
-            //deal with mkdir
-            var mkdirs = document.getElementsByName("mkdir");
-            if(!mkdirs) {
-                mkdirs = getElementsByName("a", "mkdir");
-            }
-            if(mkdirs) {
-                for(var i=0;i<mkdirs.length;i++) {
-                    var path = ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + mkdirs[i].innerText;
-                    mkdirs[i].onclick = showMkdirDivFuncFactory(path);
-                    mkdirs[i].innerText = "创建文件夹";
-                }
-            }
-
             //deal with first-page,previous-page,next-page,last-page
             var firstPageNo = 1;
             var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
@@ -264,81 +251,6 @@
                 setOptionSelected(tagSelectOptions[0]);
             }
             
-        }
-
-        var ficsArr = [[${fileInvalidCharacterString}]].split(' ');
-
-        function mkdir() {
-            var path = document.getElementById('mkdirPathInput').value;
-            var name = document.getElementById('mkdirNameInput').value;
-            var mkdirHint = document.getElementById('mkdirHint');
-
-            if(path === null || path === '') {
-                updateTitle('mkdirHint', '目标路径为空', 'red');
-                return;
-            }
-            if(!path.startsWith('/')) {
-                updateTitle('mkdirHint', '非法的目标路径', 'red');
-                return;
-            }
-            if(name === null || name === '') {
-                updateTitle('mkdirHint', '文件夹名称为空', 'red');
-                return;
-            }
-            for(var i=0;i<ficsArr.length;i++) {
-                var fics = ficsArr[i];
-                if(name.indexOf(fics) !== -1) {
-                    updateTitle('mkdirHint', '文件夹名称包含非法字符' + fics, 'red');
-                    return;
-                }
-            }
-            updateTitle('mkdirHint', '正在创建文件夹');
-            abortXhr();
-            sendPostFormRequest(
-                contextPath + '/createFolder',
-                'path=' + encodeURIComponent(path) + '&name=' + encodeURIComponent(name),
-                true,
-                function (xhr) {
-                    if (xhr.readyState === 4) {
-                        //兼容IE9
-                        try {
-                            var xhrStatus = xhr.status;
-                        } catch(e) {
-                            if(window.console) {
-                                console.error('获取XMLHttpRequest状态码时发生异常:', e);
-                            }
-                            return;
-                        }
-                        if (xhr.status === 200) {
-                            var returnObject = JSON.parse(xhr.responseText);
-                            if(returnObject.success) {
-                                updateTitle('mkdirHint', '创建文件夹成功！');
-                            } else {
-                                updateTitle('mkdirHint', '创建文件夹失败:' + returnObject.message, 'red');
-                            }
-                        } else {
-                            updateTitle('mkdirHint', '创建文件夹失败，状态码:' + xhr.status, 'red');
-                        }
-                    }
-                }
-            );
-        }
-
-        function showMkdirDiv(path) {
-            document.getElementById('mkdirPathInput').value = path;
-            document.getElementById('mkdirHint').innerText = '';
-            document.getElementById('mkdirHint').style.display = 'none';
-            setClass('mkdirDiv', 'show');
-        }
-
-        function showMkdirDivFuncFactory(path) {
-            return function() {
-                showMkdirDiv(path);
-            };
-        }
-
-        function hideMkdirDiv() {
-            setClass('mkdirDiv', 'hidden');
         }
 
         function setOptionSelected(option) {
@@ -413,6 +325,94 @@
 
         function concatUrlCompressFolder(dirName) {
             return URL_COMPRESS_FOLDER + "?path=" + encodeURIComponent(dirName);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript" th:if="${directoryExists and mkdirEnabled}">
+        //deal with mkdir
+        var mkdirs = document.getElementsByName("mkdir");
+        if(!mkdirs) {
+            mkdirs = getElementsByName("a", "mkdir");
+        }
+        if(mkdirs) {
+            for(var i=0;i<mkdirs.length;i++) {
+                var path = ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + mkdirs[i].innerText;
+                mkdirs[i].onclick = showMkdirDivFuncFactory(path);
+                mkdirs[i].innerText = "创建文件夹";
+            }
+        }
+
+        var ficsArr = [[${fileInvalidCharacterString}]].split(' ');
+        function mkdir() {
+            var path = document.getElementById('mkdirPathInput').value;
+            var name = document.getElementById('mkdirNameInput').value;
+            var mkdirHint = document.getElementById('mkdirHint');
+
+            if(path === null || path === '') {
+                updateTitle('mkdirHint', '目标路径为空', 'red');
+                return;
+            }
+            if(!path.startsWith('/')) {
+                updateTitle('mkdirHint', '非法的目标路径', 'red');
+                return;
+            }
+            if(name === null || name === '') {
+                updateTitle('mkdirHint', '文件夹名称为空', 'red');
+                return;
+            }
+            for(var i=0;i<ficsArr.length;i++) {
+                var fics = ficsArr[i];
+                if(name.indexOf(fics) !== -1) {
+                    updateTitle('mkdirHint', '文件夹名称包含非法字符' + fics, 'red');
+                    return;
+                }
+            }
+            updateTitle('mkdirHint', '正在创建文件夹');
+            abortXhr();
+            sendPostFormRequest(
+                contextPath + '/createFolder',
+                'path=' + encodeURIComponent(path) + '&name=' + encodeURIComponent(name),
+                true,
+                function (xhr) {
+                    if (xhr.readyState === 4) {
+                        //兼容IE9
+                        try {
+                            var xhrStatus = xhr.status;
+                        } catch(e) {
+                            if(window.console) {
+                                console.error('获取XMLHttpRequest状态码时发生异常:', e);
+                            }
+                            return;
+                        }
+                        if (xhr.status === 200) {
+                            var returnObject = JSON.parse(xhr.responseText);
+                            if(returnObject.success) {
+                                updateTitle('mkdirHint', '创建文件夹成功！');
+                            } else {
+                                updateTitle('mkdirHint', '创建文件夹失败:' + returnObject.message, 'red');
+                            }
+                        } else {
+                            updateTitle('mkdirHint', '创建文件夹失败，状态码:' + xhr.status, 'red');
+                        }
+                    }
+                }
+            );
+        }
+
+        function showMkdirDiv(path) {
+            document.getElementById('mkdirPathInput').value = path;
+            document.getElementById('mkdirHint').innerText = '';
+            document.getElementById('mkdirHint').style.display = 'none';
+            setClass('mkdirDiv', 'show');
+        }
+
+        function showMkdirDivFuncFactory(path) {
+            return function() {
+                showMkdirDiv(path);
+            };
+        }
+
+        function hideMkdirDiv() {
+            setClass('mkdirDiv', 'hidden');
         }
     </script>
 </body>

@@ -79,7 +79,7 @@ public class FtsServerConfigService implements DisposableBean {
 
         //post construct
         this.pid = getPid(LocalFtsStartupException.class);
-        this.setZipPropertiesIfNull();
+        this.setPropertiesIfNull();
         if(localFtsProperties.getZip().getEnabled()) {
             this.createZipFolder(LocalFtsStartupException.class);
         }
@@ -254,7 +254,8 @@ public class FtsServerConfigService implements DisposableBean {
                     .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
         }
         stringBuilder.append("[Upload directory pseudo user-agent contains]").append(localFtsProperties.getUpload().getDirectory().getPseudoUaContains()).append(System.lineSeparator());
-        stringBuilder.append("[Pseudo unload user-agent contains]").append(localFtsProperties.getPseudoUnloadUaContains()).append(System.lineSeparator());
+        stringBuilder.append("[Pseudo unload user-agent contains]").append(localFtsProperties.getPseudoUnloadUaContains()).append(System.lineSeparator())
+                .append("[Mkdir enabled]").append(localFtsProperties.getMkdir().getEnabled()).append(System.lineSeparator());
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!CollectionUtils.isEmpty(testLanguageMap)) {
             for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
@@ -301,10 +302,11 @@ public class FtsServerConfigService implements DisposableBean {
         return stringBuilder.toString();
     }
 
-    private void setZipPropertiesIfNull() {
+    private void setPropertiesIfNull() {
         setZipEnabledIfNull();
         setZipDeleteOnExistIfNull();
         setZipBackgroundEnabledIfNull();
+        setMkdirEnabledIfNull();
     }
 
     private void setZipEnabledIfNull() {
@@ -325,6 +327,13 @@ public class FtsServerConfigService implements DisposableBean {
         Boolean zipBackgroundEnabled = localFtsProperties.getZip().getBackgroundEnabled();
         if(zipBackgroundEnabled == null) {
             localFtsProperties.getZip().setBackgroundEnabled(false);
+        }
+    }
+
+    private void setMkdirEnabledIfNull() {
+        Boolean mkdirEnabled = localFtsProperties.getMkdir().getEnabled();
+        if(mkdirEnabled == null) {
+            localFtsProperties.getMkdir().setEnabled(false);
         }
     }
 

@@ -23,6 +23,8 @@ public class LocalFtsProperties {
     @NestedConfigurationProperty
     private UploadProperties upload;
     private List<String> pseudoUnloadUaContains;
+    @NestedConfigurationProperty
+    private MkdirProperties mkdir;
     private Map<TestLanguageText, Boolean> testLanguage;
 
 }
