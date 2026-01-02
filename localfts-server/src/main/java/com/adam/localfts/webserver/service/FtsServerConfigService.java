@@ -628,8 +628,8 @@ public class FtsServerConfigService implements DisposableBean {
             throwException(exClass, "Directory '" + directory.getAbsolutePath() + "' is not a directory!");
         }
 
-        String fileContent = Constants.FOLDER_DELETE_ON_EXIT_HINT.replaceAll("\\$\\{pid}", "" + pid);
-        String fileName = fileContent + ".txt";
+        String fileName = Constants.FOLDER_DELETE_ON_EXIT_HINT_FILE_NAME.replaceAll("\\$\\{pid}", "" + pid) + ".txt";
+        String fileContent = Constants.FOLDER_DELETE_ON_EXIT_HINT_FILE_CONTENT.replaceAll("\\$\\{pid}", "" + pid);
         try {
             boolean createFile = IOUtil.createFile(directory, fileName);
             if(!createFile) {

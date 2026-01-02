@@ -23,7 +23,7 @@ public class FileTest {
         boolean createFile = IOUtil.createFile(directory, fileName);
         Assert.assertTrue(createFile);
         File file = new File(directory, fileName);
-        String content = Constants.FOLDER_DELETE_ON_EXIT_HINT;
+        String content = Constants.FOLDER_DELETE_ON_EXIT_HINT_FILE_CONTENT;
         IOUtil.rewriteFile(file, content);
         IOUtil.rewriteFile(file, content);
     }
