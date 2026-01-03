@@ -6,7 +6,7 @@
     <link rel="stylesheet" th:href="${#request.contextPath} + '/static/common.css'">
 </head>
 <body>
-    <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="setClass('serverIpInfo','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
+    <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="showDialog('serverIpInfo')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
     <hr>
     <br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:if=${zipEnabled} th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a>
     <button type="button" style="margin-left:1em" th:if="${directoryExists} and ${mkdirEnabled}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
@@ -30,7 +30,7 @@
             </tr>
             </tbody>
         </table>
-        <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="setClass('serverIpInfo','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
+        <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="hideDialog('serverIpInfo')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
     <div th:if="${directoryExists}">
         <div id="mkdirDiv" th:if="${mkdirEnabled}" class="hidden" style="text-align:center;">
@@ -148,6 +148,7 @@
         该路径不存在！
     </div>
     <script th:src="${#request.contextPath} + '/static/common.js'"></script>
+    <script th:src="${#request.contextPath} + '/static/dialog.js'"></script>
     <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
     <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
@@ -408,7 +409,7 @@
             document.getElementById('mkdirPathInput').value = path;
             document.getElementById('mkdirHint').innerText = '';
             document.getElementById('mkdirHint').style.display = 'none';
-            setClass('mkdirDiv', 'show');
+            showDialog('mkdirDiv');
         }
 
         function showMkdirDivFuncFactory(path) {
@@ -418,7 +419,7 @@
         }
 
         function hideMkdirDiv() {
-            setClass('mkdirDiv', 'hidden');
+            hideDialog('mkdirDiv');
         }
     </script>
 </body>

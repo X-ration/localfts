@@ -6,7 +6,13 @@
     background-color:white;
     width:70%;height:auto;margin:5em 15% auto 15%;
     border-style:solid;border-width:0.05em;
-    z-index:1;
+
+    /* IE6 hack 模拟fixed */
+    _position: absolute; /* IE6强制改为absolute */
+    /* 动态计算top：滚动条高度*/
+    _top: expression(eval(document.documentElement.scrollTop));
+    /* 动态计算left：滚动条宽度*/
+    _left: expression(eval(document.documentElement.scrollLeft));
 }
 .dialogTitle {
     text-align:center;
