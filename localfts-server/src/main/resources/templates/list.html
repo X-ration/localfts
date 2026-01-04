@@ -48,19 +48,39 @@
         <table class="left-head-table" style="text-align:left;border-style:solid">
             <thead>
             <tr th:if="${zipEnabled}">
-                <th style="width:52%">文件名</th>
-                <th style="width:8%">类型</th>
-                <th style="width:8%">大小</th>
-                <th style="width:8%">修改时间</th>
-                <th style="width:8%">文件夹压缩状态</th>
-                <th style="width:8%">压缩文件修改时间</th>
+                <th style="width:52%">文件名
+                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="thImg"/></a>
+                </th>
+                <th style="width:8%">类型
+                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:8%">大小
+                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:8%">修改时间
+                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="thImg"/></a>
+                </th>
+                <th style="width:8%">文件夹压缩状态
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="thImg"/></a>
+                </th>
+                <th style="width:8%">压缩文件修改时间
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="thImg"/></a>
+                </th>
                 <th style="width:8%">操作</th>
             </tr>
             <tr th:if="${!zipEnabled}">
-                <th style="width:60%">文件名</th>
-                <th style="width:10%">类型</th>
-                <th style="width:10%">大小</th>
-                <th style="width:10%">修改时间</th>
+                <th style="width:60%">文件名
+                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="thImg"/></a>
+                </th>
+                <th style="width:10%">类型
+                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:10%">大小
+                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:10%">修改时间
+                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="thImg"/></a>
+                </th>
                 <th style="width:10%">操作</th>
             </tr>
             </thead>
@@ -75,14 +95,14 @@
                 <td>-</td>
             </tr>
             <tr>
-                <td><a id="return-to-current-path">当前目录</a></td>
-                <td>文件夹</td>
-                <td>-</td>
-                <td th:text="${ftsPage.currentPathModel.lastModified}"></td>
-                <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}"></td>
-                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModified}"></td>
-                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}">-</td>
-                <td>
+                <td style="border-bottom-width: 0.1em"><a id="return-to-current-path" style="border-bottom-width: 0.1em">当前目录</a></td>
+                <td style="border-bottom-width: 0.1em">文件夹</td>
+                <td style="border-bottom-width: 0.1em">-</td>
+                <td th:text="${ftsPage.currentPathModel.lastModified}" style="border-bottom-width: 0.1em"></td>
+                <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}" style="border-bottom-width: 0.1em"></td>
+                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModified}" style="border-bottom-width: 0.1em"></td>
+                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}" style="border-bottom-width: 0.1em">-</td>
+                <td style="border-bottom-width: 0.1em">
                     <a id="upload-to-current-path">上传文件</a>
                     <a th:if="${zipEnabled}" id="compress-current-path">压缩管理</a>
                     <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}" th:attr="compress-file-size=${ftsPage.currentPathModel.compressedFileSize}">下载文件夹(zip)</a>
@@ -132,6 +152,8 @@
         <form th:action="@{'/list'}" enctype="application/x-www-form-urlencoded">
             <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
             <input type="hidden" name="path" th:value="${ftsPage.path}">
+            <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
+            <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
             <label for="page-no">页数:</label>
             <input type="text" size="2" id="page-no" name="pageNo" th:value="${ftsPage.currentPage}">
             <label for="page-size-select">每页数量:</label>
@@ -154,12 +176,19 @@
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
         var contextPath = [[${#request.contextPath}]];
         var ftsPagePath = [[${currentPath}]];
+        var sortColumn = [[${sortColumn}]];
+        var sortOrder = [[${sortOrder}]];
         /*var URL_LIST = "/localfts/list";
         var URL_DOWNLOAD = "/localfts/downloadFile";
         var URL_UPLOAD = "/localfts/uploadFile";*/
         var URL_LIST = concatUrlForConstant(contextPath, '/list');
         var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
         var URL_UPLOAD = concatUrlForConstant(contextPath, '/uploadFile');
+
+        if(sortColumn === null) {
+            sortColumn = undefined;
+            sortOrder = undefined;
+        }
 
         main();
 
@@ -221,15 +250,64 @@
                 uploadFiles[i].innerText = "上传文件";
             }
 
+            //deal with sort-link
+            var sortLinks = document.getElementsByName("sort-link");
+            if(!sortLinks) {
+                sortLinks = getElementsByName("a", "sort-link");
+            }
+            for(var i=0;i<sortLinks.length;i++) {
+                var eSortColumn = sortLinks[i].getAttribute('sort-column');
+                var eSortOrder = null, imgSrc = null;
+                if(sortColumn === null || sortColumn !== eSortColumn) {
+                    eSortOrder = 'ASC';
+                    imgSrc = contextPath + '/static/icon/sort_32px_black';
+                    if(isIE6()) {
+                        imgSrc = imgSrc + '_png8';
+                    }
+                } else if(sortColumn !== null && sortOrder === 'ASC') {
+                    eSortOrder = 'DESC';
+                    imgSrc = contextPath + '/static/icon/sort_asc_32px_black';
+                    if(isIE6()) {
+                        imgSrc = imgSrc + '_png8';
+                    }
+                } else if(sortColumn !== null && sortOrder === 'DESC') {
+                    eSortColumn = undefined;
+                    eSortOrder = undefined;
+                    imgSrc = contextPath + '/static/icon/sort_desc_32px_black';
+                    if(isIE6()) {
+                        imgSrc = imgSrc + '_png8';
+                    }
+                } else {
+                    if(window.console) {
+                        console.error('非法状态，sortColumn=' + sortColumn + ',sortOrder=' + sortOrder);
+                    }
+                    eSortColumn = undefined;
+                    eSortOrder = undefined;
+                }
+                imgSrc = imgSrc + '.png';
+                //sortLinks[i].children[0].setAttribute('src', imgSrc);
+                var sortLinkChildren = sortLinks[i].children;
+                if(sortLinkChildren) {
+                    for(var j=0;j<sortLinkChildren.length;j++) {
+                        var sortLinkChild = sortLinkChildren[j];
+                        if(sortLinkChild.tagName.toLowerCase() === 'img') {
+                            sortLinkChild.setAttribute('src', imgSrc);
+                        }
+                    }
+                }
+                var url = concatUrlList(ftsPagePath, undefined, undefined, eSortColumn, eSortOrder);
+                sortLinks[i].setAttribute('href', url);
+            }
+
             //deal with first-page,previous-page,next-page,last-page
             var firstPageNo = 1;
             var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
             var previousPageNo = (ftsPageCurrentPage > 1) ? (ftsPageCurrentPage - 1) : 1;
             var nextPageNo = (ftsPageCurrentPage < lastPageNo) ? (ftsPageCurrentPage + 1) : lastPageNo;
-            var firstPageUrl = concatUrlList(ftsPagePath, firstPageNo, ftsPageSize);
-            var lastPageUrl = concatUrlList(ftsPagePath, lastPageNo, ftsPageSize);
-            var previousPageUrl = concatUrlList(ftsPagePath, previousPageNo, ftsPageSize);
-            var nextPageUrl = concatUrlList(ftsPagePath, nextPageNo, ftsPageSize);
+            var firstPageUrl = concatUrlList(ftsPagePath, firstPageNo, ftsPageSize, sortColumn, sortOrder);
+            var lastPageUrl = concatUrlList(ftsPagePath, lastPageNo, ftsPageSize, sortColumn, sortOrder);
+            var previousPageUrl = concatUrlList(ftsPagePath, previousPageNo, ftsPageSize, sortColumn, sortOrder);
+            var nextPageUrl = concatUrlList(ftsPagePath, nextPageNo, ftsPageSize, sortColumn, sortOrder);
             document.getElementById("first-page").setAttribute("href", firstPageUrl);
             document.getElementById("last-page").setAttribute("href", lastPageUrl);
             document.getElementById("previous-page").setAttribute("href", previousPageUrl);
@@ -268,8 +346,22 @@
             return contextPath + path;
         }
 
-        function concatUrlList(path, pageNo, pageSize) {
-            return URL_LIST + "?path=" + encodeURIComponent(path) + "&pageNo=" + pageNo + "&pageSize=" + pageSize;
+        function concatUrlList(path, pageNo, pageSize, sortColumn, sortOrder) {
+            //return URL_LIST + "?path=" + encodeURIComponent(path) + "&pageNo=" + pageNo + "&pageSize=" + pageSize;
+            var result = URL_LIST + "?path=" + encodeURIComponent(path);
+            if(pageNo !== undefined) {
+                result = result + "&pageNo=" + pageNo;
+            }
+            if(pageSize !== undefined) {
+                result = result + "&pageSize=" + pageSize;
+            }
+            if(sortColumn !== undefined) {
+                result = result + "&sortColumn=" + sortColumn;
+            }
+            if(sortOrder !== undefined) {
+                result = result + "&sortOrder=" + sortOrder;
+            }
+            return result;
         }
         function concatUrlDownload(fileName) {
             return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);

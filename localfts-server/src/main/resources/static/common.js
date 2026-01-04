@@ -17,6 +17,15 @@ function setStyle(id,styleKey,styleValue) {
     }
 }
 
+function isIE6() {
+    var userAgent = navigator.userAgent;
+    if(userAgent) {
+        return userAgent.indexOf('MSIE 6.0') !== -1;
+    } else {
+        return false;
+    }
+}
+
 function updateTitle(id, text, color) {
     var element = document.getElementById(id);
     if(element) {

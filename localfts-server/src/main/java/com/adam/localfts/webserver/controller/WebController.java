@@ -5,6 +5,8 @@ import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
 import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
+import com.adam.localfts.webserver.common.sort.ListTableColumn;
+import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
 import com.adam.localfts.webserver.util.Util;
@@ -46,22 +48,35 @@ public class WebController {
     }
 
     @GetMapping("/list")
-    public String list(Model model, @RequestParam(name = "path") String relativePath, @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
+    public String list(Model model, @RequestParam(name = "path") String relativePath,
+                       @RequestParam(defaultValue = "1") int pageNo,
+                       @RequestParam(defaultValue = "20") int pageSize,
+                       @RequestParam(required = false)ListTableColumn sortColumn,
+                       @RequestParam(required = false) SortOrder sortOrder
+                       ) {
         model.addAttribute("currentPath", relativePath);
         boolean directoryExists = ftsService.checkDirectoryExists(relativePath);
         model.addAttribute("directoryExists", directoryExists);
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        model.addAttribute("zipEnabled", zipEnabled);
         if(pageNo <= 0) {
             pageNo = 1;
         }
         if(pageSize <= 0) {
             pageSize = 20;
         }
+        if(!zipEnabled && (sortColumn == ListTableColumn.COMPRESS_STATUS || sortColumn == ListTableColumn.COMPRESS_FILE_LAST_MODIFIED)) {
+            sortColumn = null;
+        }
+        if(sortColumn != null && sortOrder == null) {
+            sortOrder = SortOrder.ASC;
+        }
+        model.addAttribute("sortColumn", sortColumn);
+        model.addAttribute("sortOrder", sortOrder);
         if(directoryExists) {
-            FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize);
+            FtsPageModel ftsPageModel = ftsService.getDirectoryModel(relativePath, pageNo, pageSize, sortColumn, sortOrder);
             model.addAttribute("ftsPage", ftsPageModel);
         }
-        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
-        model.addAttribute("zipEnabled", zipEnabled);
         boolean mkdirEnabled = ftsServerConfigService.getLocalFtsProperties().getMkdir().getEnabled();
         model.addAttribute("mkdirEnabled", mkdirEnabled);
         String fileInvalidCharacterString = ftsService.getFileInvalidCharacterString();

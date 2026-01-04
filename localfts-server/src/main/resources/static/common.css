@@ -38,3 +38,9 @@ th,td {
 .left-head-table th {
     text-align: left
 }
+img.thImg{
+    width:1em; height:1em;
+    vertical-align: middle;
+    border: 0 none;
+    outline: none;
+}

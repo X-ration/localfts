@@ -5,6 +5,8 @@ import com.adam.localfts.webserver.common.FtsPageModel;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.compress.*;
+import com.adam.localfts.webserver.common.sort.ListTableColumn;
+import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.util.IOUtil;
@@ -23,11 +25,13 @@ import org.springframework.web.util.UriUtils;
 import ua_parser.Client;
 import ua_parser.Parser;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.text.Collator;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,6 +54,8 @@ public class FtsService {
     private final Map<String, ReentrantLock> zipFileLockMap = new ConcurrentHashMap<>();
     private final ReadWriteLock zipPathSelfGlobalLock = new ReentrantReadWriteLock();
     private final Map<String, FolderCompressingContextHolder> folderCompressingInfoMap = new ConcurrentHashMap<>();
+    private final Map<ListTableColumn, Comparator<FtsPageModel.FtsPageFileModel>> listTableComparatorMap = new HashMap<>();
+    private final Collator CHINESE_COLLATOR = Collator.getInstance(Locale.CHINA);
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
 
@@ -107,7 +113,7 @@ public class FtsService {
         return directory.exists() && directory.isDirectory();
     }
 
-    public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize) {
+    public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize, ListTableColumn sortColumn, SortOrder sortOrder) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
@@ -155,28 +161,44 @@ public class FtsService {
         model.setCurrentSize(actualPageSize);
         //左开右闭区间[lIndex,rIndex)
         int lIndex = pageSize * (pageNo - 1), rIndex = lIndex + actualPageSize;
-        List<FtsPageModel.FtsPageFileModel> fileModels = new ArrayList<>(actualPageSize);
+        List<FtsPageModel.FtsPageFileModel> tempList = new ArrayList<>(actualPageSize);
         for(int i = 0; i < items.length; i++) {
-            if(i >= lIndex && i < rIndex) {
-                File item = items[i];
-                FtsPageModel.FtsPageFileModel fileModel = model.new FtsPageFileModel();
-                boolean isDirectory = item.isDirectory();
-                fileModel.setDirectory(isDirectory);
-                fileModel.setFileName(item.getName());
-                if(isDirectory) {
-                    fileModel.setFileSize(0);
-                    if(zipEnabled) {
-                        fillDirectoryModelCompress(item, zipDirectory, rootPath, zipFileParentRelativePath, fileModel, simpleDateFormat);
-                    }
-                } else {
-                    fileModel.setFileSize(item.length());
+            File item = items[i];
+            FtsPageModel.FtsPageFileModel fileModel = model.new FtsPageFileModel();
+            boolean isDirectory = item.isDirectory();
+            fileModel.setDirectory(isDirectory);
+            fileModel.setFileName(item.getName());
+            if (isDirectory) {
+                fileModel.setFileSize(0);
+                if (zipEnabled) {
+                    fillDirectoryModelCompress(item, zipDirectory, rootPath, zipFileParentRelativePath, fileModel, simpleDateFormat);
                 }
-                fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
-                fileModel.setLastModified(simpleDateFormat.format(new Date(item.lastModified())));
-                fileModels.add(fileModel);
+            } else {
+                fileModel.setFileSize(item.length());
+            }
+            fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
+            fileModel.setLastModified(simpleDateFormat.format(new Date(item.lastModified())));
+            tempList.add(fileModel);
+        }
+
+        if(sortColumn != null) {
+            Comparator<FtsPageModel.FtsPageFileModel> comparator = listTableComparatorMap.get(sortColumn);
+            if(comparator == null) {
+                LOGGER.warn("List table sort by '{}' requires a comparator!", sortColumn);
+            } else {
+                if(sortOrder == SortOrder.DESC) {
+                    comparator = comparator.reversed();
+                }
+                tempList.sort(comparator);
             }
         }
-        model.setData(fileModels);
+        List<FtsPageModel.FtsPageFileModel> fileModelList = new LinkedList<>();
+        for(int i=0;i<tempList.size();i++) {
+            if(i >= lIndex && i < rIndex) {
+                fileModelList.add(tempList.get(i));
+            }
+        }
+        model.setData(fileModelList);
         return model;
     }
 
@@ -836,6 +858,60 @@ public class FtsService {
             LOGGER.error("上传文件'{}'到路径'{}'时出错", filePath, dirName, e);
             return ReturnObject.fail(e.getMessage(), filePath);
         }
+    }
+
+    @PostConstruct
+    public void postConstruct() {
+        listTableComparatorMap.put(ListTableColumn.FILENAME, (fm1, fm2) ->
+                CHINESE_COLLATOR.compare(fm1.getFileName(), fm2.getFileName()));
+        listTableComparatorMap.put(ListTableColumn.TYPE, (fm1, fm2) -> {
+            String typeStr1 = fm1.isDirectory() ? "文件夹" : "文件";
+            String typeStr2 = fm2.isDirectory() ? "文件夹" : "文件";
+            return CHINESE_COLLATOR.compare(typeStr1, typeStr2);
+        });
+        listTableComparatorMap.put(ListTableColumn.SIZE, (fm1, fm2) -> {
+            long fileSize1 = fm1.getFileSize(), fileSize2 = fm2.getFileSize();
+            if(fm1.isDirectory()) {
+                fileSize1 = -1L;
+            }
+            if(fm2.isDirectory()) {
+                fileSize2 = -1L;
+            }
+            return Long.compare(fileSize1, fileSize2);
+        });
+        listTableComparatorMap.put(ListTableColumn.LAST_MODIFIED,
+                Comparator.comparing(FtsPageModel.FtsPageFileModel::getLastModified));
+        listTableComparatorMap.put(ListTableColumn.COMPRESS_STATUS, (fm1, fm2) -> {
+            if(fm1.getCompressStatus() == null && fm2.getCompressStatus() == null) {
+                return 0;
+            } else if(fm1.getCompressStatus() == null) {
+                return -1;
+            } else if(fm2.getCompressStatus() == null) {
+                return 1;
+            } else {
+                return CHINESE_COLLATOR.compare(fm1.getCompressStatus().getDesc(), fm2.getCompressStatus().getDesc());
+            }
+        });
+        listTableComparatorMap.put(ListTableColumn.COMPRESS_FILE_LAST_MODIFIED, (fm1, fm2) -> {
+            FolderCompressStatus compressStatus1 = fm1.getCompressStatus(), compressStatus2 = fm2.getCompressStatus();
+            if(fm1.getCompressStatus() == null && fm2.getCompressStatus() == null) {
+                return 0;
+            } else if(fm1.getCompressStatus() == null) {
+                return -1;
+            } else if(fm2.getCompressStatus() == null) {
+                return 1;
+            } else {
+                if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 != FolderCompressStatus.COMPRESSED) {
+                    return 0;
+                } else if (compressStatus1 == FolderCompressStatus.COMPRESSED && compressStatus2 != FolderCompressStatus.COMPRESSED) {
+                    return 1;
+                } else if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 == FolderCompressStatus.COMPRESSED) {
+                    return -1;
+                } else {
+                    return fm1.getCompressedFileLastModified().compareTo(fm2.getCompressedFileLastModified());
+                }
+            }
+        });
     }
 
 }
