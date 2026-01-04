@@ -5,6 +5,7 @@ import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
 import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
+import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
@@ -94,7 +95,11 @@ public class WebController {
      * @return
      */
     @GetMapping("/compressManagement")
-    public String compressManagement(@RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "10") int pageSize, Model model) {
+    public String compressManagement(@RequestParam(defaultValue = "1") int pageNo,
+                                     @RequestParam(defaultValue = "10") int pageSize,
+                                     @RequestParam(required = false) CompressManagementColumn sortColumn,
+                                     @RequestParam(required = false) SortOrder sortOrder,
+                                     Model model) {
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         if(!zipEnabled) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -105,7 +110,12 @@ public class WebController {
         if(pageSize <= 0) {
             pageSize = 10;
         }
-        CompressManagementPageModel list = ftsService.listCompressTask(pageNo, pageSize);
+        if(sortColumn != null && sortOrder == null) {
+            sortOrder = SortOrder.ASC;
+        }
+        model.addAttribute("sortColumn", sortColumn);
+        model.addAttribute("sortOrder", sortOrder);
+        CompressManagementPageModel list = ftsService.listCompressTask(pageNo, pageSize, sortColumn, sortOrder);
         model.addAttribute("pagedList", list);
         boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
         model.addAttribute("needSizeCheck", needSizeCheck);

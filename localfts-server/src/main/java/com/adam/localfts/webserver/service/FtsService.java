@@ -5,6 +5,7 @@ import com.adam.localfts.webserver.common.FtsPageModel;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.compress.*;
+import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
@@ -41,6 +42,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.adam.localfts.webserver.common.Constants.CRLF;
 
@@ -56,6 +58,7 @@ public class FtsService {
     private final ReadWriteLock zipPathSelfGlobalLock = new ReentrantReadWriteLock();
     private final Map<String, FolderCompressingContextHolder> folderCompressingInfoMap = new ConcurrentHashMap<>();
     private final Map<ListTableColumn, Comparator<FtsPageModel.FtsPageFileModel>> listTableComparatorMap = new HashMap<>();
+    private final Map<CompressManagementColumn, Comparator<FolderCompressDTO>> compressManagementComparatorMap = new HashMap<>();
     private final Collator CHINESE_COLLATOR = Collator.getInstance(Locale.CHINA);
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FtsService.class);
@@ -240,11 +243,11 @@ public class FtsService {
         }
     }
 
-    public CompressManagementPageModel listCompressTask(int pageNo, int pageSize) {
+    public CompressManagementPageModel listCompressTask(int pageNo, int pageSize, CompressManagementColumn sortColumn, SortOrder sortOrder) {
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         FolderCompressCounter counter = new FolderCompressCounter();
         SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
-        List<FolderCompressDTO> allList = folderCompressingInfoMap.entrySet().stream()
+        Stream<FolderCompressDTO> allStream = folderCompressingInfoMap.entrySet().stream()
                 .map(entry -> {
                     String folderAbsolutePath = entry.getKey();
                     FolderCompressingContextHolder folderCompressingContextHolder = entry.getValue();
@@ -262,14 +265,27 @@ public class FtsService {
                         FolderCompressInfo folderCompressInfo = getFolderCompressInfo(folderAbsolutePath, true);
                         folderCompressDTO.setZipFilePath(folderCompressInfo.getZipFileRelativePath());
                         long compressedFileSize = folderCompressInfo.getCompressedFileSize();
+                        folderCompressDTO.setCompressedFileSize(compressedFileSize);
                         folderCompressDTO.setZipFileSize(Util.fileLengthToStringNew(compressedFileSize));
                         long compressedFileLastModified = folderCompressInfo.getCompressedFileLastModified();
+                        folderCompressDTO.setCompressedFileLastModified(compressedFileLastModified);
                         String lastModifiedString = simpleDateFormat.format(new Date(compressedFileLastModified));
                         folderCompressDTO.setZipFileLastModified(lastModifiedString);
                     }
                     return folderCompressDTO;
-                })
-                .collect(Collectors.toList());
+                });
+        if(sortColumn != null) {
+            Comparator<FolderCompressDTO> comparator = compressManagementComparatorMap.get(sortColumn);
+            if(comparator == null) {
+                LOGGER.warn("Compress management table sort by '{}' requires a comparator!", sortColumn);
+            } else {
+                if(sortOrder == SortOrder.DESC) {
+                    comparator = comparator.reversed();
+                }
+                allStream = allStream.sorted(comparator);
+            }
+        }
+        List<FolderCompressDTO> allList = allStream.collect(Collectors.toList());
         CompressManagementPageModel pageModel = new CompressManagementPageModel(pageNo, pageSize, allList);
         pageModel.setTotalCount(counter.getTotalCount());
         pageModel.setNotCompressedCount(counter.getNotCompressedCount());
@@ -890,26 +906,30 @@ public class FtsService {
         });
         listTableComparatorMap.put(ListTableColumn.LAST_MODIFIED,
                 Comparator.comparing(FtsPageModel.FtsPageFileModel::getLastModified));
-        listTableComparatorMap.put(ListTableColumn.COMPRESS_STATUS, (fm1, fm2) -> {
-            if(fm1.getCompressStatus() == null && fm2.getCompressStatus() == null) {
-                return 0;
-            } else if(fm1.getCompressStatus() == null) {
-                return -1;
-            } else if(fm2.getCompressStatus() == null) {
-                return 1;
-            } else {
-                return CHINESE_COLLATOR.compare(fm1.getCompressStatus().getDesc(), fm2.getCompressStatus().getDesc());
-            }
-        });
-        listTableComparatorMap.put(ListTableColumn.COMPRESS_FILE_SIZE, (fm1, fm2) -> compareCompressedColumns(fm1, fm2,
-                (afm1, afm2) -> Long.compare(afm1.getCompressedFileSize(), afm2.getCompressedFileSize())));
-        listTableComparatorMap.put(ListTableColumn.COMPRESS_FILE_LAST_MODIFIED, (fm1, fm2) -> compareCompressedColumns(fm1, fm2,
-                (afm1, afm2) -> Long.compare(afm1.getCompressedFileLastModified(), afm2.getCompressedFileLastModified())));
+        listTableComparatorMap.put(ListTableColumn.COMPRESS_STATUS, this::compareCompressStatus);
+        listTableComparatorMap.put(ListTableColumn.COMPRESS_FILE_SIZE, this::compareCompressedFileSize);
+        listTableComparatorMap.put(ListTableColumn.COMPRESS_FILE_LAST_MODIFIED, this::compareCompressedFileLastModified);
+
+        compressManagementComparatorMap.put(CompressManagementColumn.FOLDER_NAME, (fcd1, fcd2) ->
+                CHINESE_COLLATOR.compare(fcd1.getPath(), fcd2.getPath()));
+        compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_STATUS, this::compareCompressStatus);
+        compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_FILE_SIZE, this::compareCompressedFileSize);
+        compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_FILE_LAST_MODIFIED, this::compareCompressedFileLastModified);
     }
 
-    private int compareCompressedColumns(FtsPageModel.FtsPageFileModel fm1, FtsPageModel.FtsPageFileModel fm2,
-                                         BiFunction<FtsPageModel.FtsPageFileModel, FtsPageModel.FtsPageFileModel, Integer> biFunction) {
-        FolderCompressStatus compressStatus1 = fm1.getCompressStatus(), compressStatus2 = fm2.getCompressStatus();
+    private int compareCompressedFileSize(CompressedColumns cc1, CompressedColumns cc2) {
+        return compareCompressedColumns(cc1, cc2,
+                (acc1, acc2) -> Long.compare(acc1.getCompressedFileSize(), acc2.getCompressedFileSize()));
+    }
+
+    private int compareCompressedFileLastModified(CompressedColumns cc1, CompressedColumns cc2) {
+        return compareCompressedColumns(cc1, cc2,
+                (acc1, acc2) -> Long.compare(acc1.getCompressedFileLastModified(), acc2.getCompressedFileLastModified()));
+    }
+
+    private int compareCompressedColumns(CompressedColumns cc1, CompressedColumns cc2,
+                                         BiFunction<CompressedColumns, CompressedColumns, Integer> biFunction) {
+        FolderCompressStatus compressStatus1 = cc1.getCompressStatus(), compressStatus2 = cc2.getCompressStatus();
         if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 != FolderCompressStatus.COMPRESSED) {
             return 0;
         } else if (compressStatus1 == FolderCompressStatus.COMPRESSED && compressStatus2 != FolderCompressStatus.COMPRESSED) {
@@ -917,7 +937,19 @@ public class FtsService {
         } else if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 == FolderCompressStatus.COMPRESSED) {
             return -1;
         } else {
-            return biFunction.apply(fm1, fm2);
+            return biFunction.apply(cc1, cc2);
+        }
+    }
+
+    private int compareCompressStatus(CompressedColumns cc1, CompressedColumns cc2) {
+        if(cc1.getCompressStatus() == null && cc2.getCompressStatus() == null) {
+            return 0;
+        } else if(cc1.getCompressStatus() == null) {
+            return -1;
+        } else if(cc2.getCompressStatus() == null) {
+            return 1;
+        } else {
+            return CHINESE_COLLATOR.compare(cc1.getCompressStatus().getDesc(), cc2.getCompressStatus().getDesc());
         }
     }
 

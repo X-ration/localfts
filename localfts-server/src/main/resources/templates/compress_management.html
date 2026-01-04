@@ -37,10 +37,18 @@
     <table class="left-head-table" style="text-align:left;border-style:solid;width:100%" id="cmTable">
         <thead>
         <tr>
-            <th style="width:52%">文件夹</th>
-            <th style="width:8%">压缩状态</th>
-            <th style="width:8%">压缩文件大小</th>
-            <th style="width:8%">压缩文件修改时间</th>
+            <th style="width:52%">文件夹
+                <a name="sort-link" th:attr="sort-column='FOLDER_NAME'"><img class="thImg"/></a>
+            </th>
+            <th style="width:8%">压缩状态
+                <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="thImg"/></a>
+            </th>
+            <th style="width:8%">压缩文件大小
+                <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_SIZE'"><img class="thImg"/></a>
+            </th>
+            <th style="width:8%">压缩文件修改时间
+                <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="thImg"/></a>
+            </th>
             <th style="width:8%">链接</th>
             <th style="width:8%">提示信息</th>
             <th style="width:8%">操作</th>
@@ -85,6 +93,8 @@
     <form th:action="@{'/compressManagement'}" enctype="application/x-www-form-urlencoded">
         <label for="page-no">页数:</label>
         <input type="text" size="2" id="page-no" name="pageNo" th:value="${pagedList.currentPage}">
+        <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
+        <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
         <label for="page-size-select">每页数量:</label>
         <select name="pageSize" id="page-size-select">
             <option value="5">5</option>
@@ -107,11 +117,19 @@ var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
 var URL_COMPRESS_MANAGEMENT = concatUrlForConstant(contextPath, '/compressManagement');
 var URL_LIST = concatUrlForConstant(contextPath, '/list');
 var needSizeCheck = [[${needSizeCheck}]];
+var ftsPageSize = [[${pagedList.pageSize}]];
 //var backgroundEnabled = [[${backgroundEnabled}]];
 var globalTotalCount = [[${pagedList.totalCount}]],
   globalNotCompressedCount = [[${pagedList.notCompressedCount}]],
   globalCompressingCount = [[${pagedList.compressingCount}]],
   globalCompressedCount = [[${pagedList.compressedCount}]];
+var sortColumn = [[${sortColumn}]];
+var sortOrder = [[${sortOrder}]];
+
+if(sortColumn === null) {
+  sortColumn = undefined;
+  sortOrder = undefined;
+}
 
 //deal with download-zip
 var downloadZips = document.getElementsByName("download-zip");
@@ -145,13 +163,58 @@ for(var i=0;i<visitDirectories.length;i++) {
   visitDirectories[i].setAttribute("href", concatUrlList(visitDirectories[i].innerText));
   visitDirectories[i].innerText = '访问目录';
 }
+
+//deal with sort-link
+var sortLinks = document.getElementsByName("sort-link");
+if(!sortLinks) {
+  sortLinks = getElementsByName("a", "sort-link");
+}
+for(var i=0;i<sortLinks.length;i++) {
+  var eSortColumn = sortLinks[i].getAttribute('sort-column');
+  var eSortOrder = null, imgSrc = null;
+  if(sortColumn === null || sortColumn !== eSortColumn) {
+    eSortOrder = 'ASC';
+    imgSrc = contextPath + '/static/icon/sort_32px_black';
+  } else if(sortColumn !== null && sortOrder === 'ASC') {
+    eSortOrder = 'DESC';
+    imgSrc = contextPath + '/static/icon/sort_asc_32px_black';
+  } else if(sortColumn !== null && sortOrder === 'DESC') {
+    eSortColumn = undefined;
+    eSortOrder = undefined;
+    imgSrc = contextPath + '/static/icon/sort_desc_32px_black';
+  } else {
+    if(window.console) {
+      console.error('非法状态，sortColumn=' + sortColumn + ',sortOrder=' + sortOrder);
+    }
+    eSortColumn = undefined;
+    eSortOrder = undefined;
+  }
+  if(imgSrc) {
+    if(isIE6()) {
+      imgSrc = imgSrc + '_png8';
+    }
+    imgSrc = imgSrc + '.png';
+    //sortLinks[i].children[0].setAttribute('src', imgSrc);
+    var sortLinkChildren = sortLinks[i].children;
+    if(sortLinkChildren) {
+      for(var j=0;j<sortLinkChildren.length;j++) {
+        var sortLinkChild = sortLinkChildren[j];
+        if(sortLinkChild.tagName.toLowerCase() === 'img') {
+          sortLinkChild.setAttribute('src', imgSrc);
+        }
+      }
+    }
+  }
+  var url = concatUrlCompressManagement(undefined, ftsPageSize, eSortColumn, eSortOrder);
+  sortLinks[i].setAttribute('href', url);
+}
+
 updateCmHint();
 updateCmPageHint();
 updatePager();
 
 function updatePager() {
   var ftsPageNo = Number(document.getElementById("page-no").value);
-  var ftsPageSize = [[${pagedList.pageSize}]];
   var ftsPageCurrentPage = Number(document.getElementById("current-page").innerText);
   var ftsPageCurrentSize = Number(document.getElementById("current-size").innerText);
   var ftsPageTotalPage = Number(document.getElementById("total-page").innerText);
@@ -162,10 +225,10 @@ function updatePager() {
   var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
   var previousPageNo = (ftsPageCurrentPage > 1) ? (ftsPageCurrentPage - 1) : 1;
   var nextPageNo = (ftsPageCurrentPage < lastPageNo) ? (ftsPageCurrentPage + 1) : lastPageNo;
-  var firstPageUrl = concatUrlCompressManagement(firstPageNo, ftsPageSize);
-  var lastPageUrl = concatUrlCompressManagement(lastPageNo, ftsPageSize);
-  var previousPageUrl = concatUrlCompressManagement(previousPageNo, ftsPageSize);
-  var nextPageUrl = concatUrlCompressManagement(nextPageNo, ftsPageSize);
+  var firstPageUrl = concatUrlCompressManagement(firstPageNo, ftsPageSize, sortColumn, sortOrder);
+  var lastPageUrl = concatUrlCompressManagement(lastPageNo, ftsPageSize, sortColumn, sortOrder);
+  var previousPageUrl = concatUrlCompressManagement(previousPageNo, ftsPageSize, sortColumn, sortOrder);
+  var nextPageUrl = concatUrlCompressManagement(nextPageNo, ftsPageSize, sortColumn, sortOrder);
   document.getElementById("first-page").setAttribute("href", firstPageUrl);
   document.getElementById("last-page").setAttribute("href", lastPageUrl);
   document.getElementById("previous-page").setAttribute("href", previousPageUrl);
@@ -588,16 +651,24 @@ function concatUrlDownload(fileName) {
 function concatUrlCompressFolder(path) {
   return URL_COMPRESS_FOLDER + "?path=" + encodeURIComponent(path);
 }
-function concatUrlCompressManagement(pageNo,pageSize) {
-  if(pageNo === undefined && pageSize === undefined) {
-    return URL_COMPRESS_MANAGEMENT;
-  } else if(pageNo === undefined) {
-    return URL_COMPRESS_MANAGEMENT + '?pageSize=' + pageSize;
-  } else if(pageSize === undefined) {
-    return URL_COMPRESS_MANAGEMENT + '?pageNo=' + pageNo;
-  } else {
-    return URL_COMPRESS_MANAGEMENT + '?pageNo=' + pageNo + '&pageSize=' + pageSize;
+function concatUrlCompressManagement(pageNo,pageSize, sortColumn, sortOrder) {
+  var url = URL_COMPRESS_MANAGEMENT, paramStr = '';
+  if(pageNo !== undefined) {
+    paramStr = paramStr + '&pageNo=' + pageNo;
   }
+  if(pageSize !== undefined) {
+    paramStr = paramStr + '&pageSize=' + pageSize;
+  }
+  if(sortColumn !== undefined) {
+    paramStr = paramStr + '&sortColumn=' + sortColumn;
+  }
+  if(sortOrder !== undefined) {
+    paramStr = paramStr + '&sortOrder=' + sortOrder;
+  }
+  if(paramStr !== '') {
+    url = url + '?' + paramStr.substring(1);
+  }
+  return url;
 }
 //for IE, not supporting document.getElementsByName
 function getElementsByName(tagName, name) {

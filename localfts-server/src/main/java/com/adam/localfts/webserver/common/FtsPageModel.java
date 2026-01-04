@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.common;
 
+import com.adam.localfts.webserver.common.compress.CompressedColumns;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,7 +13,7 @@ public class FtsPageModel extends PageObject<FtsPageModel.FtsPageFileModel> {
 
     @Getter
     @Setter
-    public class FtsPageFileModel {
+    public class FtsPageFileModel implements CompressedColumns {
         private String fileName;
         private boolean isDirectory;
         private long fileSize;
