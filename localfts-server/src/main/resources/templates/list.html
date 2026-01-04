@@ -98,9 +98,9 @@
                 <td style="border-bottom-width: 0.1em"><a id="return-to-current-path" style="border-bottom-width: 0.1em">当前目录</a></td>
                 <td style="border-bottom-width: 0.1em">文件夹</td>
                 <td style="border-bottom-width: 0.1em">-</td>
-                <td th:text="${ftsPage.currentPathModel.lastModified}" style="border-bottom-width: 0.1em"></td>
+                <td th:text="${ftsPage.currentPathModel.lastModifiedStr}" style="border-bottom-width: 0.1em"></td>
                 <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}" style="border-bottom-width: 0.1em"></td>
-                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModified}" style="border-bottom-width: 0.1em"></td>
+                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModifiedStr}" style="border-bottom-width: 0.1em"></td>
                 <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}" style="border-bottom-width: 0.1em">-</td>
                 <td style="border-bottom-width: 0.1em">
                     <a id="upload-to-current-path">上传文件</a>
@@ -119,12 +119,12 @@
                 <td th:if="${item.directory}">-</td>
                 <td th:if="${!item.directory}" th:text="${item.fileSizeStr}">0</td>
 
-                <td th:text="${item.lastModified}">last modified</td>
+                <td th:text="${item.lastModifiedStr}">last modified</td>
 
                 <td th:if="${zipEnabled and item.directory}" th:text="${item.compressStatus.desc}"></td>
                 <td th:if="${zipEnabled and !item.directory}">-</td>
 
-                <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModified}"></td>
+                <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModifiedStr}"></td>
                 <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
 
                 <td th:if="${item.directory}">

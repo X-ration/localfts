@@ -137,7 +137,9 @@ public class FtsService {
         if(zipEnabled) {
             fillDirectoryModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, currentPathModel, simpleDateFormat);
         }
-        currentPathModel.setLastModified(simpleDateFormat.format(new Date(directory.lastModified())));
+        long currentPathLastModified = directory.lastModified();
+        currentPathModel.setLastModified(currentPathLastModified);
+        currentPathModel.setLastModifiedStr(simpleDateFormat.format(new Date(currentPathLastModified)));
         model.setCurrentPathModel(currentPathModel);
 
         File[] items = directory.listFiles();
@@ -177,7 +179,9 @@ public class FtsService {
                 fileModel.setFileSize(item.length());
             }
             fileModel.setFileSizeStr(Util.fileLengthToStringNew(fileModel.getFileSize()));
-            fileModel.setLastModified(simpleDateFormat.format(new Date(item.lastModified())));
+            long itemLastModified = item.lastModified();
+            fileModel.setLastModified(itemLastModified);
+            fileModel.setLastModifiedStr(simpleDateFormat.format(new Date(itemLastModified)));
             tempList.add(fileModel);
         }
 
@@ -217,7 +221,9 @@ public class FtsService {
             }
             fileModel.setCompressedPath(zipFileRelativePath);
             fileModel.setCompressedFileSize(Util.fileLengthToStringNew(zipFile.length()));
-            fileModel.setCompressedFileLastModified(simpleDateFormat.format(new Date(zipFile.lastModified())));
+            long zipFileLastModified = zipFile.lastModified();
+            fileModel.setCompressedFileLastModified(zipFileLastModified);
+            fileModel.setCompressedFileLastModifiedStr(simpleDateFormat.format(new Date(zipFileLastModified)));
         }
     }
 
@@ -908,7 +914,7 @@ public class FtsService {
                 } else if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 == FolderCompressStatus.COMPRESSED) {
                     return -1;
                 } else {
-                    return fm1.getCompressedFileLastModified().compareTo(fm2.getCompressedFileLastModified());
+                    return Long.compare(fm1.getCompressedFileLastModified(), fm2.getCompressedFileLastModified());
                 }
             }
         });

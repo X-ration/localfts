@@ -16,12 +16,14 @@ public class FtsPageModel extends PageObject<FtsPageModel.FtsPageFileModel> {
         private String fileName;
         private boolean isDirectory;
         private long fileSize;
-        private String lastModified;
+        private long lastModified;
+        private String lastModifiedStr;
         private String fileSizeStr;
         //private boolean compressed;
         private FolderCompressStatus compressStatus;
         private String compressedPath;
         private String compressedFileSize;
-        private String compressedFileLastModified;
+        private long compressedFileLastModified;
+        private String compressedFileLastModifiedStr;
     }
 }
