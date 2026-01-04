@@ -48,25 +48,28 @@
         <table class="left-head-table" style="text-align:left;border-style:solid">
             <thead>
             <tr th:if="${zipEnabled}">
-                <th style="width:52%">文件名
+                <th style="width:50%">文件名
                     <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="thImg"/></a>
                 </th>
-                <th style="width:8%">类型
+                <th style="width:5%">类型
                     <a name="sort-link" th:attr="sort-column='TYPE'"><img class="thImg"/></a>
                 </th>
-                <th style="width:8%">大小
+                <th style="width:7%">大小
                     <a name="sort-link" th:attr="sort-column='SIZE'"><img class="thImg"/></a>
                 </th>
-                <th style="width:8%">修改时间
+                <th style="width:7%">修改时间
                     <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="thImg"/></a>
                 </th>
-                <th style="width:8%">文件夹压缩状态
+                <th style="width:7%">文件夹压缩状态
                     <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="thImg"/></a>
                 </th>
-                <th style="width:8%">压缩文件修改时间
+                <th style="width:7%">压缩文件大小
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_SIZE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:7%">压缩文件修改时间
                     <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="thImg"/></a>
                 </th>
-                <th style="width:8%">操作</th>
+                <th style="width:10%">操作</th>
             </tr>
             <tr th:if="${!zipEnabled}">
                 <th style="width:60%">文件名
@@ -92,6 +95,7 @@
                 <td>-</td>
                 <td th:if="${zipEnabled}">-</td>
                 <td th:if="${zipEnabled}">-</td>
+                <td th:if="${zipEnabled}">-</td>
                 <td>-</td>
             </tr>
             <tr>
@@ -100,12 +104,14 @@
                 <td style="border-bottom-width: 0.1em">-</td>
                 <td th:text="${ftsPage.currentPathModel.lastModifiedStr}" style="border-bottom-width: 0.1em"></td>
                 <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}" style="border-bottom-width: 0.1em"></td>
+                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileSizeStr}" style="border-bottom-width: 0.1em"></td>
+                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}" style="border-bottom-width: 0.1em">-</td>
                 <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModifiedStr}" style="border-bottom-width: 0.1em"></td>
                 <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}" style="border-bottom-width: 0.1em">-</td>
                 <td style="border-bottom-width: 0.1em">
                     <a id="upload-to-current-path">上传文件</a>
                     <a th:if="${zipEnabled}" id="compress-current-path">压缩管理</a>
-                    <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}" th:attr="compress-file-size=${ftsPage.currentPathModel.compressedFileSize}">下载文件夹(zip)</a>
+                    <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}">下载文件夹(zip)</a>
                     <button type="button" style="margin-left:1em" th:if="${mkdirEnabled}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
                 </td>
             </tr>
@@ -124,13 +130,16 @@
                 <td th:if="${zipEnabled and item.directory}" th:text="${item.compressStatus.desc}"></td>
                 <td th:if="${zipEnabled and !item.directory}">-</td>
 
+                <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileSizeStr}"></td>
+                <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
+
                 <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModifiedStr}"></td>
                 <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
 
                 <td th:if="${item.directory}">
                     <a name="upload-file" th:text="${item.fileName}">上传文件</a>
                     <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.fileName}">压缩管理</a>
-                    <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}" th:attr="compress-file-size=${item.compressedFileSize}">下载文件夹(zip)</a>
+                    <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}">下载文件夹(zip)</a>
                     <button name="mkdir" type="button" style="margin-left:1em" th:if="${mkdirEnabled}" th:text="${item.fileName}">创建文件夹</button>
                 </td>
                 <td th:if="${!item.directory}"><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
@@ -261,22 +270,13 @@
                 if(sortColumn === null || sortColumn !== eSortColumn) {
                     eSortOrder = 'ASC';
                     imgSrc = contextPath + '/static/icon/sort_32px_black';
-                    if(isIE6()) {
-                        imgSrc = imgSrc + '_png8';
-                    }
                 } else if(sortColumn !== null && sortOrder === 'ASC') {
                     eSortOrder = 'DESC';
                     imgSrc = contextPath + '/static/icon/sort_asc_32px_black';
-                    if(isIE6()) {
-                        imgSrc = imgSrc + '_png8';
-                    }
                 } else if(sortColumn !== null && sortOrder === 'DESC') {
                     eSortColumn = undefined;
                     eSortOrder = undefined;
                     imgSrc = contextPath + '/static/icon/sort_desc_32px_black';
-                    if(isIE6()) {
-                        imgSrc = imgSrc + '_png8';
-                    }
                 } else {
                     if(window.console) {
                         console.error('非法状态，sortColumn=' + sortColumn + ',sortOrder=' + sortOrder);
@@ -284,14 +284,19 @@
                     eSortColumn = undefined;
                     eSortOrder = undefined;
                 }
-                imgSrc = imgSrc + '.png';
-                //sortLinks[i].children[0].setAttribute('src', imgSrc);
-                var sortLinkChildren = sortLinks[i].children;
-                if(sortLinkChildren) {
-                    for(var j=0;j<sortLinkChildren.length;j++) {
-                        var sortLinkChild = sortLinkChildren[j];
-                        if(sortLinkChild.tagName.toLowerCase() === 'img') {
-                            sortLinkChild.setAttribute('src', imgSrc);
+                if(imgSrc) {
+                    if(isIE6()) {
+                        imgSrc = imgSrc + '_png8';
+                    }
+                    imgSrc = imgSrc + '.png';
+                    //sortLinks[i].children[0].setAttribute('src', imgSrc);
+                    var sortLinkChildren = sortLinks[i].children;
+                    if(sortLinkChildren) {
+                        for(var j=0;j<sortLinkChildren.length;j++) {
+                            var sortLinkChild = sortLinkChildren[j];
+                            if(sortLinkChild.tagName.toLowerCase() === 'img') {
+                                sortLinkChild.setAttribute('src', imgSrc);
+                            }
                         }
                     }
                 }
@@ -409,12 +414,7 @@
         if(downloadFolders) {
             for(var i=0;i<downloadFolders.length;i++) {
                 downloadFolders[i].setAttribute("href", concatUrlDownload(downloadFolders[i].innerText));
-                var compressedFileSize = downloadFolders[i].getAttribute("compress-file-size");
                 downloadFolders[i].innerText = "下载文件夹(zip)";
-                if(compressedFileSize !== null) {
-                  var compressedFileSizeStr = "(" + compressedFileSize + ")";
-                  downloadFolders[i].innerText = downloadFolders[i].innerText + compressedFileSizeStr;
-                }
             }
         }
 

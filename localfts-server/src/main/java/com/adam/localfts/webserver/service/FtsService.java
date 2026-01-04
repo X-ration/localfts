@@ -39,6 +39,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static com.adam.localfts.webserver.common.Constants.CRLF;
@@ -220,7 +221,9 @@ public class FtsService {
                 zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
             }
             fileModel.setCompressedPath(zipFileRelativePath);
-            fileModel.setCompressedFileSize(Util.fileLengthToStringNew(zipFile.length()));
+            long zipFileSize = zipFile.length();
+            fileModel.setCompressedFileSize(zipFileSize);
+            fileModel.setCompressedFileSizeStr(Util.fileLengthToStringNew(zipFileSize));
             long zipFileLastModified = zipFile.lastModified();
             fileModel.setCompressedFileLastModified(zipFileLastModified);
             fileModel.setCompressedFileLastModifiedStr(simpleDateFormat.format(new Date(zipFileLastModified)));
@@ -898,26 +901,24 @@ public class FtsService {
                 return CHINESE_COLLATOR.compare(fm1.getCompressStatus().getDesc(), fm2.getCompressStatus().getDesc());
             }
         });
-        listTableComparatorMap.put(ListTableColumn.COMPRESS_FILE_LAST_MODIFIED, (fm1, fm2) -> {
-            FolderCompressStatus compressStatus1 = fm1.getCompressStatus(), compressStatus2 = fm2.getCompressStatus();
-            if(fm1.getCompressStatus() == null && fm2.getCompressStatus() == null) {
-                return 0;
-            } else if(fm1.getCompressStatus() == null) {
-                return -1;
-            } else if(fm2.getCompressStatus() == null) {
-                return 1;
-            } else {
-                if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 != FolderCompressStatus.COMPRESSED) {
-                    return 0;
-                } else if (compressStatus1 == FolderCompressStatus.COMPRESSED && compressStatus2 != FolderCompressStatus.COMPRESSED) {
-                    return 1;
-                } else if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 == FolderCompressStatus.COMPRESSED) {
-                    return -1;
-                } else {
-                    return Long.compare(fm1.getCompressedFileLastModified(), fm2.getCompressedFileLastModified());
-                }
-            }
-        });
+        listTableComparatorMap.put(ListTableColumn.COMPRESS_FILE_SIZE, (fm1, fm2) -> compareCompressedColumns(fm1, fm2,
+                (afm1, afm2) -> Long.compare(afm1.getCompressedFileSize(), afm2.getCompressedFileSize())));
+        listTableComparatorMap.put(ListTableColumn.COMPRESS_FILE_LAST_MODIFIED, (fm1, fm2) -> compareCompressedColumns(fm1, fm2,
+                (afm1, afm2) -> Long.compare(afm1.getCompressedFileLastModified(), afm2.getCompressedFileLastModified())));
+    }
+
+    private int compareCompressedColumns(FtsPageModel.FtsPageFileModel fm1, FtsPageModel.FtsPageFileModel fm2,
+                                         BiFunction<FtsPageModel.FtsPageFileModel, FtsPageModel.FtsPageFileModel, Integer> biFunction) {
+        FolderCompressStatus compressStatus1 = fm1.getCompressStatus(), compressStatus2 = fm2.getCompressStatus();
+        if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 != FolderCompressStatus.COMPRESSED) {
+            return 0;
+        } else if (compressStatus1 == FolderCompressStatus.COMPRESSED && compressStatus2 != FolderCompressStatus.COMPRESSED) {
+            return 1;
+        } else if (compressStatus1 != FolderCompressStatus.COMPRESSED && compressStatus2 == FolderCompressStatus.COMPRESSED) {
+            return -1;
+        } else {
+            return biFunction.apply(fm1, fm2);
+        }
     }
 
 }
