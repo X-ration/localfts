@@ -259,18 +259,20 @@ public class FtsService {
                     counter.countFolder(folderCompressStatus);
                     FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
                     folderCompressDTO.setPath(relativePath);
-                    folderCompressDTO.setStatus(folderCompressStatus.name());
-                    folderCompressDTO.setStatusDesc(folderCompressStatus.getDesc());
+//                    folderCompressDTO.setStatus(folderCompressStatus.name());
+//                    folderCompressDTO.setStatusDesc(folderCompressStatus.getDesc());
+                    folderCompressDTO.setCompressStatus(folderCompressStatus);
+//                    folderCompressDTO.setCompressStatusDesc(folderCompressStatus.getDesc());
                     if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
                         FolderCompressInfo folderCompressInfo = getFolderCompressInfo(folderAbsolutePath, true);
-                        folderCompressDTO.setZipFilePath(folderCompressInfo.getZipFileRelativePath());
+                        folderCompressDTO.setCompressedFilePath(folderCompressInfo.getZipFileRelativePath());
                         long compressedFileSize = folderCompressInfo.getCompressedFileSize();
                         folderCompressDTO.setCompressedFileSize(compressedFileSize);
-                        folderCompressDTO.setZipFileSize(Util.fileLengthToStringNew(compressedFileSize));
+                        folderCompressDTO.setCompressedFileSizeStr(Util.fileLengthToStringNew(compressedFileSize));
                         long compressedFileLastModified = folderCompressInfo.getCompressedFileLastModified();
                         folderCompressDTO.setCompressedFileLastModified(compressedFileLastModified);
                         String lastModifiedString = simpleDateFormat.format(new Date(compressedFileLastModified));
-                        folderCompressDTO.setZipFileLastModified(lastModifiedString);
+                        folderCompressDTO.setCompressedFileLastModifiedStr(lastModifiedString);
                     }
                     return folderCompressDTO;
                 });
@@ -389,12 +391,13 @@ public class FtsService {
             if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
 //                data.setPath(zipFileRelativePath);
                 folderCompressDTO.setPath(relativePath);
-                folderCompressDTO.setZipFilePath(zipFileRelativePath);
-                folderCompressDTO.setZipFileSize(Util.fileLengthToStringNew(zipFile.length()));
+                folderCompressDTO.setCompressedFilePath(zipFileRelativePath);
+                folderCompressDTO.setCompressedFileSizeStr(Util.fileLengthToStringNew(zipFile.length()));
                 SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
-                folderCompressDTO.setZipFileLastModified(simpleDateFormat.format(new Date(zipFile.lastModified())));
+                folderCompressDTO.setCompressedFileLastModifiedStr(simpleDateFormat.format(new Date(zipFile.lastModified())));
             }
-            folderCompressDTO.setStatus(folderCompressStatus.name());
+//            folderCompressDTO.setStatus(folderCompressStatus.name());
+            folderCompressDTO.setCompressStatus(folderCompressStatus);
             return ReturnObject.success(folderCompressDTO);
         }
     }

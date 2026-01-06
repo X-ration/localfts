@@ -58,24 +58,24 @@
         <tbody id="tbody">
         <tr th:each="item:${pagedList.data}">
             <td th:text="${item.path}">path</td>
-            <td name="statusDesc" th:text="${item.statusDesc}">status</td>
-            <td name="fileSize" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFileSize}">file size</td>
-            <td name="fileSize" th:if="${item.status != 'COMPRESSED'}">-</td>
-            <td name="lastModified" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFileLastModified}">last modified</td>
-            <td name="lastModified" th:if="${item.status != 'COMPRESSED'}">-</td>
+            <td name="statusDesc" th:text="${item.compressStatus.desc}">status</td>
+            <td name="fileSize" th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileSizeStr}">file size</td>
+            <td name="fileSize" th:if="${item.compressStatus.name() != 'COMPRESSED'}">-</td>
+            <td name="lastModified" th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModifiedStr}">last modified</td>
+            <td name="lastModified" th:if="${item.compressStatus.name() != 'COMPRESSED'}">-</td>
             <td name="links">
                 <a name="visit-directory" th:text="${item.path}">访问目录</a>
                 <a name="compress-folder" th:text="${item.path}">压缩管理</a>
-                <a name="download-zip" th:if="${item.status == 'COMPRESSED'}" th:text="${item.zipFilePath}" th:attr="compress-file-size=${item.zipFileSize}">下载压缩文件(zip)</a>
+                <a name="download-zip" th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFilePath}" th:attr="compress-file-size=${item.compressedFileSizeStr}">下载压缩文件(zip)</a>
             </td>
-            <td name="trHint" th:if="${item.status == 'COMPRESSING' and needSizeCheck}">正在检查文件夹大小并压缩</td>
-            <td name="trHint" th:if="${item.status != 'COMPRESSING' or !needSizeCheck}"></td>
+            <td name="trHint" th:if="${item.compressStatus.name() == 'COMPRESSING' and needSizeCheck}">正在检查文件夹大小并压缩</td>
+            <td name="trHint" th:if="${item.compressStatus.name() != 'COMPRESSING' or !needSizeCheck}"></td>
             <td name="operations">
                 <button name="compressButton" type="button" th:onclick="compressFolder([[${item.path}]],this)">压缩文件夹</button>
-                <button name="cancelCompressButton" type="button" th:if="${item.status == 'COMPRESSING'}" th:onclick="cancelCompress([[${item.path}]],this)">取消压缩</button>
-                <button name="deleteCompressFileButton" type="button" th:if="${item.status == 'COMPRESSED'}" th:onclick="deleteCompressFile([[${item.path}]],this)">删除压缩文件</button>
+                <button name="cancelCompressButton" type="button" th:if="${item.compressStatus.name() == 'COMPRESSING'}" th:onclick="cancelCompress([[${item.path}]],this)">取消压缩</button>
+                <button name="deleteCompressFileButton" type="button" th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:onclick="deleteCompressFile([[${item.path}]],this)">删除压缩文件</button>
             </td>
-            <td name="status" style="display:none" th:text="${item.status}"></td>
+            <td name="status" style="display:none" th:text="${item.compressStatus.name()}"></td>
         </tr>
         </tbody>
     </table>
@@ -441,10 +441,10 @@ function compressFolder(currentPath,button) {
             console.log(returnObject);
           }
           if(returnObject.success) {
-            changeStatus(button,returnObject.data.status);
-            if(returnObject.data.status === 'COMPRESSED') {
-              var compressedFileSize = returnObject.data.zipFileSize;
-              var compressedFileLastModified = returnObject.data.zipFileLastModified;
+            changeStatus(button,returnObject.data.compressStatus);
+            if(returnObject.data.compressStatus === 'COMPRESSED') {
+              var compressedFileSize = returnObject.data.compressedFileSizeStr;
+              var compressedFileLastModified = returnObject.data.compressedFileLastModifiedStr;
               updateCmTrHint('压缩完成',button);
               removeChildrenByTdNameAndTagName(button,'operations','button','deleteCompressFileButton');
               var downloadZip = document.createElement('a');
@@ -454,7 +454,7 @@ function compressFolder(currentPath,button) {
                 downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
               }*/
               downloadZip.setAttribute('name', 'download-zip');
-              downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.zipFilePath));
+              downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.compressedFilePath));
               getTdByName(button,'links').appendChild(downloadZip);
               var deleteCompressFileButton = document.createElement('button');
               deleteCompressFileButton.innerText = '删除压缩文件';
@@ -467,7 +467,7 @@ function compressFolder(currentPath,button) {
               getTdByName(button,'fileSize').innerText = compressedFileSize;
               getTdByName(button,'lastModified').innerText = compressedFileLastModified;
               removeChildrenByTdNameAndTagName(button,'operations','button','cancelCompressButton');
-            } else if(returnObject.data.status === 'COMPRESSING') {
+            } else if(returnObject.data.compressStatus === 'COMPRESSING') {
               updateCmTrHint(compressingHintText,button);
             } else {
               updateCmTrHint('非法状态',button);

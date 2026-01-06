@@ -247,10 +247,10 @@ function compressFolder() {
             console.log(returnObject);
           }
           if(returnObject.success) {
-            if(returnObject.data.status === 'COMPRESSED') {
-              compressStatus = returnObject.data.status;
-              var compressedFileSize = returnObject.data.zipFileSize;
-              var compressedFileLastModified = returnObject.data.zipFileLastModified;
+            if(returnObject.data.compressStatus === 'COMPRESSED') {
+              compressStatus = returnObject.data.compressStatus;
+              var compressedFileSize = returnObject.data.compressedFileSizeStr;
+              var compressedFileLastModified = returnObject.data.compressedFileLastModifiedStr;
               updateCompressingHint('压缩完成');
               removeElementById('download-zip', 'compressingDiv');
               removeElementById('deleteCompressFileButton', 'compressingDiv');
@@ -261,7 +261,7 @@ function compressFolder() {
                 downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
               }*/
               downloadZip.setAttribute('id', 'download-zip');
-              downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.zipFilePath));
+              downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.compressedFilePath));
               document.getElementById('compressingDiv').appendChild(downloadZip);
               var deleteCompressFileButton = document.createElement('button');
               deleteCompressFileButton.innerText = '删除压缩文件';
@@ -276,9 +276,9 @@ function compressFolder() {
                 document.getElementById('compressedFileInfoDiv').appendChild(infoTitle);
               }
               removeElementById('cancelCompressButton', 'compressingDiv');
-            } else if(returnObject.data.status === 'COMPRESSING') {
+            } else if(returnObject.data.compressStatus === 'COMPRESSING') {
               updateCompressingHint(compressingHintText);
-              compressStatus = returnObject.data.status;
+              compressStatus = returnObject.data.compressStatus;
             } else {
               updateCompressingHint('非法状态');
             }
