@@ -146,15 +146,23 @@ public class WebController {
         if(directoryExists) {
             FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
             model.addAttribute("compressStatus", compressStatus.name());
+            FolderCompressInfo folderCompressInfo = ftsService.getFolderCompressInfo(relativePath, false);
+            SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
+            if(compressStatus == FolderCompressStatus.COMPRESSING || compressStatus == FolderCompressStatus.COMPRESSED) {
+                long compressStartTime = folderCompressInfo.getCompressStartTime();
+                String compressStartTimeStr = simpleDateFormat.format(new Date(compressStartTime));
+                model.addAttribute("compressStartTime", compressStartTimeStr);
+            }
             if(compressStatus == FolderCompressStatus.COMPRESSED) {
-                FolderCompressInfo folderCompressInfo = ftsService.getFolderCompressInfo(relativePath, false);
                 model.addAttribute("compressedFilePath", folderCompressInfo.getZipFileRelativePath());
                 long compressedFileSize = folderCompressInfo.getCompressedFileSize();
                 String compressedFileSizeStr = Util.fileLengthToStringNew(compressedFileSize);
                 model.addAttribute("compressedFileSize", compressedFileSizeStr);
-                SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
                 String compressedFileLastModified = simpleDateFormat.format(new Date(folderCompressInfo.getCompressedFileLastModified()));
                 model.addAttribute("compressedFileLastModified", compressedFileLastModified);
+                long compressFinishTime = folderCompressInfo.getCompressFinishTime();
+                String compressFinishTimeStr = simpleDateFormat.format(new Date(compressFinishTime));
+                model.addAttribute("compressFinishTime", compressFinishTimeStr);
             }
             boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
             model.addAttribute("needSizeCheck", needSizeCheck);

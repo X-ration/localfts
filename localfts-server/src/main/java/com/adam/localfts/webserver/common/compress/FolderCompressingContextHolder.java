@@ -8,10 +8,14 @@ import lombok.Setter;
 public class FolderCompressingContextHolder {
     private Long compressSize;
     private Thread executeThread;
+    private long startTime;
+    private long finishTime;
 
     public FolderCompressingContextHolder(Long compressSize) {
         this.compressSize = compressSize;
         this.executeThread = Thread.currentThread();
+        this.startTime = System.currentTimeMillis();
+        this.finishTime = -1L;
     }
 
     /**
@@ -27,5 +31,9 @@ public class FolderCompressingContextHolder {
         } else {
             return false;
         }
+    }
+
+    public void updateFinishTimeNow() {
+        this.finishTime = System.currentTimeMillis();
     }
 }

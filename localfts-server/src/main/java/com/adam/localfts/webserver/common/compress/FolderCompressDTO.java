@@ -19,5 +19,9 @@ public class FolderCompressDTO implements CompressedColumns{
     private String compressedFileSizeStr;
     private long compressedFileLastModified;
     private String compressedFileLastModifiedStr;
+    private long compressStartTime;
+    private String compressStartTimeStr;
+    private long compressFinishTime;
+    private String compressFinishTimeStr;
 
 }

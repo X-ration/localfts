@@ -8,7 +8,9 @@ import lombok.Setter;
 public class FolderCompressInfo {
 
     private String zipFileRelativePath;
-    private long compressedFileSize;
-    private long compressedFileLastModified;
+    private long compressedFileSize = -1L;
+    private long compressedFileLastModified = -1L;
+    private long compressStartTime = -1L;
+    private long compressFinishTime = -1L;
 
 }

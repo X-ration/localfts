@@ -30,14 +30,14 @@
     <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="setClass('serverIpInfo','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
 </div>
 <div id="cmDiv">
-    <h3 id="cmHint">总体统计信息</h3>
-    <h4 id="cmPageHint">当前页统计信息</h4>
+    <h3 id="cmHint" class="margin-0">总体统计信息</h3>
+    <h4 id="cmPageHint" class="margin-0">当前页统计信息</h4>
     <h5 th:if="${backgroundEnabled}">后台压缩功能：已启用</h5>
     <h5 th:if="${!backgroundEnabled}">后台压缩功能：已禁用，但关闭此页面不会取消正在进行的压缩任务</h5>
     <table class="left-head-table" style="text-align:left;border-style:solid;width:100%" id="cmTable">
         <thead>
         <tr>
-            <th style="width:52%">文件夹
+            <th style="width:36%">文件夹
                 <a name="sort-link" th:attr="sort-column='FOLDER_NAME'"><img class="thImg"/></a>
             </th>
             <th style="width:8%">压缩状态
@@ -48,6 +48,12 @@
             </th>
             <th style="width:8%">压缩文件修改时间
                 <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="thImg"/></a>
+            </th>
+            <th style="width:8%">压缩任务开始时间
+                <a name="sort-link" th:attr="sort-column='COMPRESS_START_TIME'"><img class="thImg"/></a>
+            </th>
+            <th style="width:8%">压缩任务完成时间
+                <a name="sort-link" th:attr="sort-column='COMPRESS_FINISH_TIME'"><img class="thImg"/></a>
             </th>
             <th style="width:8%">链接</th>
             <th style="width:8%">提示信息</th>
@@ -63,6 +69,10 @@
             <td name="fileSize" th:if="${item.compressStatus.name() != 'COMPRESSED'}">-</td>
             <td name="lastModified" th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModifiedStr}">last modified</td>
             <td name="lastModified" th:if="${item.compressStatus.name() != 'COMPRESSED'}">-</td>
+            <td name="compressStartTime" th:if="${item.compressStatus.name() == 'NOT_COMPRESSED'}">-</td>
+            <td name="compressStartTime" th:if="${item.compressStatus.name() != 'NOT_COMPRESSED'}" th:text="${item.compressStartTimeStr}">compress start time</td>
+            <td name="compressFinishTime" th:if="${item.compressStatus.name() != 'COMPRESSED'}">-</td>
+            <td name="compressFinishTime" th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressFinishTimeStr}">compress finish time</td>
             <td name="links">
                 <a name="visit-directory" th:text="${item.path}">访问目录</a>
                 <a name="compress-folder" th:text="${item.path}">压缩管理</a>
@@ -282,6 +292,8 @@ function deleteCompressFile(currentPath,button) {
             changeStatus(button,'NOT_COMPRESSED');
             getTdByName(button,'lastModified').innerText = '-';
             getTdByName(button,'fileSize').innerText = '-';
+            getTdByName(button,'compressStartTime').innerText = '-';
+            getTdByName(button,'compressFinishTime').innerText = '-';
             removeChildrenByTdNameAndTagName(button,'operations','button','deleteCompressFileButton');
           } else {
             updateCmTrHint('删除失败，原因：' + returnObject.message,button);
@@ -323,6 +335,8 @@ function cancelCompress(currentPath,button) {
             changeStatus(td,'NOT_COMPRESSED');
             getTdByName(td,'lastModified').innerText = '-';
             getTdByName(td,'fileSize').innerText = '-';
+            getTdByName(button,'compressStartTime').innerText = '-';
+            getTdByName(button,'compressFinishTime').innerText = '-';
             removeChildrenByTdNameAndTagName(td,'operations','button','cancelCompressButton');
           } else {
             updateCmTrHint('取消失败，原因：' + returnObject.message,button);
@@ -417,6 +431,8 @@ function compressFolder(currentPath,button) {
   }
   getTdByName(button,'lastModified').innerText = '-';
   getTdByName(button,'fileSize').innerText = '-';
+  getTdByName(button,'compressStartTime').innerText = formatTime();
+  getTdByName(button,'compressFinishTime').innerText = '-';
   sendPostFormRequest(
     contextPath + "/compressFolder", // 目标接口 URL
     "path=" + encodeURIComponent(currentPath), // 表单格式数据
@@ -445,6 +461,8 @@ function compressFolder(currentPath,button) {
             if(returnObject.data.compressStatus === 'COMPRESSED') {
               var compressedFileSize = returnObject.data.compressedFileSizeStr;
               var compressedFileLastModified = returnObject.data.compressedFileLastModifiedStr;
+              var compressStartTime = returnObject.data.compressStartTimeStr;
+              var compressFinishTime = returnObject.data.compressFinishTimeStr;
               updateCmTrHint('压缩完成',button);
               removeChildrenByTdNameAndTagName(button,'operations','button','deleteCompressFileButton');
               var downloadZip = document.createElement('a');
@@ -466,9 +484,13 @@ function compressFolder(currentPath,button) {
               getTdByName(button,'operations').appendChild(deleteCompressFileButton);
               getTdByName(button,'fileSize').innerText = compressedFileSize;
               getTdByName(button,'lastModified').innerText = compressedFileLastModified;
+              getTdByName(button,'compressStartTime').innerText = compressStartTime;
+              getTdByName(button,'compressFinishTime').innerText = compressFinishTime;
               removeChildrenByTdNameAndTagName(button,'operations','button','cancelCompressButton');
             } else if(returnObject.data.compressStatus === 'COMPRESSING') {
               updateCmTrHint(compressingHintText,button);
+              var compressStartTime = returnObject.data.compressStartTimeStr;
+              getTdByName(button,'compressStartTime').innerText = compressStartTime;
             } else {
               updateCmTrHint('非法状态',button);
             }

@@ -35,8 +35,10 @@
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSING' and !needSizeCheck}">正在压缩</h4>
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
     <h5 th:if="${backgroundEnabled}">后台压缩功能：已启用</h5>
-    <div id="compressedFileInfoDiv">
-        <h4 th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩文件大小:' + ${compressedFileSize} + ',修改时间:' + ${compressedFileLastModified}"></h4>
+    <div id="compressInfoDiv">
+        <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSING'}" th:text="'压缩任务开始时间:' + ${compressStartTime}"></h4>
+        <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩文件大小:' + ${compressedFileSize} + ',修改时间:' + ${compressedFileLastModified}"></h4>
+        <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩任务开始时间:' + ${compressStartTime} + ',压缩任务完成时间:' + ${compressFinishTime}"></h4>
     </div>
     <h5 style="color:red" th:if="${!backgroundEnabled and !pseudoUnload}">后台压缩功能：已禁用，关闭页面会取消正在进行的压缩任务</h5>
     <h5 style="color:red" th:if="${!backgroundEnabled and pseudoUnload}">后台压缩功能：已禁用，但关闭页面不会取消正在进行的压缩任务，需要手动取消！</h5>
@@ -150,7 +152,7 @@ function deleteCompressFile() {
           if(returnObject.success) {
             removeElementById('deleteCompressFileButton', 'compressingDiv');
             removeElementById('download-zip', 'compressingDiv');
-            removeChildrenByIdAndTagName('compressedFileInfoDiv','h4');
+            removeChildrenByIdAndTagName('compressInfoDiv','h4');
             updateCompressingHint('成功删除压缩文件');
             compressStatus = 'NOT_COMPRESSED';
           } else {
@@ -189,7 +191,7 @@ function cancelCompress() {
           if(returnObject.success) {
             updateCompressingHint('已取消');
             removeElementById('cancelCompressButton', 'compressingDiv');
-            removeChildrenByIdAndTagName('compressedFileInfoDiv','h4');
+            removeChildrenByIdAndTagName('compressInfoDiv','h4');
             compressStatus = 'NOT_COMPRESSED';
           } else {
             updateCompressingHint('取消失败，原因：' + returnObject.message);
@@ -222,7 +224,11 @@ function compressFolder() {
     cancelCompressButton.onclick = cancelCompress;
     document.getElementById('compressingDiv').appendChild(cancelCompressButton);
   }
-  removeChildrenByIdAndTagName('compressedFileInfoDiv','h4');
+  removeChildrenByIdAndTagName('compressInfoDiv','h4');
+  var infoTitle = document.createElement('h4');
+  infoTitle.className = 'margin-0';
+  infoTitle.innerText = '压缩请求时间:' + formatTime();
+  document.getElementById('compressInfoDiv').appendChild(infoTitle);
   compressStatus = 'COMPRESSING';
   sendPostFormRequest(
     contextPath + "/compressFolder", // 目标接口 URL
@@ -251,6 +257,8 @@ function compressFolder() {
               compressStatus = returnObject.data.compressStatus;
               var compressedFileSize = returnObject.data.compressedFileSizeStr;
               var compressedFileLastModified = returnObject.data.compressedFileLastModifiedStr;
+              var compressStartTime = returnObject.data.compressStartTimeStr;
+              var compressFinishTime = returnObject.data.compressFinishTimeStr;
               updateCompressingHint('压缩完成');
               removeElementById('download-zip', 'compressingDiv');
               removeElementById('deleteCompressFileButton', 'compressingDiv');
@@ -269,16 +277,31 @@ function compressFolder() {
               deleteCompressFileButton.setAttribute('type', 'button');
               deleteCompressFileButton.onclick = deleteCompressFile;
               document.getElementById('compressingDiv').appendChild(deleteCompressFileButton);
-              removeChildrenByIdAndTagName('compressedFileInfoDiv','h4');
+              removeChildrenByIdAndTagName('compressInfoDiv','h4');
               if(compressedFileLastModified !== null && compressedFileSize !== null) {
                 var infoTitle = document.createElement('h4');
+                infoTitle.className = 'margin-0';
                 infoTitle.innerText = '压缩文件大小:' + compressedFileSize + ',修改时间:' + compressedFileLastModified;
-                document.getElementById('compressedFileInfoDiv').appendChild(infoTitle);
+                document.getElementById('compressInfoDiv').appendChild(infoTitle);
+              }
+              if(compressStartTime !== null && compressFinishTime !== null) {
+                var infoTitle = document.createElement('h4');
+                infoTitle.className = 'margin-0';
+                infoTitle.innerText = '压缩任务开始时间:' + compressStartTime + ',压缩任务完成时间:' + compressFinishTime;
+                document.getElementById('compressInfoDiv').appendChild(infoTitle);
               }
               removeElementById('cancelCompressButton', 'compressingDiv');
             } else if(returnObject.data.compressStatus === 'COMPRESSING') {
               updateCompressingHint(compressingHintText);
               compressStatus = returnObject.data.compressStatus;
+              removeChildrenByIdAndTagName('compressInfoDiv','h4');
+              var compressStartTime = returnObject.data.compressStartTimeStr;
+              if(compressStartTime !== null) {
+                var infoTitle = document.createElement('h4');
+                infoTitle.className = 'margin-0';
+                infoTitle.innerText = '压缩任务开始时间:' + compressStartTime;
+                document.getElementById('compressInfoDiv').appendChild(infoTitle);
+              }
             } else {
               updateCompressingHint('非法状态');
             }
@@ -305,6 +328,7 @@ function removeChildrenByIdAndTagName(id,tagName) {
     var childElement = divChildren[i];
     if(childElement.tagName.toLowerCase() === tagName) {
       document.getElementById(id).removeChild(childElement);
+      i--;
     }
   }
 }
