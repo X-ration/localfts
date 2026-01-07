@@ -20,6 +20,38 @@ public class Util {
         return new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
     }
 
+    public static String formatCostTime(long timeMills) {
+        Assert.isTrue(timeMills >= 0, "timeMills is negative!");
+        if(timeMills == 0) {
+            return "0秒";
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        if(timeMills > 1000 * 3600 * 24) {
+            long days = timeMills / (1000 * 3600 * 24);
+            timeMills = timeMills % (1000 * 3600 * 24);
+            stringBuilder.append(days).append("天");
+        }
+        if(timeMills > 1000 * 3600) {
+            long hours = timeMills / (1000 * 3600);
+            timeMills = timeMills % (1000 * 3600);
+            stringBuilder.append(hours).append("小时");
+        }
+        if(timeMills > 1000 * 60) {
+            long minutes = timeMills / (1000 * 60);
+            timeMills = timeMills % (1000 * 60);;
+            stringBuilder.append(minutes).append("分钟");
+        }
+        if(timeMills > 1000) {
+            long seconds = timeMills / 1000;
+            timeMills = timeMills % 1000;
+            stringBuilder.append(seconds).append("秒");
+        }
+        if(timeMills > 0) {
+            stringBuilder.append(timeMills).append("毫秒");
+        }
+        return stringBuilder.toString();
+    }
+
     public static String getServerTimeFormattedString() {
         return getServerTimeFormattedString(Locale.SIMPLIFIED_CHINESE);
     }

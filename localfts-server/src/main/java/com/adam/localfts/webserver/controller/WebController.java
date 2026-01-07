@@ -163,6 +163,9 @@ public class WebController {
                 long compressFinishTime = folderCompressInfo.getCompressFinishTime();
                 String compressFinishTimeStr = simpleDateFormat.format(new Date(compressFinishTime));
                 model.addAttribute("compressFinishTime", compressFinishTimeStr);
+                long compressCostTime = compressFinishTime - folderCompressInfo.getCompressStartTime();
+                String compressCostTimeStr = Util.formatCostTime(compressCostTime);
+                model.addAttribute("compressCostTime", compressCostTimeStr);
             }
             boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
             model.addAttribute("needSizeCheck", needSizeCheck);

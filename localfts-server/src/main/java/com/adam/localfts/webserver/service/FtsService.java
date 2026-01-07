@@ -281,6 +281,10 @@ public class FtsService {
                         long compressFinishTime = folderCompressingContextHolder.getFinishTime();
                         folderCompressDTO.setCompressFinishTime(compressFinishTime);
                         folderCompressDTO.setCompressFinishTimeStr(simpleDateFormat.format(new Date(compressFinishTime)));
+                        long compressCostTime = compressFinishTime - folderCompressingContextHolder.getStartTime();
+                        folderCompressDTO.setCompressCostTime(compressCostTime);
+                        String compressCostTimeStr = Util.formatCostTime(compressCostTime);
+                        folderCompressDTO.setCompressCostTimeStr(compressCostTimeStr);
                     }
                     return folderCompressDTO;
                 });
@@ -412,6 +416,10 @@ public class FtsService {
                 long compressFinishTime = folderCompressingContextHolder.getFinishTime();
                 folderCompressDTO.setCompressFinishTime(compressFinishTime);
                 folderCompressDTO.setCompressFinishTimeStr(simpleDateFormat.format(new Date(compressFinishTime)));
+                long compressCostTime = compressFinishTime - folderCompressingContextHolder.getStartTime();
+                folderCompressDTO.setCompressCostTime(compressCostTime);
+                String compressCostTimeStr = Util.formatCostTime(compressCostTime);
+                folderCompressDTO.setCompressCostTimeStr(compressCostTimeStr);
             }
             folderCompressDTO.setCompressStatus(folderCompressStatus);
             return ReturnObject.success(folderCompressDTO);
@@ -938,6 +946,8 @@ public class FtsService {
                 Comparator.comparing(FolderCompressDTO::getCompressStartTime));
         compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_FINISH_TIME,
                 Comparator.comparing(FolderCompressDTO::getCompressFinishTime));
+        compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_COST_TIME,
+                Comparator.comparing(FolderCompressDTO::getCompressCostTime));
     }
 
     private int compareCompressedFileSize(CompressedColumns cc1, CompressedColumns cc2) {

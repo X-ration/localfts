@@ -23,5 +23,7 @@ public class FolderCompressDTO implements CompressedColumns{
     private String compressStartTimeStr;
     private long compressFinishTime;
     private String compressFinishTimeStr;
+    private long compressCostTime = -1L;
+    private String compressCostTimeStr;
 
 }

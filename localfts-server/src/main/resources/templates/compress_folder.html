@@ -39,6 +39,7 @@
         <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSING'}" th:text="'压缩任务开始时间:' + ${compressStartTime}"></h4>
         <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩文件大小:' + ${compressedFileSize} + ',修改时间:' + ${compressedFileLastModified}"></h4>
         <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩任务开始时间:' + ${compressStartTime} + ',压缩任务完成时间:' + ${compressFinishTime}"></h4>
+        <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩任务耗时:' + ${compressCostTime}"></h4>
     </div>
     <h5 style="color:red" th:if="${!backgroundEnabled and !pseudoUnload}">后台压缩功能：已禁用，关闭页面会取消正在进行的压缩任务</h5>
     <h5 style="color:red" th:if="${!backgroundEnabled and pseudoUnload}">后台压缩功能：已禁用，但关闭页面不会取消正在进行的压缩任务，需要手动取消！</h5>
@@ -259,6 +260,7 @@ function compressFolder() {
               var compressedFileLastModified = returnObject.data.compressedFileLastModifiedStr;
               var compressStartTime = returnObject.data.compressStartTimeStr;
               var compressFinishTime = returnObject.data.compressFinishTimeStr;
+              var compressCostTime = returnObject.data.compressCostTimeStr;
               updateCompressingHint('压缩完成');
               removeElementById('download-zip', 'compressingDiv');
               removeElementById('deleteCompressFileButton', 'compressingDiv');
@@ -288,6 +290,12 @@ function compressFolder() {
                 var infoTitle = document.createElement('h4');
                 infoTitle.className = 'margin-0';
                 infoTitle.innerText = '压缩任务开始时间:' + compressStartTime + ',压缩任务完成时间:' + compressFinishTime;
+                document.getElementById('compressInfoDiv').appendChild(infoTitle);
+              }
+              if(compressCostTime !== null) {
+                var infoTitle = document.createElement('h4');
+                infoTitle.className = 'margin-0';
+                infoTitle.innerText = '压缩任务耗时:' + compressCostTime;
                 document.getElementById('compressInfoDiv').appendChild(infoTitle);
               }
               removeElementById('cancelCompressButton', 'compressingDiv');
