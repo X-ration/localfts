@@ -1,3 +1,10 @@
+if (!String.prototype.startsWith) {
+    String.prototype.startsWith = function(search, pos) {
+        pos = !pos || pos < 0 ? 0 : +pos;
+        return this.substr(pos, search.length) === search;
+    };
+}
+
 function setClass(id, cn) {
     //deal with IE
     var element = document.getElementById(id);
