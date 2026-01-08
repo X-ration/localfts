@@ -2,7 +2,6 @@ package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
-import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.config.localfts.*;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
@@ -44,8 +43,6 @@ public class FtsServerConfigService implements DisposableBean {
     private String maxFileSize;
     @Value("${spring.servlet.multipart.max-request-size}")
     private String maxRequestSize;
-    @Autowired
-    private ShutdownListener shutdownListener;
 
     private long pid;
     private RootPathInfo rootPathInfo;
@@ -845,7 +842,7 @@ public class FtsServerConfigService implements DisposableBean {
 
     @Override
     public void destroy() throws Exception {
-        if(shutdownListener.getWebServer() != null && getLocalFtsProperties().getZip().getEnabled()) {
+        if(getLocalFtsProperties().getZip().getEnabled()) {
             //清理压缩文件夹
             Boolean deleteOnExit = getLocalFtsProperties().getZip().getDeleteOnExit();
             if (deleteOnExit != null && deleteOnExit) {
