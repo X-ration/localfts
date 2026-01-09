@@ -266,6 +266,14 @@ public class FtsService {
                     boolean directoryExists = checkDirectoryExists(folderAbsolutePath, true);
                     FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
                     folderCompressDTO.setPath(relativePath);
+                    if(directoryExists) {
+                        File directory = new File(folderAbsolutePath);
+                        long lastModified = directory.lastModified();
+                        folderCompressDTO.setLastModified(lastModified);
+                        if(lastModified != 0L) {
+                            folderCompressDTO.setLastModifiedStr(simpleDateFormat.format(new Date(lastModified)));
+                        }
+                    }
                     folderCompressDTO.setDirectoryExists(directoryExists);
                     folderCompressDTO.setCompressStatus(folderCompressStatus);
                     FolderCompressInfo folderCompressInfo = getFolderCompressInfo(folderAbsolutePath, true);
@@ -405,12 +413,20 @@ public class FtsService {
             String reason = interrupted ? "压缩任务被取消" : (exMessage == null ? "未知原因" : "发生异常：" + exMessage);
             return ReturnObject.fail(reason);
         } else {
+            SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
             FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
             folderCompressDTO.setPath(relativePath);
             boolean directoryExists = checkDirectoryExists(relativePath, false);
             folderCompressDTO.setDirectoryExists(directoryExists);
+            if(directoryExists) {
+                File directory = new File(folderAbsolutePath);
+                long lastModified = directory.lastModified();
+                folderCompressDTO.setLastModified(lastModified);
+                if(lastModified != 0L) {
+                    folderCompressDTO.setLastModifiedStr(simpleDateFormat.format(new Date(lastModified)));
+                }
+            }
             FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
-            SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
             if(folderCompressStatus == FolderCompressStatus.COMPRESSING || folderCompressStatus == FolderCompressStatus.COMPRESSED) {
                 long compressStartTime = folderCompressingContextHolder.getStartTime();
                 folderCompressDTO.setCompressStartTime(compressStartTime);
@@ -520,6 +536,9 @@ public class FtsService {
         }
         File folderFile = new File(actualFolderPath);
 //        Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
+        if(folderFile.exists() && folderFile.isDirectory()) {
+            folderCompressInfo.setFolderLastModified(folderFile.lastModified());
+        }
 
         String folderAbsolutePath = folderFile.getAbsolutePath();
         String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
@@ -962,6 +981,8 @@ public class FtsService {
 
         compressManagementComparatorMap.put(CompressManagementColumn.FOLDER_NAME, (fcd1, fcd2) ->
                 CHINESE_COLLATOR.compare(fcd1.getPath(), fcd2.getPath()));
+        compressManagementComparatorMap.put(CompressManagementColumn.FOLDER_LAST_MODIFIED,
+                Comparator.comparing(FolderCompressDTO::getLastModified));
         compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_STATUS, this::compareCompressStatus);
         compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_FILE_SIZE, this::compareCompressedFileSize);
         compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_FILE_LAST_MODIFIED, this::compareCompressedFileLastModified);

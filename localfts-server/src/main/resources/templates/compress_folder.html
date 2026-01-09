@@ -37,6 +37,7 @@
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSED'}">压缩完成</h4>
     <h5 th:if="${backgroundEnabled}">后台压缩功能：已启用</h5>
     <div id="compressInfoDiv">
+        <h4 class="margin-0" th:if="${lastModified != null}" th:text="'文件夹修改时间:' + ${lastModified}"></h4>
         <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSING'}" th:text="'压缩任务开始时间:' + ${compressStartTime}"></h4>
         <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩文件大小:' + ${compressedFileSize} + ',修改时间:' + ${compressedFileLastModified}"></h4>
         <h4 class="margin-0" th:if="${compressStatus == 'COMPRESSED'}" th:text="'压缩任务开始时间:' + ${compressStartTime} + ',压缩任务完成时间:' + ${compressFinishTime}"></h4>
@@ -61,6 +62,7 @@ var URL_LIST = concatUrlForConstant(contextPath, '/list');
 var compressStatus = [[${compressStatus}]];
 var needSizeCheck = [[${needSizeCheck}]];
 var backgroundEnabled = [[${backgroundEnabled}]];
+var lastModified = [[${lastModified}]];
 
 var visitDirectory = document.getElementById("visit-directory");
 if(visitDirectory) {
@@ -154,6 +156,12 @@ function deleteCompressFile() {
             removeElementById('deleteCompressFileButton', 'compressingDiv');
             removeElementById('download-zip', 'compressingDiv');
             removeChildrenByIdAndTagName('compressInfoDiv','h4');
+            if(lastModified !== null) {
+              var infoTitle = document.createElement('h4');
+              infoTitle.className = 'margin-0';
+              infoTitle.innerText = '文件夹修改时间:' + lastModified;
+              document.getElementById('compressInfoDiv').appendChild(infoTitle);
+            }
             updateCompressingHint('成功删除压缩文件');
             compressStatus = 'NOT_COMPRESSED';
           } else {
@@ -232,6 +240,12 @@ function cancelCompress() {
             updateCompressingHint('已取消');
             removeElementById('cancelCompressButton', 'compressingDiv');
             removeChildrenByIdAndTagName('compressInfoDiv','h4');
+            if(lastModified !== null) {
+              var infoTitle = document.createElement('h4');
+              infoTitle.className = 'margin-0';
+              infoTitle.innerText = '文件夹修改时间:' + lastModified;
+              document.getElementById('compressInfoDiv').appendChild(infoTitle);
+            }
             compressStatus = 'NOT_COMPRESSED';
           } else {
             updateCompressingHint('取消失败，原因：' + returnObject.message);
@@ -260,6 +274,12 @@ function compressFolder() {
     document.getElementById('compressingDiv').appendChild(cancelCompressButton);
   }
   removeChildrenByIdAndTagName('compressInfoDiv','h4');
+  if(lastModified !== null) {
+    var infoTitle = document.createElement('h4');
+    infoTitle.className = 'margin-0';
+    infoTitle.innerText = '文件夹修改时间:' + lastModified;
+    document.getElementById('compressInfoDiv').appendChild(infoTitle);
+  }
   var infoTitle = document.createElement('h4');
   infoTitle.className = 'margin-0';
   infoTitle.innerText = '压缩请求时间:' + formatTime();
@@ -288,6 +308,7 @@ function compressFolder() {
             console.log(returnObject);
           }
           if(returnObject.success) {
+            lastModified = returnObject.data.lastModifiedStr;
             if(returnObject.data.compressStatus === 'COMPRESSED') {
               compressStatus = returnObject.data.compressStatus;
               var compressedFileSize = returnObject.data.compressedFileSizeStr;
@@ -314,6 +335,12 @@ function compressFolder() {
               deleteCompressFileButton.onclick = deleteCompressFile;
               document.getElementById('compressingDiv').appendChild(deleteCompressFileButton);
               removeChildrenByIdAndTagName('compressInfoDiv','h4');
+              if(lastModified !== null) {
+                var infoTitle = document.createElement('h4');
+                infoTitle.className = 'margin-0';
+                infoTitle.innerText = '文件夹修改时间:' + lastModified;
+                document.getElementById('compressInfoDiv').appendChild(infoTitle);
+              }
               if(compressedFileLastModified !== null && compressedFileSize !== null) {
                 var infoTitle = document.createElement('h4');
                 infoTitle.className = 'margin-0';
@@ -337,6 +364,12 @@ function compressFolder() {
               updateCompressingHint(compressingHintText);
               compressStatus = returnObject.data.compressStatus;
               removeChildrenByIdAndTagName('compressInfoDiv','h4');
+              if(lastModified !== null) {
+                var infoTitle = document.createElement('h4');
+                infoTitle.className = 'margin-0';
+                infoTitle.innerText = '文件夹修改时间:' + lastModified;
+                document.getElementById('compressInfoDiv').appendChild(infoTitle);
+              }
               var compressStartTime = returnObject.data.compressStartTimeStr;
               if(compressStartTime !== null) {
                 var infoTitle = document.createElement('h4');

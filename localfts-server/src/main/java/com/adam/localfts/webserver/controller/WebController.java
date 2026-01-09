@@ -145,8 +145,14 @@ public class WebController {
         model.addAttribute("currentPath", relativePath);
         FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
         model.addAttribute("compressStatus", compressStatus.name());
-        FolderCompressInfo folderCompressInfo = ftsService.getFolderCompressInfo(relativePath, false);
+
         SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
+        FolderCompressInfo folderCompressInfo = ftsService.getFolderCompressInfo(relativePath, false);
+        String lastModifiedStr = null;
+        if(directoryExists) {
+            lastModifiedStr = simpleDateFormat.format(new Date(folderCompressInfo.getFolderLastModified()));
+        }
+        model.addAttribute("lastModified", lastModifiedStr);
         if(compressStatus == FolderCompressStatus.COMPRESSING || compressStatus == FolderCompressStatus.COMPRESSED) {
             long compressStartTime = folderCompressInfo.getCompressStartTime();
             String compressStartTimeStr = simpleDateFormat.format(new Date(compressStartTime));
