@@ -736,11 +736,10 @@ function concatUrlCompressManagement(pageNo,pageSize, sortColumn, sortOrder) {
 function getElementsByName(tagName, name) {
   var collection = document.getElementsByTagName(tagName);
   var result = [];
-  if(!collection) {
-    var children = collection.children;
-    for(var i=0;i<children.length;i++) {
-      if(children[i].getAttribute("name") == name) {
-        result[result.length] = children[i];
+  if(collection) {
+    for(var i=0;i<collection.length;i++) {
+      if(collection[i].getAttribute("name") == name) {
+        result[result.length] = collection[i];
       }
     }
   }

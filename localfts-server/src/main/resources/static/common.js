@@ -17,8 +17,7 @@ function setClass(id, cn) {
     }
 }
 
-function setStyle(id,styleKey,styleValue) {
-    var element = document.getElementById(id);
+function setStyle(element,styleKey,styleValue) {
     if(element) {
         element.style[styleKey] = styleValue;
     }
@@ -28,6 +27,44 @@ function isIE6() {
     var userAgent = navigator.userAgent;
     if(userAgent) {
         return userAgent.indexOf('MSIE 6.0') !== -1;
+    } else {
+        return false;
+    }
+}
+
+function getIEVersion() {
+  var userAgent = navigator.userAgent.toLowerCase();
+  var ie6_10Reg = /msie\s(\d+(\.\d+)?)/;
+  var ie11Reg = /rv:(\d+(\.\d+)?)/;
+
+  // 判断是否是 IE6~IE10
+  if (ie6_10Reg.test(userAgent)) {
+    // 提取版本号并转为数字类型
+    var version = parseFloat(RegExp.$1);
+    return version;
+  }
+  // 判断是否是 IE11：IE11的UA包含 trident/7.0 且包含 rv:11.0
+  else if (userAgent.indexOf('trident/7.0') !== -1 && ie11Reg.test(userAgent)) {
+    var version = parseFloat(RegExp.$1);
+    return version;
+  }
+  // 不是IE浏览器
+  else {
+    return false;
+  }
+}
+
+function getChromiumVersion() {
+  var userAgent = navigator.userAgent;
+  var chromeReg = /Chrome\/(\d+)\./i; // 正则匹配Chrome/后面的主版本号
+  var match = userAgent.match(chromeReg);
+  return match ? Number(match[1]) : false; // 提取成功返回数字版本号，失败返回0
+}
+
+function isFirefox() {
+    var userAgent = navigator.userAgent;
+    if(userAgent) {
+        return userAgent.indexOf('Gecko') !== -1 && userAgent.indexOf('like Gecko') === -1;
     } else {
         return false;
     }

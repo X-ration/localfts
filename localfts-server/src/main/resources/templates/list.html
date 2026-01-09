@@ -99,16 +99,16 @@
                 <td>-</td>
             </tr>
             <tr>
-                <td style="border-bottom-width: 0.1em"><a id="return-to-current-path" style="border-bottom-width: 0.1em">当前目录</a></td>
-                <td style="border-bottom-width: 0.1em">文件夹</td>
-                <td style="border-bottom-width: 0.1em">-</td>
-                <td th:text="${ftsPage.currentPathModel.lastModifiedStr}" style="border-bottom-width: 0.1em"></td>
-                <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}" style="border-bottom-width: 0.1em"></td>
-                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileSizeStr}" style="border-bottom-width: 0.1em"></td>
-                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}" style="border-bottom-width: 0.1em">-</td>
-                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModifiedStr}" style="border-bottom-width: 0.1em"></td>
-                <td th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}" style="border-bottom-width: 0.1em">-</td>
-                <td style="border-bottom-width: 0.1em">
+                <td name="dividing-td"><a id="return-to-current-path">当前目录</a></td>
+                <td name="dividing-td">文件夹</td>
+                <td name="dividing-td">-</td>
+                <td name="dividing-td" th:text="${ftsPage.currentPathModel.lastModifiedStr}"></td>
+                <td name="dividing-td" th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}"></td>
+                <td name="dividing-td" th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileSizeStr}"></td>
+                <td name="dividing-td" th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}">-</td>
+                <td name="dividing-td" th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModifiedStr}"></td>
+                <td name="dividing-td" th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}">-</td>
+                <td name="dividing-td">
                     <a id="upload-to-current-path">上传文件</a>
                     <a th:if="${zipEnabled}" id="compress-current-path">压缩管理</a>
                     <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}">下载文件夹(zip)</a>
@@ -229,6 +229,23 @@
             //deal with upload-to-current-path
             var uploadToCurrentUrl = concatUrlUpload(ftsPagePath);
             document.getElementById("upload-to-current-path").setAttribute("href", uploadToCurrentUrl);
+
+            //deal with dividing-td
+            var dividingTds = document.getElementsByName('dividing-td');
+            if(!dividingTds || dividingTds.length === 0) {
+                dividingTds = getElementsByName('td', 'dividing-td');
+            }
+            if(dividingTds) {
+                var bb = '0.1em';
+                var chromiumVersion = getChromiumVersion();
+                if(isFirefox() || (chromiumVersion && chromiumVersion < 71)) {
+                    bb = '0.2em';
+                }
+                bb = bb + ' solid #000';
+                for(var i=0;i<dividingTds.length;i++) {
+                    setStyle(dividingTds[i],'border-bottom',bb);
+                }
+            }
 
             //deal with directory-path
             var directoryPaths = document.getElementsByName("directory-path");
@@ -378,11 +395,10 @@
         function getElementsByName(tagName, name) {
             var collection = document.getElementsByTagName(tagName);
             var result = [];
-            if(!collection) {
-                var children = collection.children;
-                for(var i=0;i<children.length;i++) {
-                    if(children[i].getAttribute("name") == name) {
-                        result[result.length] = children[i];
+            if(collection) {
+                for(var i=0;i<collection.length;i++) {
+                    if(collection[i].getAttribute("name") == name) {
+                        result[result.length] = collection[i];
                     }
                 }
             }
