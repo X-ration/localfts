@@ -56,7 +56,7 @@ public class WebController {
                        @RequestParam(required = false) SortOrder sortOrder
                        ) {
         model.addAttribute("currentPath", relativePath);
-        boolean directoryExists = ftsService.checkDirectoryExists(relativePath);
+        boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
         model.addAttribute("directoryExists", directoryExists);
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         model.addAttribute("zipEnabled", zipEnabled);
@@ -140,40 +140,38 @@ public class WebController {
         if(!zipEnabled) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        boolean directoryExists = ftsService.checkDirectoryExists(relativePath);
+        boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
         model.addAttribute("directoryExists", directoryExists);
         model.addAttribute("currentPath", relativePath);
-        if(directoryExists) {
-            FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
-            model.addAttribute("compressStatus", compressStatus.name());
-            FolderCompressInfo folderCompressInfo = ftsService.getFolderCompressInfo(relativePath, false);
-            SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
-            if(compressStatus == FolderCompressStatus.COMPRESSING || compressStatus == FolderCompressStatus.COMPRESSED) {
-                long compressStartTime = folderCompressInfo.getCompressStartTime();
-                String compressStartTimeStr = simpleDateFormat.format(new Date(compressStartTime));
-                model.addAttribute("compressStartTime", compressStartTimeStr);
-            }
-            if(compressStatus == FolderCompressStatus.COMPRESSED) {
-                model.addAttribute("compressedFilePath", folderCompressInfo.getZipFileRelativePath());
-                long compressedFileSize = folderCompressInfo.getCompressedFileSize();
-                String compressedFileSizeStr = Util.fileLengthToStringNew(compressedFileSize);
-                model.addAttribute("compressedFileSize", compressedFileSizeStr);
-                String compressedFileLastModified = simpleDateFormat.format(new Date(folderCompressInfo.getCompressedFileLastModified()));
-                model.addAttribute("compressedFileLastModified", compressedFileLastModified);
-                long compressFinishTime = folderCompressInfo.getCompressFinishTime();
-                String compressFinishTimeStr = simpleDateFormat.format(new Date(compressFinishTime));
-                model.addAttribute("compressFinishTime", compressFinishTimeStr);
-                long compressCostTime = compressFinishTime - folderCompressInfo.getCompressStartTime();
-                String compressCostTimeStr = Util.formatCostTime(compressCostTime);
-                model.addAttribute("compressCostTime", compressCostTimeStr);
-            }
-            boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
-            model.addAttribute("needSizeCheck", needSizeCheck);
-            Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
-            model.addAttribute("backgroundEnabled", backgroundEnabled);
-            boolean pseudoUnload = ftsService.isPseudoUnload(userAgent);
-            model.addAttribute("pseudoUnload", pseudoUnload);
+        FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
+        model.addAttribute("compressStatus", compressStatus.name());
+        FolderCompressInfo folderCompressInfo = ftsService.getFolderCompressInfo(relativePath, false);
+        SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
+        if(compressStatus == FolderCompressStatus.COMPRESSING || compressStatus == FolderCompressStatus.COMPRESSED) {
+            long compressStartTime = folderCompressInfo.getCompressStartTime();
+            String compressStartTimeStr = simpleDateFormat.format(new Date(compressStartTime));
+            model.addAttribute("compressStartTime", compressStartTimeStr);
         }
+        if(compressStatus == FolderCompressStatus.COMPRESSED) {
+            model.addAttribute("compressedFilePath", folderCompressInfo.getZipFileRelativePath());
+            long compressedFileSize = folderCompressInfo.getCompressedFileSize();
+            String compressedFileSizeStr = Util.fileLengthToStringNew(compressedFileSize);
+            model.addAttribute("compressedFileSize", compressedFileSizeStr);
+            String compressedFileLastModified = simpleDateFormat.format(new Date(folderCompressInfo.getCompressedFileLastModified()));
+            model.addAttribute("compressedFileLastModified", compressedFileLastModified);
+            long compressFinishTime = folderCompressInfo.getCompressFinishTime();
+            String compressFinishTimeStr = simpleDateFormat.format(new Date(compressFinishTime));
+            model.addAttribute("compressFinishTime", compressFinishTimeStr);
+            long compressCostTime = compressFinishTime - folderCompressInfo.getCompressStartTime();
+            String compressCostTimeStr = Util.formatCostTime(compressCostTime);
+            model.addAttribute("compressCostTime", compressCostTimeStr);
+        }
+        boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
+        model.addAttribute("needSizeCheck", needSizeCheck);
+        Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
+        model.addAttribute("backgroundEnabled", backgroundEnabled);
+        boolean pseudoUnload = ftsService.isPseudoUnload(userAgent);
+        model.addAttribute("pseudoUnload", pseudoUnload);
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
@@ -243,7 +241,7 @@ public class WebController {
     @GetMapping("/uploadFile")
     public String uploadFile(Model model, @RequestParam String dirName, @RequestHeader(required = false, value = "User-Agent")String userAgent) {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
-        boolean directoryExists = ftsService.checkDirectoryExists(dirName);
+        boolean directoryExists = ftsService.checkDirectoryExists(dirName, false);
         model.addAttribute("directoryExists", directoryExists);
         boolean pseudoDirectoryUpload = ftsService.isPseudoDirectoryUpload(userAgent);
         model.addAttribute("pseudoDirectoryUpload", pseudoDirectoryUpload);

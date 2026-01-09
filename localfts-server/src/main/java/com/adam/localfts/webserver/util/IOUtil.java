@@ -170,6 +170,10 @@ public class IOUtil {
      */
     private static void zipDirectory(File zipFile, File currentFile, String parentEntryName, boolean isOuterCall, ZipOutputStream zipOutputStream, BufferedOutputStream bufferedOutputStream) throws IOException, InterruptedException {
         checkAndThrowInterruptedException();
+        if(!currentFile.exists()) {
+            LOGGER.warn("zipDirectory ignoring non-exist file:{}", currentFile.getAbsolutePath());
+            return;
+        }
         if(currentFile.isDirectory()) {
             String entryName = "";
             if(!isOuterCall) {

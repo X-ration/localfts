@@ -8,7 +8,7 @@
 <body>
 <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="setClass('serverIpInfo','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
 <hr>
-<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" id="visit-directory" th:text="${currentPath}">访问目录</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><br><br>
+<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" id="visit-directory" th:if="${directoryExists}" th:text="${currentPath}">访问目录</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><br><br>
 <div id="serverIpInfo" class="hidden">
     <div class="dialogTitle">服务器网络信息</div>
     <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
@@ -29,7 +29,8 @@
     </table>
     <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="setClass('serverIpInfo','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
 </div>
-<div th:if="${directoryExists}" id="compressingDiv">
+<div id="compressingDiv">
+    <h4 style="color: red" th:if="${!directoryExists}">警告！当前文件夹不存在。</h4>
     <h4 id="compressingHint" th:if="${compressStatus == 'NOT_COMPRESSED'}">文件夹待压缩</h4>
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSING' and needSizeCheck}">正在检查文件夹大小并压缩</h4>
     <h4 id="compressingHint" th:if="${compressStatus == 'COMPRESSING' and !needSizeCheck}">正在压缩</h4>
@@ -43,19 +44,16 @@
     </div>
     <h5 style="color:red" th:if="${!backgroundEnabled and !pseudoUnload}">后台压缩功能：已禁用，关闭页面会取消正在进行的压缩任务</h5>
     <h5 style="color:red" th:if="${!backgroundEnabled and pseudoUnload}">后台压缩功能：已禁用，但关闭页面不会取消正在进行的压缩任务，需要手动取消！</h5>
-    <button id="compressButton" type="button" onclick="compressFolder()">压缩文件夹</button>
-    <button id="cancelCompressButton" type="button" th:if="${compressStatus == 'COMPRESSING'}" onclick="cancelCompress()">取消压缩</button>
+    <button id="compressButton" type="button" th:if="${directoryExists}" onclick="compressFolder()">压缩文件夹</button>
+    <button id="cancelCompressButton" type="button" th:if="${directoryExists and compressStatus == 'COMPRESSING'}" onclick="cancelCompress()">取消压缩</button>
     <a id="download-zip" th:if="${compressStatus == 'COMPRESSED'}" th:text="${compressedFilePath}" th:attr="compress-file-size=${compressedFileSize}">下载压缩文件(zip)</a>
     <button id="deleteCompressFileButton" type="button" th:if="${compressStatus == 'COMPRESSED'}" onclick="deleteCompressFile()">删除压缩文件</button>
-</div>
-<div th:if="${!directoryExists}">
-    该路径不存在！
 </div>
 </body>
 <script th:src="${#request.contextPath} + '/static/common.js'"></script>
 <script th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
-<script th:src="${#request.contextPath} + '/static/xhr_si.js'" th:if="${directoryExists}"></script>
-<script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
+<script th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
+<script type="text/javascript" th:inline="javascript">
 var contextPath = [[${#request.contextPath}]];
 var currentPath = [[${currentPath}]];
 var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
@@ -65,8 +63,10 @@ var needSizeCheck = [[${needSizeCheck}]];
 var backgroundEnabled = [[${backgroundEnabled}]];
 
 var visitDirectory = document.getElementById("visit-directory");
-visitDirectory.setAttribute('href', concatUrlList(visitDirectory.innerText));
-visitDirectory.innerText = '访问目录';
+if(visitDirectory) {
+  visitDirectory.setAttribute('href', concatUrlList(visitDirectory.innerText));
+  visitDirectory.innerText = '访问目录';
+}
 
 if(compressStatus === 'COMPRESSED') {
   var downloadZip = document.getElementById("download-zip");
@@ -167,6 +167,45 @@ function deleteCompressFile() {
   );
 }
 
+function updateCompressingHint(text) {
+  document.getElementById('compressingHint').innerText = text;
+  document.getElementById('compressingHint').style.display = 'block';
+}
+
+function removeChildrenByIdAndTagName(id,tagName) {
+  var divChildren = document.getElementById(id).children;
+  for(var i=0;i<divChildren.length;i++) {
+    var childElement = divChildren[i];
+    if(childElement.tagName.toLowerCase() === tagName) {
+      document.getElementById(id).removeChild(childElement);
+      i--;
+    }
+  }
+}
+function removeElementById(id,parentId) {
+  var element = document.getElementById(id);
+  if(element) {
+    document.getElementById(parentId).removeChild(element);
+  }
+}
+function concatUrlForConstant(contextPath, path) {
+  return contextPath + path;
+}
+function concatUrlList(path, pageNo, pageSize) {
+  var url = URL_LIST + "?path=" + encodeURIComponent(path);
+  if(pageNo !== undefined) {
+    url = url + '&pageNo=' + pageNo;
+  }
+  if(pageSize !== undefined) {
+    url = url + '&pageSize=' + pageSize;
+  }
+  return url;
+}
+function concatUrlDownload(fileName) {
+  return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
+}
+</script>
+<script type="text/javascript" th:if="${directoryExists}">
 function cancelCompress() {
   updateCompressingHint('正在取消');
   abortXhr();
@@ -203,11 +242,6 @@ function cancelCompress() {
       }
     }
   );
-}
-
-function updateCompressingHint(text) {
-  document.getElementById('compressingHint').innerText = text;
-  document.getElementById('compressingHint').style.display = 'block';
 }
 
 function compressFolder() {
@@ -329,38 +363,6 @@ function compressFolder() {
       }
     }
   );
-}
-function removeChildrenByIdAndTagName(id,tagName) {
-  var divChildren = document.getElementById(id).children;
-  for(var i=0;i<divChildren.length;i++) {
-    var childElement = divChildren[i];
-    if(childElement.tagName.toLowerCase() === tagName) {
-      document.getElementById(id).removeChild(childElement);
-      i--;
-    }
-  }
-}
-function removeElementById(id,parentId) {
-  var element = document.getElementById(id);
-  if(element) {
-    document.getElementById(parentId).removeChild(element);
-  }
-}
-function concatUrlForConstant(contextPath, path) {
-  return contextPath + path;
-}
-function concatUrlList(path, pageNo, pageSize) {
-  var url = URL_LIST + "?path=" + encodeURIComponent(path);
-  if(pageNo !== undefined) {
-    url = url + '&pageNo=' + pageNo;
-  }
-  if(pageSize !== undefined) {
-    url = url + '&pageSize=' + pageSize;
-  }
-  return url;
-}
-function concatUrlDownload(fileName) {
-  return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
 }
 </script>
 </html>
