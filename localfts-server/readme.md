@@ -18,11 +18,53 @@
 
 下载文件支持迅雷下载、多范围下载。
 
-运行release版本时可以通过命令行参数覆盖application.yml配置，如：
-`java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam`
+首次运行提示：可能需要重新指定根路径和端口号（配置说明详见 ![application.yml](src/main/resources/application.yml) ）。如：
+`java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam --server.port=8080`
 
 注：路径带空格时需要用双引号包裹，如`java
 -jar localfts-server-1.1.0.jar --localfts.root_path="C:\Documents and Settings\Administrator\My Documents"`
+
+## v1.1.1
+### 功能更新
+* 列表页/压缩管理/全局压缩管理页面增加展示压缩文件大小、修改时间
+* 压缩管理/全局压缩管理页面增加展示文件夹修改时间、压缩任务开始时间、完成时间、任务耗时
+  ![localfts-server-1.1.1-compress-page.png](readme/localfts-server-1.1.1-compress-page.png)
+* 支持列表页、全局压缩管理页面的排序
+  ![localfts-server-1.1.1-list-page.png](readme/localfts-server-1.1.1-list-page.png)
+  禁用压缩功能时的列表页
+  ![localfts-server-1.1.1-list-page-zip-disabled.png](readme/localfts-server-1.1.1-list-page-zip-disabled.png)
+  ![localfts-server-1.1.1-global-cm-page.png](readme/localfts-server-1.1.1-global-cm-page.png)
+* 在受支持的浏览器中支持多文件上传
+  ![localfts-server-1.1.1-upload-multiple.png](readme/localfts-server-1.1.1-upload-multiple.png)
+* 支持创建文件夹（功能由`localfts.mkdir.enabled`控制）。文件夹名称长度不得超过200，文件夹全路径名长度不得超过240。
+  ![localfts-server-1.1.1-create-folder.png](readme/localfts-server-1.1.1-create-folder.png)
+### 优化 & 修复
+* 优化了列表页的展示，文件和文件夹处于同等地位参加排序，但“返回上一级”“当前目录”置顶(通过加粗边框设置分隔线)不参与排序
+* 当压缩开关、应用退出时删除压缩文件路径开关开启时，应用启动创建压缩文件夹时自动创建文本文件提示用户退出应用时删除
+* 优化了压缩状态获取条件，不再限制文件夹存在（不存在的文件夹如果进行过压缩也会在压缩页面保留展示，但会给出提示）
+* 修复getElementsByName方法
+* 当根路径不存在时，默认设置根路径为用户主文件夹
+- Windows 11
+
+  Root path 'null' does not match rules, changed to default 'C:\Users\Adam'
+- Windows XP
+
+  Root path 'null' does not match rules, changed to default 'C:\Documents and Settings\Administrator'
+- Linux
+
+  Root path 'null' does not match rules, changed to default '/home/adam'
+  
+### 提示
+* 当压缩开关、应用退出时删除压缩文件路径开关开启时，应用结束时将会删除压缩文件路径（包括所有由应用创建的文件夹）。如果不希望如此，可通过如下命令强制结束进程：
+- Windows
+
+  taskkill -PID &lt;pid&gt; /F
+- MacOS/Linux
+
+  kill -9 &lt;pid&gt;
+### 已知问题
+* 在IE6中对话框渲染存在问题，可能不能很好地居中
+* 在桌面Chrome浏览器中点击返回按钮可能不会执行页面刷新，需要手动刷新获取最新状态
 
 ## v1.1.0
 ### 功能更新
