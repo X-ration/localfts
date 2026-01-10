@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.system.ApplicationPid;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.util.unit.DataSize;
 import org.yaml.snakeyaml.Yaml;
 
@@ -779,11 +780,13 @@ public class FtsServerConfigService implements DisposableBean {
     }
 
     private String changeRootPathToDefault() {
-        String newRootPath;
-        if(Util.isSystemWindows()) {
-            newRootPath = Constants.ROOT_PATH_DEFAULT_WINDOWS;
-        } else {
-            newRootPath = Constants.ROOT_PATH_DEFAULT_LINUX_MACOS;
+        String newRootPath = System.getProperty("user.home");
+        if(StringUtils.isEmpty(newRootPath)) {
+            if (Util.isSystemWindows()) {
+                newRootPath = Constants.ROOT_PATH_DEFAULT_WINDOWS;
+            } else {
+                newRootPath = Constants.ROOT_PATH_DEFAULT_LINUX_MACOS;
+            }
         }
         localFtsProperties.setRootPath(newRootPath);
         return newRootPath;
