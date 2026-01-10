@@ -2,7 +2,6 @@ package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
-import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.config.localfts.*;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
@@ -15,8 +14,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.system.ApplicationPid;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.util.unit.DataSize;
 import org.yaml.snakeyaml.Yaml;
 
@@ -43,9 +44,8 @@ public class FtsServerConfigService implements DisposableBean {
     private String maxFileSize;
     @Value("${spring.servlet.multipart.max-request-size}")
     private String maxRequestSize;
-    @Autowired
-    private ShutdownListener shutdownListener;
 
+    private long pid;
     private RootPathInfo rootPathInfo;
     private FtsServerIpInfoModel ftsServerIpInfoModel;
     private final Stack<File> zipFolderStack = new Stack<>();
@@ -76,12 +76,31 @@ public class FtsServerConfigService implements DisposableBean {
         }
 
         //post construct
-        this.setZipPropertiesIfNull();
+        this.pid = getPid(LocalFtsStartupException.class);
+        this.setPropertiesIfNull();
         if(localFtsProperties.getZip().getEnabled()) {
-            this.createZipFolder(localFtsProperties.getZip().getPath(), LocalFtsStartupException.class);
+            this.createZipFolder(LocalFtsStartupException.class);
         }
         this.rootPathInfo = new RootPathInfo(localFtsProperties.getRootPath());
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
+    }
+
+    public long getPid(Class<? extends RuntimeException> exClass) {
+        ApplicationPid applicationPid = new ApplicationPid();
+        String pidString = applicationPid.toString();
+        if(pidString == null) {
+            throwException(exClass, "Error getting pid:pidString is null!");
+        }
+        if(pidString.equals("???")) {
+            throwException(exClass, "Cannot get pid!");
+        }
+        try {
+            return Long.parseLong(pidString);
+        } catch (NumberFormatException e) {
+            LOGGER.error("Error parsing pidString as long:{}", pidString);
+            throwException(exClass, "Error parsing pidString as long:" + pidString);
+            return -1L;
+        }
     }
 
     /**
@@ -212,6 +231,7 @@ public class FtsServerConfigService implements DisposableBean {
     public String toStringConsole() {
         StringBuilder stringBuilder = new StringBuilder("Output server info").append(System.lineSeparator())
                 .append("======Server properties======").append(System.lineSeparator())
+                .append("[Pid]").append(pid).append(System.lineSeparator())
                 .append("[Server port]").append(serverPort).append(System.lineSeparator())
                 .append("[Server context path]").append(contextPath).append(System.lineSeparator())
                 .append("[Max file size]").append(maxFileSize).append(System.lineSeparator())
@@ -232,7 +252,8 @@ public class FtsServerConfigService implements DisposableBean {
                     .append("[Zip background enabled]").append(localFtsProperties.getZip().getBackgroundEnabled()).append(System.lineSeparator());
         }
         stringBuilder.append("[Upload directory pseudo user-agent contains]").append(localFtsProperties.getUpload().getDirectory().getPseudoUaContains()).append(System.lineSeparator());
-        stringBuilder.append("[Pseudo unload user-agent contains]").append(localFtsProperties.getPseudoUnloadUaContains()).append(System.lineSeparator());
+        stringBuilder.append("[Pseudo unload user-agent contains]").append(localFtsProperties.getPseudoUnloadUaContains()).append(System.lineSeparator())
+                .append("[Mkdir enabled]").append(localFtsProperties.getMkdir().getEnabled()).append(System.lineSeparator());
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!CollectionUtils.isEmpty(testLanguageMap)) {
             for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
@@ -279,10 +300,11 @@ public class FtsServerConfigService implements DisposableBean {
         return stringBuilder.toString();
     }
 
-    private void setZipPropertiesIfNull() {
+    private void setPropertiesIfNull() {
         setZipEnabledIfNull();
         setZipDeleteOnExistIfNull();
         setZipBackgroundEnabledIfNull();
+        setMkdirEnabledIfNull();
     }
 
     private void setZipEnabledIfNull() {
@@ -303,6 +325,13 @@ public class FtsServerConfigService implements DisposableBean {
         Boolean zipBackgroundEnabled = localFtsProperties.getZip().getBackgroundEnabled();
         if(zipBackgroundEnabled == null) {
             localFtsProperties.getZip().setBackgroundEnabled(false);
+        }
+    }
+
+    private void setMkdirEnabledIfNull() {
+        Boolean mkdirEnabled = localFtsProperties.getMkdir().getEnabled();
+        if(mkdirEnabled == null) {
+            localFtsProperties.getMkdir().setEnabled(false);
         }
     }
 
@@ -569,17 +598,52 @@ public class FtsServerConfigService implements DisposableBean {
         return true;
     }
 
-    private void createZipFolder(String zipFolderPath, Class<? extends RuntimeException> exClass) {
-        createZipFolder(zipFolderPath, localFtsProperties.getRootPath(), exClass);
+    private void createZipFolder(Class<? extends RuntimeException> exClass) {
+        createZipFolder(localFtsProperties.getZip().getPath(), localFtsProperties.getRootPath(),
+                localFtsProperties.getZip().getDeleteOnExit(), exClass);
     }
 
-    private void createZipFolder(String zipFolderPath, String rootPath, Class<? extends RuntimeException> exClass) {
+    private void createZipFolder(String zipFolderPath, String rootPath, boolean zipDeleteOnExit, Class<? extends RuntimeException> exClass) {
         File rootFile = IOUtil.getFile(rootPath);
         File zipFolderPathFile = new File(rootFile, zipFolderPath);
         if(!zipFolderPathFile.exists()) {
-            createFolderHierarchically(zipFolderPathFile, zipFolderStack, exClass);
-        } else {
+            createFolderHierarchically(zipFolderPathFile, zipFolderStack, zipDeleteOnExit, exClass);
+        } else if(zipFolderPathFile.isDirectory()){
+            if(zipDeleteOnExit) {
+                createHintFile(zipFolderPathFile, exClass);
+            }
             zipFolderStack.push(zipFolderPathFile);
+        } else {
+            throwException(exClass, "Zip folder path '" + zipFolderPath + "' is a file!");
+        }
+    }
+
+    private void createHintFile(File directory, Class<? extends RuntimeException> exClass) {
+        if(!directory.exists()) {
+            throwException(exClass, "Directory '" + directory.getAbsolutePath() + "' does not exist!");
+        }
+        if(!directory.isDirectory()) {
+            throwException(exClass, "Directory '" + directory.getAbsolutePath() + "' is not a directory!");
+        }
+
+        String fileName = Constants.FOLDER_DELETE_ON_EXIT_HINT_FILE_NAME.replaceAll("\\$\\{pid}", "" + pid) + ".txt";
+        String fileContent = Constants.FOLDER_DELETE_ON_EXIT_HINT_FILE_CONTENT.replaceAll("\\$\\{pid}", "" + pid);
+        try {
+            boolean createFile = IOUtil.createFile(directory, fileName);
+            if(!createFile) {
+                throwException(exClass, "Create hint file under '" + directory.getAbsolutePath() + "' failed!");
+            }
+        } catch (IOException e) {
+            LOGGER.error("Create hint file under '{}' failed:{}", directory.getAbsolutePath(), e.getMessage(), e);
+            throwException(exClass, "Create hint file under '" + directory.getAbsolutePath() + "' failed!");
+        }
+
+        File file = new File(directory, fileName);
+        try {
+            IOUtil.rewriteFile(file, fileContent);
+        } catch (IOException e) {
+            LOGGER.error("Rewrite hint file under '{}' failed:{}", directory.getAbsolutePath(), e.getMessage(), e);
+            throwException(exClass, "Rewrite hint file under '" + directory.getAbsolutePath() + "' failed!");
         }
     }
 
@@ -589,7 +653,7 @@ public class FtsServerConfigService implements DisposableBean {
      * @param stack
      * @param exClass
      */
-    private void createFolderHierarchically(File folderFile, Stack<File> stack, Class<? extends RuntimeException> exClass) {
+    private void createFolderHierarchically(File folderFile, Stack<File> stack, boolean zipDeleteOnExit, Class<? extends RuntimeException> exClass) {
         if(folderFile == null) {
             throwException(exClass, "folderFile is null!");
         }
@@ -607,14 +671,14 @@ public class FtsServerConfigService implements DisposableBean {
                     throwException(exClass, "parentFile[" + parentFile.getAbsolutePath() + "] is a file!");
                 }
                 if (!parentFileExists) {
-                    createFolderHierarchically(parentFile, stack, exClass);
+                    createFolderHierarchically(parentFile, stack, zipDeleteOnExit, exClass);
                 }
             } else {
                 LOGGER.warn("parentFile[{}] is null, ignoring", folderFile.getAbsolutePath());
             }
 
             try {
-                LOGGER.info("Creating folder {}", folderFile.getAbsolutePath());
+                LOGGER.debug("Creating folder {}", folderFile.getAbsolutePath());
                 boolean mkdir = folderFile.mkdir();
                 if (!mkdir) {
                     if (!folderFile.exists()) {
@@ -626,6 +690,16 @@ public class FtsServerConfigService implements DisposableBean {
             } catch (SecurityException e) {
                 LOGGER.error("Error creating folder {}", folderFile.getAbsolutePath(), e);
                 throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
+            }
+
+            if(zipDeleteOnExit) {
+                try {
+                    LOGGER.debug("Creating hint file under {}", folderFile.getAbsolutePath());
+                    createHintFile(folderFile, exClass);
+                } catch (SecurityException e) {
+                    LOGGER.error("Error creating hint file under {}", folderFile.getAbsolutePath(), e);
+                    throwException(exClass, "create hint file[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
+                }
             }
         }
 
@@ -706,11 +780,13 @@ public class FtsServerConfigService implements DisposableBean {
     }
 
     private String changeRootPathToDefault() {
-        String newRootPath;
-        if(Util.isSystemWindows()) {
-            newRootPath = Constants.ROOT_PATH_DEFAULT_WINDOWS;
-        } else {
-            newRootPath = Constants.ROOT_PATH_DEFAULT_LINUX_MACOS;
+        String newRootPath = System.getProperty("user.home");
+        if(StringUtils.isEmpty(newRootPath)) {
+            if (Util.isSystemWindows()) {
+                newRootPath = Constants.ROOT_PATH_DEFAULT_WINDOWS;
+            } else {
+                newRootPath = Constants.ROOT_PATH_DEFAULT_LINUX_MACOS;
+            }
         }
         localFtsProperties.setRootPath(newRootPath);
         return newRootPath;
@@ -769,7 +845,7 @@ public class FtsServerConfigService implements DisposableBean {
 
     @Override
     public void destroy() throws Exception {
-        if(shutdownListener.getWebServer() != null && getLocalFtsProperties().getZip().getEnabled()) {
+        if(getLocalFtsProperties().getZip().getEnabled()) {
             //清理压缩文件夹
             Boolean deleteOnExit = getLocalFtsProperties().getZip().getDeleteOnExit();
             if (deleteOnExit != null && deleteOnExit) {

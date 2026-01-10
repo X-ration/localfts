@@ -10,13 +10,13 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CompressManagementPageModel extends PageObject<FolderCompressData> {
+public class CompressManagementPageModel extends PageObject<FolderCompressDTO> {
     private int totalCount;
     private int notCompressedCount;
     private int compressingCount;
     private int compressedCount;
 
-    public CompressManagementPageModel(int pageNo, int pageSize, List<FolderCompressData> allData) {
+    public CompressManagementPageModel(int pageNo, int pageSize, List<FolderCompressDTO> allData) {
         super(pageNo, pageSize, allData);
     }
 }

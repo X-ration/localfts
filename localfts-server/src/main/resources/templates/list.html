@@ -6,12 +6,14 @@
     <link rel="stylesheet" th:href="${#request.contextPath} + '/static/common.css'">
 </head>
 <body>
-    <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="document.getElementById('serverIpInfo').setAttribute('class','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
+    <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="showDialog('serverIpInfo')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
     <hr>
-    <br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:if=${zipEnabled} th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><br><br>
+    <br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:if=${zipEnabled} th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a>
+    <button type="button" style="margin-left:1em" th:if="${directoryExists} and ${mkdirEnabled}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
+    <br><br>
 <!--    <strong style="color: red">注意：下载文件夹前需要压缩，否则会报404 Not Found错误。</strong>-->
-    <div id="serverIpInfo" class="hidden" style="position:absolute;left:0em;top:0em">
-        <div style="text-align:center;padding-bottom:1em;padding-top:1em;font-size:1.5em;font-style:bold">服务器网络信息</div>
+    <div id="serverIpInfo" class="hidden">
+        <div class="dialogTitle">服务器网络信息</div>
         <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
             <thead>
             <tr>
@@ -28,24 +30,60 @@
             </tr>
             </tbody>
         </table>
-        <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="document.getElementById('serverIpInfo').setAttribute('class','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
+        <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="hideDialog('serverIpInfo')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
     <div th:if="${directoryExists}">
+        <div id="mkdirDiv" th:if="${mkdirEnabled}" class="hidden" style="text-align:center;">
+            <div class="dialogTitle">创建文件夹</div>
+            <h4 id="mkdirHint" style="display:none"></h4>
+            <label for="mkdirPathInput">路径</label><br>
+            <input type="text" class="inputDefault" id="mkdirPathInput"><br>
+            <label for="mkdirNameInput" th:text="'文件夹名称（不能包含' + ${fileInvalidCharacterString} + '）'">文件夹名称</label><br>
+            <input type="text" class="inputDefault" id="mkdirNameInput">
+            <div style="padding-bottom:1em;padding-top:2em;">
+                <button id="mkdirButton" type="button" onclick="mkdir()" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确认创建</button>
+                <button id="mkdirDivHideButton" onclick="hideMkdirDiv()" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">关闭</button>
+            </div>
+        </div>
         <table class="left-head-table" style="text-align:left;border-style:solid">
             <thead>
             <tr th:if="${zipEnabled}">
-                <th style="width:60%">文件名</th>
-                <th style="width:8%">类型</th>
-                <th style="width:8%">大小</th>
-                <th style="width:8%">文件夹压缩状态</th>
-                <th style="width:8%">修改时间</th>
-                <th style="width:8%">操作</th>
+                <th style="width:50%">文件名
+                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="thImg"/></a>
+                </th>
+                <th style="width:5%">类型
+                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:7%">大小
+                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:7%">修改时间
+                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="thImg"/></a>
+                </th>
+                <th style="width:7%">文件夹压缩状态
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="thImg"/></a>
+                </th>
+                <th style="width:7%">压缩文件大小
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_SIZE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:7%">压缩文件修改时间
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="thImg"/></a>
+                </th>
+                <th style="width:10%">操作</th>
             </tr>
             <tr th:if="${!zipEnabled}">
-                <th style="width:60%">文件名</th>
-                <th style="width:10%">类型</th>
-                <th style="width:10%">大小</th>
-                <th style="width:10%">修改时间</th>
+                <th style="width:60%">文件名
+                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="thImg"/></a>
+                </th>
+                <th style="width:10%">类型
+                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:10%">大小
+                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="thImg"/></a>
+                </th>
+                <th style="width:10%">修改时间
+                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="thImg"/></a>
+                </th>
                 <th style="width:10%">操作</th>
             </tr>
             </thead>
@@ -54,42 +92,57 @@
                 <td><a id="return-to-up-path">返回上一级</a></td>
                 <td>-</td>
                 <td>-</td>
-                <td th:if="${zipEnabled}">-</td>
                 <td>-</td>
+                <td th:if="${zipEnabled}">-</td>
+                <td th:if="${zipEnabled}">-</td>
+                <td th:if="${zipEnabled}">-</td>
                 <td>-</td>
             </tr>
             <tr>
-                <td><a id="return-to-current-path">当前目录</a></td>
-                <td>文件夹</td>
-                <td>-</td>
-                <td th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}"></td>
-                <td th:text="${ftsPage.currentPathModel.lastModified}"></td>
-                <td>
+                <td name="dividing-td"><a id="return-to-current-path">当前目录</a></td>
+                <td name="dividing-td">文件夹</td>
+                <td name="dividing-td">-</td>
+                <td name="dividing-td" th:text="${ftsPage.currentPathModel.lastModifiedStr}"></td>
+                <td name="dividing-td" th:if="${zipEnabled}" th:text="${ftsPage.currentPathModel.compressStatus.desc}"></td>
+                <td name="dividing-td" th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileSizeStr}"></td>
+                <td name="dividing-td" th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}">-</td>
+                <td name="dividing-td" th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" th:text="${ftsPage.currentPathModel.compressedFileLastModifiedStr}"></td>
+                <td name="dividing-td" th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() != 'COMPRESSED'}">-</td>
+                <td name="dividing-td">
                     <a id="upload-to-current-path">上传文件</a>
                     <a th:if="${zipEnabled}" id="compress-current-path">压缩管理</a>
-                    <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}" th:attr="compress-file-size=${ftsPage.currentPathModel.compressedFileSize}">下载文件夹(zip)</a>
+                    <a th:if="${zipEnabled and ftsPage.currentPathModel.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${ftsPage.currentPathModel.compressedPath}">下载文件夹(zip)</a>
+                    <button type="button" style="margin-left:1em" th:if="${mkdirEnabled}" th:onclick="showMkdirDiv([[${currentPath}]])">创建文件夹</button>
                 </td>
             </tr>
-            <tr th:if="${item.directory}" th:each="item:${ftsPage.data}">
-                <td><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
-                <td>文件夹</td>
-                <td>-</td>
-                <td th:if="${zipEnabled}" th:text="${item.compressStatus.desc}"></td>
-                <td th:text="${item.lastModified}">last modified</td>
-                <td>
+            <tr th:each="item:${ftsPage.data}">
+                <td th:if="${item.directory}"><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
+                <td th:if="${!item.directory}" th:text="${item.fileName}">fileName</td>
+
+                <td th:if="${item.directory}">文件夹</td>
+                <td th:if="${!item.directory}">文件</td>
+
+                <td th:if="${item.directory}">-</td>
+                <td th:if="${!item.directory}" th:text="${item.fileSizeStr}">0</td>
+
+                <td th:text="${item.lastModifiedStr}">last modified</td>
+
+                <td th:if="${zipEnabled and item.directory}" th:text="${item.compressStatus.desc}"></td>
+                <td th:if="${zipEnabled and !item.directory}">-</td>
+
+                <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileSizeStr}"></td>
+                <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
+
+                <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModifiedStr}"></td>
+                <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
+
+                <td th:if="${item.directory}">
                     <a name="upload-file" th:text="${item.fileName}">上传文件</a>
                     <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.fileName}">压缩管理</a>
-                    <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}" th:attr="compress-file-size=${item.compressedFileSize}">下载文件夹(zip)
-                    </a>
+                    <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}">下载文件夹(zip)</a>
+                    <button name="mkdir" type="button" style="margin-left:1em" th:if="${mkdirEnabled}" th:text="${item.fileName}">创建文件夹</button>
                 </td>
-            </tr>
-            <tr th:if="!${item.directory}" th:each="item:${ftsPage.data}">
-                <td th:text="${item.fileName}">fileName</td>
-                <td>文件</td>
-                <td th:text="${item.fileSizeStr}">0</td>
-                <td th:if="${zipEnabled}">-</td>
-                <td th:text="${item.lastModified}">last modified</td>
-                <td><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
+                <td th:if="${!item.directory}"><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
             </tr>
             </tbody>
         </table>
@@ -108,6 +161,8 @@
         <form th:action="@{'/list'}" enctype="application/x-www-form-urlencoded">
             <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${ftsPage.pageSize}">
             <input type="hidden" name="path" th:value="${ftsPage.path}">
+            <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
+            <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
             <label for="page-no">页数:</label>
             <input type="text" size="2" id="page-no" name="pageNo" th:value="${ftsPage.currentPage}">
             <label for="page-size-select">每页数量:</label>
@@ -123,15 +178,26 @@
     <div th:if="${!directoryExists}">
         该路径不存在！
     </div>
+    <script th:src="${#request.contextPath} + '/static/common.js'"></script>
+    <script th:src="${#request.contextPath} + '/static/dialog.js'"></script>
+    <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
+    <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
         var contextPath = [[${#request.contextPath}]];
         var ftsPagePath = [[${currentPath}]];
+        var sortColumn = [[${sortColumn}]];
+        var sortOrder = [[${sortOrder}]];
         /*var URL_LIST = "/localfts/list";
         var URL_DOWNLOAD = "/localfts/downloadFile";
         var URL_UPLOAD = "/localfts/uploadFile";*/
         var URL_LIST = concatUrlForConstant(contextPath, '/list');
         var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
         var URL_UPLOAD = concatUrlForConstant(contextPath, '/uploadFile');
+
+        if(sortColumn === null) {
+            sortColumn = undefined;
+            sortOrder = undefined;
+        }
 
         main();
 
@@ -143,17 +209,6 @@
             var ftsPageCurrentSize = Number(document.getElementById("current-size").innerText);
             var ftsPageTotalPage = Number(document.getElementById("total-page").innerText);
             var ftsPageTotalSize = Number(document.getElementById("total-size").innerText);
-
-            //deal with serverIpInfo in IE
-            if(!document.getElementById('serverIpInfo').getAttribute("class")) {
-                document.getElementById('serverIpInfoShowButton').onclick = function() {
-                    document.getElementById('serverIpInfo').setAttribute('className','show')
-                };
-                document.getElementById('serverIpInfoHideButton').onclick = function() {
-                    document.getElementById('serverIpInfo').setAttribute('className','hidden')
-                };
-            }
-
 
             //deal with up-path
             //   /->/   ;   /a->/   ;   /a/b->/a
@@ -174,6 +229,28 @@
             //deal with upload-to-current-path
             var uploadToCurrentUrl = concatUrlUpload(ftsPagePath);
             document.getElementById("upload-to-current-path").setAttribute("href", uploadToCurrentUrl);
+
+            //deal with dividing-td
+            var dividingTds = document.getElementsByName('dividing-td');
+            if(!dividingTds || dividingTds.length === 0) {
+                dividingTds = getElementsByName('td', 'dividing-td');
+            }
+            if(dividingTds) {
+                var bb = '0.1em';
+                var chromiumVersion = getChromiumVersion();
+                var ieVersion = getIEVersion();
+                if(isFirefox() || (chromiumVersion && chromiumVersion < 71) || (ieVersion && ieVersion < 7)) {
+                    bb = '2px';
+                }
+                bb = bb + ' solid #000';
+                for(var i=0;i<dividingTds.length;i++) {
+                    if(ieVersion && ieVersion < 7) {
+                        dividingTds[i].style.borderBottom = bb;
+                    } else {
+                        setStyle(dividingTds[i],'border-bottom',bb);
+                    }
+                }
+            }
 
             //deal with directory-path
             var directoryPaths = document.getElementsByName("directory-path");
@@ -204,15 +281,60 @@
                 uploadFiles[i].innerText = "上传文件";
             }
 
+            //deal with sort-link
+            var sortLinks = document.getElementsByName("sort-link");
+            if(!sortLinks) {
+                sortLinks = getElementsByName("a", "sort-link");
+            }
+            for(var i=0;i<sortLinks.length;i++) {
+                var eSortColumn = sortLinks[i].getAttribute('sort-column');
+                var eSortOrder = null, imgSrc = null;
+                if(sortColumn === null || sortColumn !== eSortColumn) {
+                    eSortOrder = 'ASC';
+                    imgSrc = contextPath + '/static/icon/sort_32px_black';
+                } else if(sortColumn !== null && sortOrder === 'ASC') {
+                    eSortOrder = 'DESC';
+                    imgSrc = contextPath + '/static/icon/sort_asc_32px_black';
+                } else if(sortColumn !== null && sortOrder === 'DESC') {
+                    eSortColumn = undefined;
+                    eSortOrder = undefined;
+                    imgSrc = contextPath + '/static/icon/sort_desc_32px_black';
+                } else {
+                    if(window.console) {
+                        console.error('非法状态，sortColumn=' + sortColumn + ',sortOrder=' + sortOrder);
+                    }
+                    eSortColumn = undefined;
+                    eSortOrder = undefined;
+                }
+                if(imgSrc) {
+                    if(isIE6()) {
+                        imgSrc = imgSrc + '_png8';
+                    }
+                    imgSrc = imgSrc + '.png';
+                    //sortLinks[i].children[0].setAttribute('src', imgSrc);
+                    var sortLinkChildren = sortLinks[i].children;
+                    if(sortLinkChildren) {
+                        for(var j=0;j<sortLinkChildren.length;j++) {
+                            var sortLinkChild = sortLinkChildren[j];
+                            if(sortLinkChild.tagName.toLowerCase() === 'img') {
+                                sortLinkChild.setAttribute('src', imgSrc);
+                            }
+                        }
+                    }
+                }
+                var url = concatUrlList(ftsPagePath, undefined, ftsPageSize, eSortColumn, eSortOrder);
+                sortLinks[i].setAttribute('href', url);
+            }
+
             //deal with first-page,previous-page,next-page,last-page
             var firstPageNo = 1;
             var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
             var previousPageNo = (ftsPageCurrentPage > 1) ? (ftsPageCurrentPage - 1) : 1;
             var nextPageNo = (ftsPageCurrentPage < lastPageNo) ? (ftsPageCurrentPage + 1) : lastPageNo;
-            var firstPageUrl = concatUrlList(ftsPagePath, firstPageNo, ftsPageSize);
-            var lastPageUrl = concatUrlList(ftsPagePath, lastPageNo, ftsPageSize);
-            var previousPageUrl = concatUrlList(ftsPagePath, previousPageNo, ftsPageSize);
-            var nextPageUrl = concatUrlList(ftsPagePath, nextPageNo, ftsPageSize);
+            var firstPageUrl = concatUrlList(ftsPagePath, firstPageNo, ftsPageSize, sortColumn, sortOrder);
+            var lastPageUrl = concatUrlList(ftsPagePath, lastPageNo, ftsPageSize, sortColumn, sortOrder);
+            var previousPageUrl = concatUrlList(ftsPagePath, previousPageNo, ftsPageSize, sortColumn, sortOrder);
+            var nextPageUrl = concatUrlList(ftsPagePath, nextPageNo, ftsPageSize, sortColumn, sortOrder);
             document.getElementById("first-page").setAttribute("href", firstPageUrl);
             document.getElementById("last-page").setAttribute("href", lastPageUrl);
             document.getElementById("previous-page").setAttribute("href", previousPageUrl);
@@ -251,8 +373,22 @@
             return contextPath + path;
         }
 
-        function concatUrlList(path, pageNo, pageSize) {
-            return URL_LIST + "?path=" + encodeURIComponent(path) + "&pageNo=" + pageNo + "&pageSize=" + pageSize;
+        function concatUrlList(path, pageNo, pageSize, sortColumn, sortOrder) {
+            //return URL_LIST + "?path=" + encodeURIComponent(path) + "&pageNo=" + pageNo + "&pageSize=" + pageSize;
+            var result = URL_LIST + "?path=" + encodeURIComponent(path);
+            if(pageNo !== undefined) {
+                result = result + "&pageNo=" + pageNo;
+            }
+            if(pageSize !== undefined) {
+                result = result + "&pageSize=" + pageSize;
+            }
+            if(sortColumn !== undefined) {
+                result = result + "&sortColumn=" + sortColumn;
+            }
+            if(sortOrder !== undefined) {
+                result = result + "&sortOrder=" + sortOrder;
+            }
+            return result;
         }
         function concatUrlDownload(fileName) {
             return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
@@ -264,11 +400,10 @@
         function getElementsByName(tagName, name) {
             var collection = document.getElementsByTagName(tagName);
             var result = [];
-            if(!collection) {
-                var children = collection.children;
-                for(var i=0;i<children.length;i++) {
-                    if(children[i].getAttribute("name") == name) {
-                        result[result.length] = children[i];
+            if(collection) {
+                for(var i=0;i<collection.length;i++) {
+                    if(collection[i].getAttribute("name") == name) {
+                        result[result.length] = collection[i];
                     }
                 }
             }
@@ -300,16 +435,112 @@
         if(downloadFolders) {
             for(var i=0;i<downloadFolders.length;i++) {
                 downloadFolders[i].setAttribute("href", concatUrlDownload(downloadFolders[i].innerText));
-                var compressedFileSize = downloadFolders[i].getAttribute("compress-file-size");
                 downloadFolders[i].innerText = "下载文件夹(zip)";
-                if(compressedFileSize !== null) {
-                  var compressedFileSizeStr = "(" + compressedFileSize + ")";
-                  downloadFolders[i].innerText = downloadFolders[i].innerText + compressedFileSizeStr;
-                }
             }
         }
+
         function concatUrlCompressFolder(dirName) {
             return URL_COMPRESS_FOLDER + "?path=" + encodeURIComponent(dirName);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript" th:if="${directoryExists and mkdirEnabled}">
+        //deal with mkdir
+        var mkdirs = document.getElementsByName("mkdir");
+        if(!mkdirs) {
+            mkdirs = getElementsByName("a", "mkdir");
+        }
+        if(mkdirs) {
+            for(var i=0;i<mkdirs.length;i++) {
+                var path = ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + mkdirs[i].innerText;
+                mkdirs[i].onclick = showMkdirDivFuncFactory(path);
+                mkdirs[i].innerText = "创建文件夹";
+            }
+        }
+
+        var ficsArr = [[${fileInvalidCharacterString}]].split(' ');
+        function mkdir() {
+            var path = document.getElementById('mkdirPathInput').value;
+            var name = document.getElementById('mkdirNameInput').value;
+            var mkdirHint = document.getElementById('mkdirHint');
+
+            if(path === null || path === '') {
+                updateTitle('mkdirHint', '目标路径为空', 'red');
+                return;
+            }
+            if(!path.startsWith('/')) {
+                updateTitle('mkdirHint', '非法的目标路径', 'red');
+                return;
+            }
+            if(name === null || name === '') {
+                updateTitle('mkdirHint', '文件夹名称为空', 'red');
+                return;
+            }
+            if(name.length > 200) {
+                updateTitle('mkdirHint', '文件夹名称长度超过200', 'red');
+                return;
+            }
+            var msg = '';
+            var foundCharArr = [];
+            for(var i=0;i<name.length;i++) {
+                var char = name.charAt(i);
+                for(var j=0;j<ficsArr.length;j++) {
+                    if(char === ficsArr[j] && foundCharArr.indexOf(char) === -1) {
+                        msg = msg + ' ' + char;
+                        foundCharArr[foundCharArr.length] = char;
+                    }
+                }
+            }
+            if(msg !== '') {
+                updateTitle('mkdirHint', '文件夹名称包含非法字符' + msg, 'red');
+                return;
+            }
+            updateTitle('mkdirHint', '正在创建文件夹');
+            abortXhr();
+            sendPostFormRequest(
+                contextPath + '/createFolder',
+                'path=' + encodeURIComponent(path) + '&name=' + encodeURIComponent(name),
+                true,
+                function (xhr) {
+                    if (xhr.readyState === 4) {
+                        //兼容IE9
+                        try {
+                            var xhrStatus = xhr.status;
+                        } catch(e) {
+                            if(window.console) {
+                                console.error('获取XMLHttpRequest状态码时发生异常:', e);
+                            }
+                            return;
+                        }
+                        if (xhr.status === 200) {
+                            var returnObject = JSON.parse(xhr.responseText);
+                            if(returnObject.success) {
+                                updateTitle('mkdirHint', '创建文件夹成功！');
+                            } else {
+                                updateTitle('mkdirHint', '创建文件夹失败:' + returnObject.message, 'red');
+                            }
+                        } else {
+                            updateTitle('mkdirHint', '创建文件夹失败，状态码:' + xhr.status, 'red');
+                        }
+                    }
+                }
+            );
+        }
+
+        function showMkdirDiv(path) {
+            document.getElementById('mkdirPathInput').value = path;
+            document.getElementById('mkdirHint').innerText = '';
+            document.getElementById('mkdirHint').style.display = 'none';
+            showDialog('mkdirDiv');
+        }
+
+        function showMkdirDivFuncFactory(path) {
+            return function() {
+                showMkdirDiv(path);
+            };
+        }
+
+        function hideMkdirDiv() {
+            hideDialog('mkdirDiv');
         }
     </script>
 </body>

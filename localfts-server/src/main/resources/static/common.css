@@ -2,10 +2,28 @@
     display:none;
 }
 .show {
-    width:70%;height:auto;margin:5em 15% auto 15%;
+    position:fixed;top:0;left:0;
     background-color:white;
+    width:70%;height:auto;margin:5em 15% auto 15%;
     border-style:solid;border-width:0.05em;
+
+    /* IE6 hack 模拟fixed */
+    _position: absolute; /* IE6强制改为absolute */
+    /* 动态计算top：滚动条高度*/
+    _top: expression(eval(document.documentElement.scrollTop));
+    /* 动态计算left：滚动条宽度*/
+    _left: expression(eval(document.documentElement.scrollLeft));
 }
+.dialogTitle {
+    text-align:center;
+    padding-bottom:1em;padding-top:1em;
+    font-size:1.5em;font-weight:bold;
+}
+.inputDefault {
+    text-align: center;
+    width: 80%;
+}
+
 table,th,td {
     border-style:solid;
     border-collapse:collapse;
@@ -19,4 +37,13 @@ th,td {
 }
 .left-head-table th {
     text-align: left
+}
+img.thImg{
+    width:1em; height:1em;
+    vertical-align: middle;
+    border: 0 none;
+    outline: none;
+}
+.margin-0 {
+    margin: 0;
 }

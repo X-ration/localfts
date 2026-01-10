@@ -1,0 +1,7 @@
+package com.adam.localfts.webserver.common.sort;
+
+public enum CompressManagementColumn {
+    FOLDER_NAME,FOLDER_LAST_MODIFIED,
+
+    COMPRESS_STATUS,COMPRESS_FILE_SIZE,COMPRESS_FILE_LAST_MODIFIED,COMPRESS_START_TIME,COMPRESS_FINISH_TIME,COMPRESS_COST_TIME
+}
