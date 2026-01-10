@@ -17,6 +17,9 @@ function setClass(id, cn) {
     }
 }
 
+/**
+    注意：IE6不支持，需要直接给style.[attr](驼峰式)赋值
+*/
 function setStyle(element,styleKey,styleValue) {
     if(element) {
         element.style[styleKey] = styleValue;

@@ -238,12 +238,17 @@
             if(dividingTds) {
                 var bb = '0.1em';
                 var chromiumVersion = getChromiumVersion();
-                if(isFirefox() || (chromiumVersion && chromiumVersion < 71)) {
-                    bb = '0.2em';
+                var ieVersion = getIEVersion();
+                if(isFirefox() || (chromiumVersion && chromiumVersion < 71) || (ieVersion && ieVersion < 7)) {
+                    bb = '2px';
                 }
                 bb = bb + ' solid #000';
                 for(var i=0;i<dividingTds.length;i++) {
-                    setStyle(dividingTds[i],'border-bottom',bb);
+                    if(ieVersion && ieVersion < 7) {
+                        dividingTds[i].style.borderBottom = bb;
+                    } else {
+                        setStyle(dividingTds[i],'border-bottom',bb);
+                    }
                 }
             }
 
