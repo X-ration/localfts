@@ -479,12 +479,20 @@
                 updateTitle('mkdirHint', '文件夹名称长度超过200', 'red');
                 return;
             }
-            for(var i=0;i<ficsArr.length;i++) {
-                var fics = ficsArr[i];
-                if(name.indexOf(fics) !== -1) {
-                    updateTitle('mkdirHint', '文件夹名称包含非法字符' + fics, 'red');
-                    return;
+            var msg = '';
+            var foundCharArr = [];
+            for(var i=0;i<name.length;i++) {
+                var char = name.charAt(i);
+                for(var j=0;j<ficsArr.length;j++) {
+                    if(char === ficsArr[j] && foundCharArr.indexOf(char) === -1) {
+                        msg = msg + ' ' + char;
+                        foundCharArr[foundCharArr.length] = char;
+                    }
                 }
+            }
+            if(msg !== '') {
+                updateTitle('mkdirHint', '文件夹名称包含非法字符' + msg, 'red');
+                return;
             }
             updateTitle('mkdirHint', '正在创建文件夹');
             abortXhr();

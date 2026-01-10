@@ -1,7 +1,44 @@
+/**
+    兼容IE6的字符串startsWith方法
+*/
 if (!String.prototype.startsWith) {
     String.prototype.startsWith = function(search, pos) {
         pos = !pos || pos < 0 ? 0 : +pos;
         return this.substr(pos, search.length) === search;
+    };
+}
+
+/**
+    兼容IE6的数组indexOf方法
+*/
+if (!Array.prototype.indexOf) {
+    Array.prototype.indexOf = function (searchElement, fromIndex) {
+        var array = this;
+        if (array === null || array === undefined) {
+            throw new TypeError('"this" is null or not defined');
+        }
+        var len = array.length;
+        var index = 0;
+
+        if (fromIndex !== null && fromIndex !== undefined) {
+            index = Number(fromIndex);
+            if (index === NaN) {
+                index = 0;
+            }
+        }
+        if (index >= len) {
+            return -1;
+        }
+        var k = index < 0 ? Math.max(len + index, 0) : index;
+
+        while(k<len) {
+            if (array[k] === searchElement) {
+                return k;
+            }
+            k++;
+        }
+
+        return -1;
     };
 }
 
