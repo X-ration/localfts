@@ -18,7 +18,7 @@
 
 下载文件支持迅雷下载、多范围下载。
 
-首次运行提示：可能需要重新指定根路径和端口号（配置说明详见 ![application.yml](src/main/resources/application.yml) ）。如：
+首次运行提示：可能需要重新指定根路径和端口号（配置说明详见 [application.yml](src/main/resources/application.yml) ）。如：
 `java -jar localfts-server-1.0.3.jar --localfts.root_path=D:\Users\Adam --server.port=8080`
 
 注：路径带空格时需要用双引号包裹，如`java
