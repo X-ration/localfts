@@ -1,7 +1,9 @@
 package com.adam.localfts.webserver.controller;
 
+import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
@@ -20,6 +22,7 @@ import ua_parser.Parser;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -44,10 +47,10 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
                 .collect(Collectors.toList());
     }
 
-    @RequestMapping(produces = MediaType.TEXT_HTML_VALUE)
-    public ModelAndView errorHtml(HttpServletRequest request,
-                                  HttpServletResponse response) {
+    @RequestMapping
+    public Object error(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String userAgent = IOUtil.getHeaderIgnoreCase(request, "User-Agent");
+        String accept = IOUtil.getHeaderIgnoreCase(request, "Accept");
         Parser uaParser = new Parser();
         Client uaClient = uaParser.parse(userAgent);
         HttpStatus status, realStatus;
@@ -69,8 +72,20 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
         modifiableModel.put("timestamp", Util.getServerTimeFormattedString(Locale.US));
         dealWithResponseStatusException(modifiableModel);
         Map<String, Object> model = Collections.unmodifiableMap(modifiableModel);
-        ModelAndView modelAndView = resolveErrorView(request, response, status, model);
-        return (modelAndView != null) ? modelAndView : new ModelAndView("error", model);
+        if(accept == null || accept.equals(MediaType.ALL_VALUE) || accept.contains(MediaType.TEXT_HTML_VALUE)) {
+            ModelAndView modelAndView = resolveErrorView(request, response, status, model);
+            return (modelAndView != null) ? modelAndView : new ModelAndView("error", model);
+        } else {
+            model = model.entrySet().stream()
+                    .filter(entry -> !entry.getKey().equalsIgnoreCase("trace"))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            ObjectMapper objectMapper = new ObjectMapper();
+            ReturnObject<Map<String, Object>> returnObject = ReturnObject.fail(realStatus.getReasonPhrase(), model);
+            String json = objectMapper.writeValueAsString(returnObject);
+            response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
+            response.getWriter().write(json);
+            return null;
+        }
     }
 
     private void dealWithResponseStatusException(Map<String, Object> modifiableModel) {

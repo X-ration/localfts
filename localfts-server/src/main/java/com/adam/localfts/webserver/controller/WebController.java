@@ -55,6 +55,7 @@ public class WebController {
                        @RequestParam(required = false)ListTableColumn sortColumn,
                        @RequestParam(required = false) SortOrder sortOrder
                        ) {
+        ftsServerConfigService.checkCriticalConfig();
         model.addAttribute("currentPath", relativePath);
         boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
         model.addAttribute("directoryExists", directoryExists);
@@ -104,6 +105,7 @@ public class WebController {
         if(!zipEnabled) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+        ftsServerConfigService.checkCriticalConfig();
         if(pageNo <= 0) {
             pageNo = 1;
         }
@@ -140,6 +142,7 @@ public class WebController {
         if(!zipEnabled) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+        ftsServerConfigService.checkCriticalConfig();
         boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
         model.addAttribute("directoryExists", directoryExists);
         model.addAttribute("currentPath", relativePath);
@@ -191,6 +194,7 @@ public class WebController {
                                            @RequestParam(value = "name") String folderName) {
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数(path)");
         Assert.isTrue(null != folderName && !"".equals(folderName), "非法请求参数(name)");
+        ftsServerConfigService.checkCriticalConfig();
         return ftsService.createFolder(relativePath, folderName);
     }
 
@@ -202,6 +206,7 @@ public class WebController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         try {
             return ftsService.compressFolder(relativePath);
         } catch (IOException e) {
@@ -218,6 +223,7 @@ public class WebController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         return ftsService.cancelCompress(relativePath);
     }
 
@@ -229,24 +235,28 @@ public class WebController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         return ftsService.deleteCompressFile(relativePath);
     }
 
     @GetMapping("/downloadFile")
     public void downloadFile(@RequestParam(value = "fileName") String filePath, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         Assert.isTrue(null != filePath & !"".equals(filePath), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         ftsService.downloadFile(filePath, request, response);
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/downloadFile")
     public void headDownloadFile(@RequestParam String fileName, HttpServletRequest request, HttpServletResponse response) throws IOException {
         Assert.isTrue(null != fileName & !"".equals(fileName), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         ftsService.headDownloadFile(fileName, request, response);
     }
 
     @GetMapping("/uploadFile")
     public String uploadFile(Model model, @RequestParam String dirName, @RequestHeader(required = false, value = "User-Agent")String userAgent) {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         boolean directoryExists = ftsService.checkDirectoryExists(dirName, false);
         model.addAttribute("directoryExists", directoryExists);
         boolean pseudoDirectoryUpload = ftsService.isPseudoDirectoryUpload(userAgent);
@@ -269,6 +279,7 @@ public class WebController {
     @PostMapping("/uploadFileTransfer")
     public String uploadFileTransfer(MultipartFile file, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
         Assert.isTrue(file != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         ReturnObject<String> returnObject = ftsService.uploadFile(dirName, file);
         redirectAttributes.addFlashAttribute("uploadFileRetObject", returnObject);
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
@@ -278,6 +289,7 @@ public class WebController {
     public String uploadFilesTransfer(MultipartFile[] files, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
         LOGGER.debug("uploadFilesTransfer files count={}, dirName={}", files.length, dirName);
         Assert.isTrue(files != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files, false);
         redirectAttributes.addFlashAttribute("uploadDirRetObject", returnObject);
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
@@ -287,6 +299,7 @@ public class WebController {
     public String uploadFolderTransfer(MultipartFile[] files, @RequestParam String dirName, RedirectAttributes redirectAttributes) {
         LOGGER.debug("uploadFolderTransfer files count={}, dirName={}", files.length, dirName);
         Assert.isTrue(files != null && dirName != null && dirName.startsWith("/"), "非法请求参数");
+        ftsServerConfigService.checkCriticalConfig();
         ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files, true);
         redirectAttributes.addFlashAttribute("uploadDirRetObject", returnObject);
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");

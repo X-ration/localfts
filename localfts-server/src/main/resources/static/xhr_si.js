@@ -34,6 +34,7 @@ function sendPostFormRequest(url, data, isAsync, func) {
   // 设置请求头：POST 请求需指定 Content-Type，否则服务器可能无法解析数据
   // 表单格式数据通常用 application/x-www-form-urlencoded
   xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  xhr.setRequestHeader("Accept", "application/json");
 
   // 发送数据（格式为 key=value&key2=value2，与表单提交格式一致）
   xhr.send(data);

@@ -3,6 +3,7 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
 import com.adam.localfts.webserver.config.localfts.*;
+import com.adam.localfts.webserver.exception.LocalFtsCriticalException;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.util.IOUtil;
@@ -63,7 +64,7 @@ public class FtsServerConfigService implements DisposableBean {
         }
         checkZip(LocalFtsStartupException.class);
         if(localFtsProperties.getZip().getEnabled() != null && localFtsProperties.getZip().getEnabled()) {
-            checkZipFolderPath(LocalFtsStartupException.class);
+            checkZipFolderPath(true, LocalFtsStartupException.class);
             checkZipMaxFolderSize(LocalFtsStartupException.class);
         }
         if(localFtsProperties.getLog() != null) {
@@ -550,19 +551,12 @@ public class FtsServerConfigService implements DisposableBean {
         return true;
     }
 
-    private boolean checkZipFolderPath() {
-        return checkZipFolderPath(null);
+    private boolean checkZipFolderPath(boolean allowNonExist, Class<? extends RuntimeException> exClass) {
+        return checkZipFolderPath(localFtsProperties.getZip().getPath(), localFtsProperties.getRootPath(), allowNonExist,
+                exClass);
     }
 
-    private boolean checkZipFolderPath(Class<? extends RuntimeException> exClass) {
-        return checkZipFolderPath(localFtsProperties.getZip().getPath(), exClass);
-    }
-
-    private boolean checkZipFolderPath(String zipFolderPath, Class<? extends RuntimeException> exClass) {
-        return checkZipFolderPath(zipFolderPath, localFtsProperties.getRootPath(), exClass);
-    }
-
-    private boolean checkZipFolderPath(String zipFolderPath, String rootPath, Class<? extends RuntimeException> exClass) {
+    private boolean checkZipFolderPath(String zipFolderPath, String rootPath, boolean allowNonExist, Class<? extends RuntimeException> exClass) {
         if(zipFolderPath == null) {
             if(exClass != null) {
                 throwException(exClass, "Zip folder path is null!");
@@ -587,7 +581,14 @@ public class FtsServerConfigService implements DisposableBean {
 
         File rootFile = IOUtil.getFile(rootPath);
         File zipFolderPathFile = new File(rootFile, zipFolderPath);
-        if(zipFolderPathFile.exists() && zipFolderPathFile.isFile()) {
+        if(!allowNonExist && !zipFolderPathFile.exists()) {
+            if(exClass != null) {
+                throwException(exClass, "Zip folder path '" + zipFolderPath + "' does not exist!");
+            } else {
+                return false;
+            }
+        }
+        if(zipFolderPathFile.isFile()) {
             if(exClass != null) {
                 throwException(exClass, "Zip folder path '" + zipFolderPath + "' is not a directory!");
             } else {
@@ -717,6 +718,17 @@ public class FtsServerConfigService implements DisposableBean {
                     LOGGER.error("{}'s deletion encountered SecurityException | IOException", file.getAbsolutePath(), e);
                 }
             }
+        }
+    }
+
+    /**
+     * 运行时检查关键配置，检查不通过时抛出异常
+     * @throws LocalFtsCriticalException
+     */
+    public void checkCriticalConfig() {
+        checkRootPath(LocalFtsCriticalException.class);
+        if(localFtsProperties.getZip().getEnabled()) {
+            checkZipFolderPath(false, LocalFtsCriticalException.class);
         }
     }
 
