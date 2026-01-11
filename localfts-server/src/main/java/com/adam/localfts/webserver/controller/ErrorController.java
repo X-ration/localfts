@@ -53,26 +53,25 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
         String accept = IOUtil.getHeaderIgnoreCase(request, "Accept");
         Parser uaParser = new Parser();
         Client uaClient = uaParser.parse(userAgent);
-        HttpStatus status, realStatus;
-        //IE 6会无法处理错误状态的http状态码（只有对话框提示不展示错误页面）
-        if(uaClient.userAgent.family.equals("IE") && Integer.parseInt(uaClient.userAgent.major) <= 6) {
-            status = HttpStatus.OK;
-            realStatus = getStatus(request);
-        } else {
-            status = getStatus(request);
-            realStatus = status;
-        }
-        response.setStatus(status.value());
 //        Map<String, Object> model = Collections.unmodifiableMap(getErrorAttributes(
 //                request, isIncludeStackTrace(request, MediaType.TEXT_HTML)));
         Map<String, Object> modifiableModel = getErrorAttributes(request,
                 isIncludeStackTrace(request, MediaType.TEXT_HTML));
+        HttpStatus realStatus = dealWithResponseStatusException(modifiableModel);
+        if(realStatus == null) {
+            realStatus = getStatus(request);
+        }
+        HttpStatus status = realStatus;
+        //IE 6会无法处理错误状态的http状态码（只有对话框提示不展示错误页面），因此强制状态码改为200
+        if(uaClient.userAgent.family.equals("IE") && Integer.parseInt(uaClient.userAgent.major) <= 6) {
+            status = HttpStatus.OK;
+        }
+        response.setStatus(status.value());
         modifiableModel.put("status", realStatus.value());
         modifiableModel.put("error", realStatus.getReasonPhrase());
         modifiableModel.put("timestamp", Util.getServerTimeFormattedString(Locale.US));
-        dealWithResponseStatusException(modifiableModel);
         Map<String, Object> model = Collections.unmodifiableMap(modifiableModel);
-        if(accept == null || accept.equals(MediaType.ALL_VALUE) || accept.contains(MediaType.TEXT_HTML_VALUE)) {
+        if(accept == null || accept.contains(MediaType.ALL_VALUE) || accept.contains(MediaType.TEXT_HTML_VALUE)) {
             ModelAndView modelAndView = resolveErrorView(request, response, status, model);
             return (modelAndView != null) ? modelAndView : new ModelAndView("error", model);
         } else {
@@ -88,12 +87,15 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
         }
     }
 
-    private void dealWithResponseStatusException(Map<String, Object> modifiableModel) {
+    private HttpStatus dealWithResponseStatusException(Map<String, Object> modifiableModel) {
         if("org.springframework.web.server.ResponseStatusException".equals(modifiableModel.get("exception"))) {
+            HttpStatus httpStatus = HttpStatus.valueOf(((String) modifiableModel.get("message")).split(" ")[1]);
             modifiableModel.remove("exception");
             modifiableModel.put("message", "No message available");
             modifiableModel.remove("trace");
+            return httpStatus;
         }
+        return null;
     }
 
     private HttpStatus getStatus(HttpServletRequest request) {
