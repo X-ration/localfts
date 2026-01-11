@@ -40,6 +40,7 @@
             <input type="text" class="inputDefault" id="mkdirPathInput"><br>
             <label for="mkdirNameInput" th:text="'文件夹名称（不能包含' + ${fileInvalidCharacterString} + '）'">文件夹名称</label><br>
             <input type="text" class="inputDefault" id="mkdirNameInput">
+            <a id="mkdirLink" style="display:none">打开文件夹</a>
             <div style="padding-bottom:1em;padding-top:2em;">
                 <button id="mkdirButton" type="button" onclick="mkdir()" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确认创建</button>
                 <button id="mkdirDivHideButton" onclick="hideMkdirDiv()" style="margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">关闭</button>
@@ -185,6 +186,7 @@
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
         var contextPath = [[${#request.contextPath}]];
         var ftsPagePath = [[${currentPath}]];
+        var ftsPageSize = Number(document.getElementById("page-size").value);
         var sortColumn = [[${sortColumn}]];
         var sortOrder = [[${sortOrder}]];
         /*var URL_LIST = "/localfts/list";
@@ -204,7 +206,6 @@
         function main()
         {
             var ftsPageNo = Number(document.getElementById("page-no").value);
-            var ftsPageSize = Number(document.getElementById("page-size").value);
             var ftsPageCurrentPage = Number(document.getElementById("current-page").innerText);
             var ftsPageCurrentSize = Number(document.getElementById("current-size").innerText);
             var ftsPageTotalPage = Number(document.getElementById("total-page").innerText);
@@ -515,6 +516,8 @@
                             var returnObject = JSON.parse(xhr.responseText);
                             if(returnObject.success) {
                                 updateTitle('mkdirHint', '创建文件夹成功！');
+                                document.getElementById('mkdirLink').setAttribute('href', concatUrlList(path + '/' + name, 1, ftsPageSize));
+                                document.getElementById('mkdirLink').style.display = 'block';
                             } else {
                                 updateTitle('mkdirHint', '创建文件夹失败:' + returnObject.message, 'red');
                             }
@@ -530,6 +533,7 @@
             document.getElementById('mkdirPathInput').value = path;
             document.getElementById('mkdirHint').innerText = '';
             document.getElementById('mkdirHint').style.display = 'none';
+            document.getElementById('mkdirLink').style.display = 'none';
             showDialog('mkdirDiv');
         }
 
