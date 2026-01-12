@@ -72,6 +72,7 @@ public class FtsServerConfigService implements DisposableBean {
         }
         checkUploadProperties(LocalFtsStartupException.class);
         checkPseudoUnloadUaContains(LocalFtsStartupException.class);
+        checkSearchProperties(LocalFtsStartupException.class);
         if(localFtsProperties.getTestLanguage() != null) {
             checkTestLanguageAndDeleteNullKeyValue(LocalFtsStartupException.class);
         }
@@ -255,6 +256,16 @@ public class FtsServerConfigService implements DisposableBean {
         stringBuilder.append("[Upload directory pseudo user-agent contains]").append(localFtsProperties.getUpload().getDirectory().getPseudoUaContains()).append(System.lineSeparator());
         stringBuilder.append("[Pseudo unload user-agent contains]").append(localFtsProperties.getPseudoUnloadUaContains()).append(System.lineSeparator())
                 .append("[Mkdir enabled]").append(localFtsProperties.getMkdir().getEnabled()).append(System.lineSeparator());
+        stringBuilder.append("[Search enabled]").append(localFtsProperties.getSearch().getEnabled()).append(System.lineSeparator());
+        if(localFtsProperties.getSearch().getEnabled()) {
+            stringBuilder.append("[Advanced search enabled]").append(localFtsProperties.getSearch().getAdvancedSearchEnabled()).append(System.lineSeparator())
+                    .append("[Search mode]").append(localFtsProperties.getSearch().getMode()).append(System.lineSeparator());
+            if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
+                stringBuilder.append("[Search index path]").append(localFtsProperties.getSearch().getIndexPath()).append(System.lineSeparator())
+                        .append("[Search index before start]").append(localFtsProperties.getSearch().getIndexBeforeStart()).append(System.lineSeparator())
+                        .append("[Search use existing index]").append(localFtsProperties.getSearch().getUseExistingIndex()).append(System.lineSeparator());
+            }
+        }
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
         if(!CollectionUtils.isEmpty(testLanguageMap)) {
             for(Map.Entry<TestLanguageText, Boolean> entry: testLanguageMap.entrySet()) {
@@ -303,9 +314,47 @@ public class FtsServerConfigService implements DisposableBean {
 
     private void setPropertiesIfNull() {
         setZipEnabledIfNull();
-        setZipDeleteOnExistIfNull();
-        setZipBackgroundEnabledIfNull();
+        if(localFtsProperties.getZip().getEnabled()) {
+            setZipDeleteOnExistIfNull();
+            setZipBackgroundEnabledIfNull();
+        }
         setMkdirEnabledIfNull();
+        setSearchEnabledIfNull();
+        if(localFtsProperties.getSearch().getEnabled()) {
+            setAdvancedSearchEnabledIfNull();
+            if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
+                setIndexBeforeStartIfNull();
+                setUseExistingIndexIfNull();
+            }
+        }
+    }
+
+    private void setUseExistingIndexIfNull() {
+        Boolean useExistingIndex = localFtsProperties.getSearch().getUseExistingIndex();
+        if(useExistingIndex == null) {
+            localFtsProperties.getSearch().setUseExistingIndex(false);
+        }
+    }
+
+    private void setIndexBeforeStartIfNull() {
+        Boolean indexBeforeStart = localFtsProperties.getSearch().getIndexBeforeStart();
+        if(indexBeforeStart == null) {
+            localFtsProperties.getSearch().setIndexBeforeStart(false);
+        }
+    }
+
+    private void setAdvancedSearchEnabledIfNull() {
+        Boolean advancedSearchEnabled = localFtsProperties.getSearch().getAdvancedSearchEnabled();
+        if(advancedSearchEnabled == null) {
+            localFtsProperties.getSearch().setAdvancedSearchEnabled(false);
+        }
+    }
+
+    private void setSearchEnabledIfNull() {
+        Boolean searchEnabled = localFtsProperties.getSearch().getEnabled();
+        if(searchEnabled == null) {
+            localFtsProperties.getSearch().setEnabled(false);
+        }
     }
 
     private void setZipEnabledIfNull() {
@@ -318,7 +367,7 @@ public class FtsServerConfigService implements DisposableBean {
     private void setZipDeleteOnExistIfNull() {
         Boolean zipDeleteOnExit = localFtsProperties.getZip().getDeleteOnExit();
         if(zipDeleteOnExit == null) {
-            localFtsProperties.getZip().setDeleteOnExit(true);
+            localFtsProperties.getZip().setDeleteOnExit(false);
         }
     }
 
@@ -394,6 +443,42 @@ public class FtsServerConfigService implements DisposableBean {
                 return false;
             }
         }
+        return true;
+    }
+
+    private boolean checkSearchProperties(Class<? extends RuntimeException> exClass) {
+        return checkSearchProperties(localFtsProperties.getSearch(), exClass);
+    }
+
+    private boolean checkSearchProperties(SearchProperties searchProperties, Class<? extends RuntimeException> exClass) {
+        if(searchProperties == null) {
+            if(exClass != null) {
+                throwException(exClass, "Search properties object is null!");
+            } else {
+                return false;
+            }
+        }
+
+        if(searchProperties.getEnabled() != null && searchProperties.getEnabled()) {
+            if(searchProperties.getMode() == null) {
+                if(exClass != null) {
+                    throwException(exClass, "Search mode is null!");
+                } else {
+                    return false;
+                }
+            }
+
+            if(searchProperties.getMode() == SearchMode.INDEXED) {
+                if(searchProperties.getIndexPath() == null) {
+                    if(exClass != null) {
+                        throwException(exClass, "Index path is null!");
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+
         return true;
     }
 

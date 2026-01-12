@@ -25,6 +25,8 @@ public class LocalFtsProperties {
     private List<String> pseudoUnloadUaContains;
     @NestedConfigurationProperty
     private MkdirProperties mkdir;
+    @NestedConfigurationProperty
+    private SearchProperties search;
     private Map<TestLanguageText, Boolean> testLanguage;
 
 }
