@@ -225,7 +225,7 @@ public class FtsServerConfigService implements DisposableBean {
     }
 
     @PostConstruct
-    public void checkAndPrintServerIpInfo() throws IOException {
+    public void postConstruct() throws IOException {
         checkPropertiesAndPostConstruct();
         LOGGER.info(toStringConsole());
     }
