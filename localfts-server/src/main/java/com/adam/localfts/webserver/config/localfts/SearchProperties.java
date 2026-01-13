@@ -14,4 +14,5 @@ public class SearchProperties {
     private Boolean indexBeforeStart;
     private String indexPath;
     private Boolean useExistingIndex;
+    private Boolean indexFileContent;
 }

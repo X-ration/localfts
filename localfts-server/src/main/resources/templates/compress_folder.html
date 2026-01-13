@@ -7,8 +7,9 @@
 </head>
 <body>
 <h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="setClass('serverIpInfo','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
+<br><br><a id="visit-directory" th:if="${directoryExists}" th:text="${currentPath}">访问目录</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/search'">文件搜索</a>
 <hr>
-<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" id="visit-directory" th:if="${directoryExists}" th:text="${currentPath}">访问目录</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><br><br>
+<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span>
 <div id="serverIpInfo" class="hidden">
     <div class="dialogTitle">服务器网络信息</div>
     <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">

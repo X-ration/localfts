@@ -1,6 +1,9 @@
 package com.adam.localfts.webserver.controller;
 
-import com.adam.localfts.webserver.common.*;
+import com.adam.localfts.webserver.common.FtsPageModel;
+import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
+import com.adam.localfts.webserver.common.PageObject;
+import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
 import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
@@ -8,6 +11,8 @@ import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
+import com.adam.localfts.webserver.config.localfts.SearchMode;
+import com.adam.localfts.webserver.service.FtsSearchService;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
 import com.adam.localfts.webserver.util.Util;
@@ -21,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriUtils;
+import org.thymeleaf.util.StringUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -38,6 +44,8 @@ public class WebController {
     private FtsService ftsService;
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
+    @Autowired
+    private FtsSearchService ftsSearchService;
 
     private final static Logger LOGGER = LoggerFactory.getLogger(WebController.class);
 
@@ -268,5 +276,44 @@ public class WebController {
         ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files, true);
         redirectAttributes.addFlashAttribute("uploadDirRetObject", returnObject);
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
+    }
+
+    @RequestMapping(value = "/search", method = {RequestMethod.GET, RequestMethod.POST})
+    public String search(Model model, @RequestParam(defaultValue = "") String keyword,
+                         @RequestParam(defaultValue = "1") int pageNo,
+                         @RequestParam(defaultValue = "20") int pageSize,
+                         @RequestParam(required = false)ListTableColumn sortColumn,
+                         @RequestParam(required = false) SortOrder sortOrder) {
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
+        String serverTime = Util.getServerTimeFormattedString();
+        model.addAttribute("serverTime", serverTime);
+        if(StringUtils.isEmpty(keyword)) {
+            return "search";
+        }
+        model.addAttribute("keyword", keyword);
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        model.addAttribute("zipEnabled", zipEnabled);
+        if(pageNo <= 0) {
+            pageNo = 1;
+        }
+        if(pageSize <= 0) {
+            pageSize = 20;
+        }
+        if(!zipEnabled && (sortColumn == ListTableColumn.COMPRESS_STATUS || sortColumn == ListTableColumn.COMPRESS_FILE_LAST_MODIFIED)) {
+            sortColumn = null;
+        }
+        if(sortColumn != null && sortOrder == null) {
+            sortOrder = SortOrder.ASC;
+        }
+        model.addAttribute("sortColumn", sortColumn);
+        model.addAttribute("sortOrder", sortOrder);
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
+        model.addAttribute("searchMode", searchMode);
+        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
+        model.addAttribute("indexFileContent", indexFileContent);
+        PageObject<Void> pageObject = ftsSearchService.search(keyword, pageNo, pageSize, sortColumn, sortOrder);
+        model.addAttribute("pageObject", pageObject);
+        return "search";
     }
 }

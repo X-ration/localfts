@@ -263,7 +263,8 @@ public class FtsServerConfigService implements DisposableBean {
             if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
                 stringBuilder.append("[Search index path]").append(localFtsProperties.getSearch().getIndexPath()).append(System.lineSeparator())
                         .append("[Search index before start]").append(localFtsProperties.getSearch().getIndexBeforeStart()).append(System.lineSeparator())
-                        .append("[Search use existing index]").append(localFtsProperties.getSearch().getUseExistingIndex()).append(System.lineSeparator());
+                        .append("[Search use existing index]").append(localFtsProperties.getSearch().getUseExistingIndex()).append(System.lineSeparator())
+                        .append("[Search index file content]").append(localFtsProperties.getSearch().getIndexFileContent()).append(System.lineSeparator());
             }
         }
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
@@ -325,7 +326,15 @@ public class FtsServerConfigService implements DisposableBean {
             if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
                 setIndexBeforeStartIfNull();
                 setUseExistingIndexIfNull();
+                setIndexFileContentIfNull();
             }
+        }
+    }
+
+    private void setIndexFileContentIfNull() {
+        Boolean indexFileContent = localFtsProperties.getSearch().getIndexFileContent();
+        if(indexFileContent == null) {
+            localFtsProperties.getSearch().setIndexFileContent(false);
         }
     }
 
