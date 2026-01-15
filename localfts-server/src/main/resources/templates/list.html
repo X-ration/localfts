@@ -232,11 +232,8 @@
             document.getElementById("upload-to-current-path").setAttribute("href", uploadToCurrentUrl);
 
             //deal with dividing-td
-            var dividingTds = document.getElementsByName('dividing-td');
-            if(!dividingTds || dividingTds.length === 0) {
-                dividingTds = getElementsByName('td', 'dividing-td');
-            }
-            if(dividingTds) {
+            var dividingTds = getElementsByName('td', 'dividing-td');
+            if(dividingTds && dividingTds.length > 0) {
                 var bb = '0.1em';
                 var chromiumVersion = getChromiumVersion();
                 var ieVersion = getIEVersion();
@@ -254,39 +251,27 @@
             }
 
             //deal with directory-path
-            var directoryPaths = document.getElementsByName("directory-path");
-            if(!directoryPaths) {
-                directoryPaths = getElementsByName("a", "directory-path");
-            }
+            var directoryPaths = getElementsByName("a", "directory-path");
             for(var i=0;i<directoryPaths.length;i++) {
                 directoryPaths[i].setAttribute("href", concatUrlList(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + directoryPaths[i].innerText, 1, ftsPageSize));
             }
 
             //deal with download-file
-            var downloadFiles = document.getElementsByName("download-file");
-            if(!downloadFiles) {
-                downloadFiles = getElementsByName("a", "download-file");
-            }
+            var downloadFiles = getElementsByName("a", "download-file");
             for(var i=0;i<downloadFiles.length;i++) {
                 downloadFiles[i].setAttribute("href", concatUrlDownload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + downloadFiles[i].innerText));
                 downloadFiles[i].innerText = "下载文件";
             }
 
             //deal with upload-file
-            var uploadFiles = document.getElementsByName("upload-file");
-            if(!uploadFiles) {
-                uploadFiles = getElementsByName("a", "upload-file");
-            }
+            var uploadFiles = getElementsByName("a", "upload-file");
             for(var i=0;i<uploadFiles.length;i++) {
                 uploadFiles[i].setAttribute("href", concatUrlUpload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + uploadFiles[i].innerText));
                 uploadFiles[i].innerText = "上传文件";
             }
 
             //deal with sort-link
-            var sortLinks = document.getElementsByName("sort-link");
-            if(!sortLinks) {
-                sortLinks = getElementsByName("a", "sort-link");
-            }
+            var sortLinks = getElementsByName("a", "sort-link");
             for(var i=0;i<sortLinks.length;i++) {
                 var eSortColumn = sortLinks[i].getAttribute('sort-column');
                 var eSortOrder = null, imgSrc = null;
@@ -397,19 +382,6 @@
         function concatUrlUpload(dirName) {
             return URL_UPLOAD + "?dirName=" + encodeURIComponent(dirName);
         }
-        //for IE, not supporting document.getElementsByName
-        function getElementsByName(tagName, name) {
-            var collection = document.getElementsByTagName(tagName);
-            var result = [];
-            if(collection) {
-                for(var i=0;i<collection.length;i++) {
-                    if(collection[i].getAttribute("name") == name) {
-                        result[result.length] = collection[i];
-                    }
-                }
-            }
-            return result;
-        }
     </script>
     <script type="text/javascript" th:if="${directoryExists and zipEnabled}">
         var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
@@ -419,20 +391,14 @@
         document.getElementById("compress-current-path").setAttribute("href", compressCurrentUrl);
 
         //deal with compress-folder
-        var compressFolders = document.getElementsByName("compress-folder");
-        if(!compressFolders) {
-            compressFolders = getElementsByName("a", "compress-folder");
-        }
+        var compressFolders = getElementsByName("a", "compress-folder");
         for(var i=0;i<compressFolders.length;i++) {
             compressFolders[i].setAttribute("href", concatUrlCompressFolder(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + compressFolders[i].innerText));
             compressFolders[i].innerText = "压缩管理";
         }
 
         //deal with download-folder
-        var downloadFolders = document.getElementsByName("download-folder");
-        if(!downloadFolders) {
-            downloadFolders = getElementsByName("a", "download-folder");
-        }
+        var downloadFolders = getElementsByName("a", "download-folder");
         if(downloadFolders) {
             for(var i=0;i<downloadFolders.length;i++) {
                 downloadFolders[i].setAttribute("href", concatUrlDownload(downloadFolders[i].innerText));
@@ -446,16 +412,11 @@
     </script>
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists and mkdirEnabled}">
         //deal with mkdir
-        var mkdirs = document.getElementsByName("mkdir");
-        if(!mkdirs) {
-            mkdirs = getElementsByName("a", "mkdir");
-        }
-        if(mkdirs) {
-            for(var i=0;i<mkdirs.length;i++) {
-                var path = ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + mkdirs[i].innerText;
-                mkdirs[i].onclick = showMkdirDivFuncFactory(path);
-                mkdirs[i].innerText = "创建文件夹";
-            }
+        var mkdirs = getElementsByName("a", "mkdir");
+        for(var i=0;i<mkdirs.length;i++) {
+            var path = ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + mkdirs[i].innerText;
+            mkdirs[i].onclick = showMkdirDivFuncFactory(path);
+            mkdirs[i].innerText = "创建文件夹";
         }
 
         var ficsArr = [[${fileInvalidCharacterString}]].split(' ');

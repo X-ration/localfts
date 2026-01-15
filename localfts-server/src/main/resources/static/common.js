@@ -42,6 +42,23 @@ if (!Array.prototype.indexOf) {
     };
 }
 
+function getElementsByName(tagName, name) {
+    if(document.getElementsByName) {
+        return document.getElementsByName(name);
+    }
+    //for IE, not supporting document.getElementsByName
+    var collection = document.getElementsByTagName(tagName);
+    var result = [];
+    if(collection) {
+        for(var i=0;i<collection.length;i++) {
+            if(collection[i].getAttribute("name") == name) {
+                result[result.length] = collection[i];
+            }
+        }
+    }
+    return result;
+}
+
 function setClass(id, cn) {
     //deal with IE
     var element = document.getElementById(id);

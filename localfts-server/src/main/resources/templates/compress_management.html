@@ -162,10 +162,7 @@ if(sortColumn === null) {
 }
 
 //deal with download-zip
-var downloadZips = document.getElementsByName("download-zip");
-if(!downloadZips) {
-  downloadZips = getElementsByName("a", "download-zip");
-}
+var downloadZips = getElementsByName("a", "download-zip");
 for(var i=0;i<downloadZips.length;i++) {
   downloadZips[i].setAttribute("href", concatUrlDownload(downloadZips[i].innerText));
   downloadZips[i].innerText = '下载压缩文件(zip)';
@@ -176,31 +173,20 @@ for(var i=0;i<downloadZips.length;i++) {
   }*/
 }
 //deal with compress-folder
-var compressFolders = document.getElementsByName("compress-folder");
-if(!compressFolders) {
-  compressFolders = getElementsByName("a", "compress-folder");
-}
+var compressFolders = getElementsByName("a", "compress-folder");
 for(var i=0;i<compressFolders.length;i++) {
   compressFolders[i].setAttribute("href", concatUrlCompressFolder(compressFolders[i].innerText));
   compressFolders[i].innerText = '压缩管理';
 }
 //deal with visit-directory
-var visitDirectories = document.getElementsByName("visit-directory");
-if(!visitDirectories) {
-  visitDirectories = getElementsByName("a", "visit-directory");
-}
-if(visitDirectories) {
-  for(var i=0;i<visitDirectories.length;i++) {
-    visitDirectories[i].setAttribute("href", concatUrlList(visitDirectories[i].innerText));
-    visitDirectories[i].innerText = '访问目录';
-  }
+var visitDirectories = getElementsByName("a", "visit-directory");
+for(var i=0;i<visitDirectories.length;i++) {
+  visitDirectories[i].setAttribute("href", concatUrlList(visitDirectories[i].innerText));
+  visitDirectories[i].innerText = '访问目录';
 }
 
 //deal with sort-link
-var sortLinks = document.getElementsByName("sort-link");
-if(!sortLinks) {
-  sortLinks = getElementsByName("a", "sort-link");
-}
+var sortLinks = getElementsByName("a", "sort-link");
 for(var i=0;i<sortLinks.length;i++) {
   var eSortColumn = sortLinks[i].getAttribute('sort-column');
   var eSortOrder = null, imgSrc = null;
@@ -732,19 +718,6 @@ function concatUrlCompressManagement(pageNo,pageSize, sortColumn, sortOrder) {
     url = url + '?' + paramStr.substring(1);
   }
   return url;
-}
-//for IE, not supporting document.getElementsByName
-function getElementsByName(tagName, name) {
-  var collection = document.getElementsByTagName(tagName);
-  var result = [];
-  if(collection) {
-    for(var i=0;i<collection.length;i++) {
-      if(collection[i].getAttribute("name") == name) {
-        result[result.length] = collection[i];
-      }
-    }
-  }
-  return result;
 }
 </script>
 </html>
