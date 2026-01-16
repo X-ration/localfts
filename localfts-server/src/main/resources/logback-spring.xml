@@ -3,11 +3,15 @@
     <springProperty scope="context" name="rootLevel" source="localfts.log.root_level" defaultValue="INFO"/>
     <springProperty scope="context" name="logBase" source="localfts.log.file_path" defaultValue="log"/>
 
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex" converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <!-- encoders are assigned the type
              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%-5level) %clr(${PID:- }){magenta} %clr([%thread]){cyan} %clr(%logger{50}){cyan} - %msg%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}</pattern>
         </encoder>
     </appender>
 
