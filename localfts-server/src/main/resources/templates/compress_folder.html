@@ -191,12 +191,6 @@ function removeChildrenByIdAndTagName(id,tagName) {
     }
   }
 }
-function removeElementById(id,parentId) {
-  var element = document.getElementById(id);
-  if(element) {
-    document.getElementById(parentId).removeChild(element);
-  }
-}
 function concatUrlForConstant(contextPath, path) {
   return contextPath + path;
 }

@@ -38,12 +38,24 @@ th,td {
 .left-head-table th {
     text-align: left
 }
-img.thImg{
+img.fontSizeImg{
     width:1em; height:1em;
     vertical-align: middle;
     border: 0 none;
     outline: none;
 }
+button.imgButton {
+    vertical-align: middle;
+    border: 0 none;
+    outline: none;
+    background: transparent;
+}
+.filled{
+    width:100%; height:100%;
+}
 .margin-0 {
     margin: 0;
+}
+.inline {
+    display: inline-block;*display: inline; zoom: 1;
 }

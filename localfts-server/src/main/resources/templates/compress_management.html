@@ -39,28 +39,28 @@
         <thead>
         <tr>
             <th style="width:27%">文件夹
-                <a name="sort-link" th:attr="sort-column='FOLDER_NAME'"><img class="thImg"/></a>
+                <a name="sort-link" th:attr="sort-column='FOLDER_NAME'"><img class="fontSizeImg"/></a>
             </th>
             <th style="width:8%">修改时间
-                <a name="sort-link" th:attr="sort-column='FOLDER_LAST_MODIFIED'"><img class="thImg"/></a>
+                <a name="sort-link" th:attr="sort-column='FOLDER_LAST_MODIFIED'"><img class="fontSizeImg"/></a>
             </th>
             <th style="width:5%">压缩状态
-                <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="thImg"/></a>
+                <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="fontSizeImg"/></a>
             </th>
             <th style="width:6%">压缩文件大小
-                <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_SIZE'"><img class="thImg"/></a>
+                <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_SIZE'"><img class="fontSizeImg"/></a>
             </th>
             <th style="width:8%">压缩文件修改时间
-                <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="thImg"/></a>
+                <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="fontSizeImg"/></a>
             </th>
             <th style="width:8%">压缩任务开始时间
-                <a name="sort-link" th:attr="sort-column='COMPRESS_START_TIME'"><img class="thImg"/></a>
+                <a name="sort-link" th:attr="sort-column='COMPRESS_START_TIME'"><img class="fontSizeImg"/></a>
             </th>
             <th style="width:8%">压缩任务完成时间
-                <a name="sort-link" th:attr="sort-column='COMPRESS_FINISH_TIME'"><img class="thImg"/></a>
+                <a name="sort-link" th:attr="sort-column='COMPRESS_FINISH_TIME'"><img class="fontSizeImg"/></a>
             </th>
             <th style="width:6%">压缩任务耗时
-                <a name="sort-link" th:attr="sort-column='COMPRESS_COST_TIME'"><img class="thImg"/></a>
+                <a name="sort-link" th:attr="sort-column='COMPRESS_COST_TIME'"><img class="fontSizeImg"/></a>
             </th>
             <th style="width:8%">链接</th>
             <th style="width:8%">提示信息</th>
@@ -640,12 +640,6 @@ function removeChildrenByTdNameAndTagName(element,tdName,tagName,name) {
         }
       }
     }
-  }
-}
-function removeElementById(id,parentId) {
-  var element = document.getElementById(id);
-  if(element) {
-    document.getElementById(parentId).removeChild(element);
   }
 }
 function getParentTrByButton(button) {

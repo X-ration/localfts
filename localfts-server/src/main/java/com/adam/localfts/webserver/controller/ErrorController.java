@@ -4,6 +4,8 @@ import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
@@ -13,9 +15,13 @@ import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.CollectionUtils;
+import org.springframework.validation.BindException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.ModelAndView;
 import ua_parser.Client;
 import ua_parser.Parser;
@@ -38,6 +44,7 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
     private final List<ErrorViewResolver> errorViewResolvers;
     @Value("${server.error.path:${error.path:/error}}")
     private String errorPath;
+    private final Logger logger = LoggerFactory.getLogger(ErrorController.class);
 
     public ErrorController(ErrorAttributes errorAttributes, ServerProperties serverProperties,
                                      ObjectProvider<ErrorViewResolver> errorViewResolvers) {
@@ -55,8 +62,8 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
         Client uaClient = uaParser.parse(userAgent);
 //        Map<String, Object> model = Collections.unmodifiableMap(getErrorAttributes(
 //                request, isIncludeStackTrace(request, MediaType.TEXT_HTML)));
-        Map<String, Object> modifiableModel = getErrorAttributes(request,
-                isIncludeStackTrace(request, MediaType.TEXT_HTML));
+        Map<String, Object> modifiableModel = getErrorAttributes(request, isIncludeStackTrace(request, MediaType.TEXT_HTML));
+        postHandleException(request, modifiableModel);
         HttpStatus realStatus = dealWithResponseStatusException(modifiableModel);
         if(realStatus == null) {
             realStatus = getStatus(request);
@@ -121,6 +128,41 @@ public class ErrorController implements org.springframework.boot.web.servlet.err
             }
         }
         return null;
+    }
+
+    private void postHandleException(HttpServletRequest request, Map<String, Object> modifiableModel) {
+        WebRequest webRequest = new ServletWebRequest(request);
+        Throwable throwable = this.errorAttributes.getError(webRequest);
+        if(throwable instanceof BindException) {
+            BindException bindException = (BindException) throwable;
+            StringBuilder stringBuilder = new StringBuilder();
+            List<FieldError> fieldErrorList = bindException.getBindingResult().getFieldErrors();
+            if(!CollectionUtils.isEmpty(fieldErrorList)) {
+                for(int i=0;i<fieldErrorList.size();i++) {
+                    stringBuilder.append(",[").append(i+1).append("]");
+                    FieldError fieldError = fieldErrorList.get(i);
+                    if(fieldError != null) {
+                        Throwable source = null;
+                        try {
+                            source = fieldError.unwrap(Throwable.class);
+                        } catch (IllegalArgumentException e) {
+                            logger.warn("failed to unwrap FieldError '{}' to Throwable", fieldError);
+                            stringBuilder.append("Field=").append(fieldError.getField()).append(",rejected value=").append(fieldError.getRejectedValue());
+                            continue;
+                        }
+                        Throwable cause = source.getCause();
+                        stringBuilder.append(cause.getClass().getName()).append(":").append(cause.getMessage());
+                    } else {
+                        stringBuilder.append("FieldError not found");
+                    }
+                }
+                modifiableModel.put("message", stringBuilder.substring(1));
+                modifiableModel.remove("trace");
+                modifiableModel.remove("errors");
+            }
+        } else if(throwable instanceof MethodArgumentTypeMismatchException) {
+            modifiableModel.remove("trace");
+        }
     }
 
     private Map<String, Object> getErrorAttributes(HttpServletRequest request,

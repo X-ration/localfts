@@ -9,6 +9,15 @@ if (!String.prototype.startsWith) {
 }
 
 /**
+    兼容IE6的字符串trim方法
+*/
+if (!String.prototype.trim) {
+    String.prototype.trim = function() {
+        return this.replace(/^\s+|\s+$/g, '');
+    };
+}
+
+/**
     兼容IE6的数组indexOf方法
 */
 if (!Array.prototype.indexOf) {
@@ -57,6 +66,17 @@ function getElementsByName(tagName, name) {
         }
     }
     return result;
+}
+
+function getCheckedValue(name) {
+    var elements = getElementsByName('input', name);
+    for(var i=0;i<elements.length;i++) {
+        var element = elements[i];
+        if(element.checked) {
+            return element.value;
+        }
+    }
+    return null;
 }
 
 function setClass(id, cn) {
@@ -157,6 +177,57 @@ function formatTime(date, format) {
     return format;
 }
 
+var supported_date_time_formats = ['yyyy-MM-dd', 'yyyy-MM-dd HH:mm:ss'];
+function isValidDateTime(str,format) {
+    if (typeof str !== 'string') {
+        return false;
+    }
+    format = format || 'yyyy-MM-dd HH:mm:ss';
+    if (supported_date_time_formats.indexOf(format) === -1) {
+        if(window.console) {
+            console.error("Invalid format:" + format);
+        }
+        return false;
+    }
+    var regObject = {};
+    regObject['yyyy-MM-dd'] = /^(\d{4})-(\d{2})-(\d{2})$/;
+    regObject['yyyy-MM-dd HH:mm:ss'] = /^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2}):(\d{2})$/;
+    var trimStr = str.replace(/^\s+|\s+$/g, '');
+    if (trimStr.length === 0) {
+        return false;
+    }
+    var reg = regObject[format];
+    var matchResult = trimStr.match(reg);
+    if (!matchResult) {
+        return false;
+    }
+    var year = parseInt(matchResult[1], 10);
+    var month = parseInt(matchResult[2], 10);
+    var day = parseInt(matchResult[3], 10);
+    var hour = matchResult[4] ? parseInt(matchResult[4], 10) : 0;
+    var minute = matchResult[5] ? parseInt(matchResult[5], 10) : 0;
+    var second = matchResult[6] ? parseInt(matchResult[6], 10) : 0;
+
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second <0 || second >59) {
+        return false;
+    }
+
+    var dateStr = trimStr.replace(/-/g, '/');
+    var dateObj = new Date(dateStr);
+    if (
+        dateObj.getFullYear() !== year ||
+        dateObj.getMonth() + 1 !== month ||
+        dateObj.getDate() !== day ||
+        dateObj.getHours() !== hour ||
+        dateObj.getMinutes() !== minute ||
+        dateObj.getSeconds() !== second
+    ) {
+        return false;
+    }
+
+    return true;
+}
+
 function updateTitle(id, text, color) {
     var element = document.getElementById(id);
     if(element) {
@@ -168,6 +239,77 @@ function updateTitle(id, text, color) {
             element.style.color = 'black';
         }
     }
+}
+
+function updateMsg(id, text, color) {
+    var element = document.getElementById(id);
+    if(element) {
+        element.innerText = text;
+        element.style.display = '';
+        if(color !== undefined) {
+            element.style.color = color;
+        } else {
+            element.style.color = 'black';
+        }
+    }
+}
+
+function formatDateDateStr(date) {
+    if(!date) {
+        return '';
+    }
+    var year = date.getFullYear();
+    var month = date.getMonth() + 1;
+    month = (month < 10 ? '0': '') + month;
+    var day = (date.getDate() < 10 ? '0' : '') + date.getDate();
+    return year + '-' + month + '-' + day;
+}
+
+function formatDateTimeStr(date) {
+    if(!date) {
+        return '';
+    }
+    var hour = (date.getHours() < 10 ? '0' : '') + date.getHours();
+    var minute = (date.getMinutes() < 10 ? '0' : '') + date.getMinutes();
+    var second = (date.getSeconds() < 10 ? '0' : '') + date.getSeconds();
+    return hour + ':' + minute + ':' + second;
+}
+
+function formatTimeInputTimeStr(input) {
+    if(!input) {
+        return '';
+    }
+    var value = input.value;
+    if(value === '') {
+        return '';
+    }
+    if(value.split(':').length === 2) {
+        var date = input.valueAsDate;
+        var second = (date.getSeconds() < 10 ? '0' : '') + date.getSeconds();
+        value = value + ':' + second;
+    }
+    return value;
+}
+
+function formatDateFullStr(date) {
+    return formatDateDateStr(date) + ' ' + formatDateTimeStr(date);
+}
+
+function isDateAndTimeInputSupported() {
+    var div = document.createElement('div');
+    div.innerHTML = '<input type="date"><input type="time">';
+    var input1 = div.children[0], input2 = div.children[1];
+    var supportDate = input1.type !== 'text',
+        supportTime = input2.type !== 'text';
+    return supportDate && supportTime;
+}
+
+function removeElementById(id,parentId) {
+  var element = document.getElementById(id);
+  var parentElement = document.getElementById(parentId);
+  if(element && parentElement) {
+    parentElement.removeChild(element);
+  }
 }
 
 function getElementsByClassName(className, tagName) {

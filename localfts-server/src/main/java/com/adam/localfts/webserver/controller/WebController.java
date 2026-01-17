@@ -8,6 +8,7 @@ import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
 import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
+import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
@@ -283,7 +284,8 @@ public class WebController {
                          @RequestParam(defaultValue = "1") int pageNo,
                          @RequestParam(defaultValue = "20") int pageSize,
                          @RequestParam(required = false)ListTableColumn sortColumn,
-                         @RequestParam(required = false) SortOrder sortOrder) {
+                         @RequestParam(required = false) SortOrder sortOrder,
+                         AdvancedSearchCondition advancedSearchCondition) {
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
@@ -291,7 +293,10 @@ public class WebController {
         if(StringUtils.isEmpty(keyword)) {
             return "search";
         }
+        LOGGER.debug("search keyword={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
+                keyword, pageNo, pageSize, sortColumn, sortOrder, advancedSearchCondition);
         model.addAttribute("keyword", keyword);
+        model.addAttribute("advancedSearchCondition", advancedSearchCondition);
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         model.addAttribute("zipEnabled", zipEnabled);
         if(pageNo <= 0) {
@@ -312,7 +317,7 @@ public class WebController {
         model.addAttribute("searchMode", searchMode);
         Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
         model.addAttribute("indexFileContent", indexFileContent);
-        PageObject<Void> pageObject = ftsSearchService.search(keyword, pageNo, pageSize, sortColumn, sortOrder);
+        PageObject<Void> pageObject = ftsSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
         model.addAttribute("pageObject", pageObject);
         return "search";
     }

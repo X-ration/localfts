@@ -1,6 +1,7 @@
 package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.PageObject;
+import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.WebServerStartListener;
@@ -36,7 +37,8 @@ public class FtsSearchService {
      * @param sortOrder
      * @return
      */
-    public PageObject<Void> search(String keyword, int pageNo, int pageSize, ListTableColumn sortColumn, SortOrder sortOrder) {
+    public PageObject<Void> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
+                                   int pageNo, int pageSize, ListTableColumn sortColumn, SortOrder sortOrder) {
         Assert.isTrue(!StringUtils.isEmpty(keyword), "搜索关键词为空");
         Assert.isTrue(pageNo > 0, "非法的页数：" + pageNo);
         Assert.isTrue(pageSize > 0, "非法的每页数量：" + pageSize);

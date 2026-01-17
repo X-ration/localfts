@@ -30,59 +30,119 @@
         <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="hideDialog('serverIpInfo')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
     <br>
-    <div id="search-div">
-        <form th:action="@{/search}" method="post" enctype="application/x-www-form-urlencoded" style="text-align: center">
-            <label for="keyword" style="font-size: 30px">文件搜索</label><br><br>
-            <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="width:80%; text-align:center"><br><br>
-            <button type="submit">搜索</button>
-        </form>
-    </div>
+    <form id="search-form" th:action="@{/search}" method="post" enctype="application/x-www-form-urlencoded" style="text-align: center">
+        <label for="keyword" style="font-size: 30px">文件搜索</label><br><br>
+        <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="width:80%; text-align:center"><br><br>
+        <button id="switchAdvancedSearchButton" type="button" onclick="switchAdvancedSearch(this)">使用高级搜索</button>
+        <button type="button" onclick="search()">搜索</button>
+        <div id="dateTimeDialogDiv" class="hidden" style="text-align: center">
+            <div class="dialogTitle">手动输入日期和时间</div>
+            <p>格式：yyyy-MM-dd|yyyy-MM-dd HH:mm:ss。<br>
+                省略时间时自动补全00:00:00。<br>
+                示例：2026-01-01或2026-01-01 00:00:00
+            </p>
+            <h5 id="dateTimeCheckHint" style="display:none"></h5>
+            <input type="text" class="inputDefault" id="dateTimeInput"><br><br>
+            <button id="dateTimeConfirmButton" type="button">确认</button><button type="button" onclick="hideDateTimeDialog()">取消</button><br><br>
+        </div>
+        <div id="advanced-condition-div" style="display: none">
+            <br>
+            类型：
+            <input type="radio" id="directoryRadio1" name="directory" value="true">
+            <label for="directoryRadio1">文件夹</label>
+            <input type="radio" id="directoryRadio2" name="directory" value="false">
+            <label for="directoryRadio2">文件</label>
+            <input type="radio" id="directoryRadio3" name="directory" value="" checked="checked">
+            <label for="directoryRadio3">不限类型</label>
+            <span class="inline" style="color:red; display:none" id="directory-msg"></span>
+            <br>
+            修改时间不早于：
+            <input class="inline" type="text" id="lastModifiedLower" name="lastModifiedLower" readonly="readonly" style="display: none">
+            <button class="inline imgButton" type="button" id="lastModifiedLowerButton" onclick="showDateTimeDialog('lastModifiedLower', 'last-modified-lower-msg')" style="display: none"><img></button>
+            <input type="date" id="lastModifiedLowerDate">
+            <input type="time" id="lastModifiedLowerTime" step="1">
+            <span class="inline" style="color:red; display:none" id="last-modified-lower-msg"></span>
+            <br>
+            修改时间不晚于：
+            <input type="text" id="lastModifiedUpper" name="lastModifiedUpper" readonly="readonly" style="display: none">
+            <br>
+            文件大小不低于：
+            <input type="text" id="fileSizeLowerInput" name="fileSizeLower" style="display:none">
+            <input type="text" id="fileSizeLowerLeftInput" style="width: 80px">
+            <select id="fileSizeLowerSelect">
+                <option>B</option>
+                <option>KB</option>
+                <option>MB</option>
+                <option>GB</option>
+                <option>TB</option>
+            </select>
+            <span class="inline" style="color:red; display:none" id="file-size-lower-msg"></span>
+            <br>
+            文件大小不高于：
+            <input type="text" id="fileSizeUpperInput" name="fileSizeUpper" style="display:none">
+            <input type="text" id="fileSizeUpperLeftInput" style="width:80px">
+            <select id="fileSizeUpperSelect">
+                <option>B</option>
+                <option>KB</option>
+                <option>MB</option>
+                <option>GB</option>
+                <option>TB</option>
+            </select>
+            <span class="inline" style="color:red; display:none" id="file-size-upper-msg"></span>
+            <br>
+            <input type="text" name="folderCompressStatus">
+            <input type="text" name="compressedFileSizeLower">
+            <input type="text" name="compressedFileSizeUpper">
+            <input type="text" name="compressedFileLastModifiedLower">
+            <input type="text" name="compressedFileLastModifiedUpper">
+        </div>
+    </form>
     <div id="result-div" th:if="${pageObject != null}">
         <hr>
         <table class="left-head-table" style="text-align:left;border-style:solid">
             <thead>
             <tr th:if="${zipEnabled}">
                 <th style="width:40%">文件名
-                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="fontSizeImg"/></a>
                 </th>
                 <th th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" style="width:10%">文件内容
-                    <a name="sort-link" th:attr="sort-column='FILE_CONTENT'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='FILE_CONTENT'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:5%">类型
-                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:7%">大小
-                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:7%">修改时间
-                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:7%">文件夹压缩状态
-                    <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:7%">压缩文件大小
-                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_SIZE'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_SIZE'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:7%">压缩文件修改时间
-                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:10%">操作</th>
             </tr>
             <tr th:if="${!zipEnabled}">
                 <th style="width:50%">文件名
-                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="fontSizeImg"/></a>
                 </th>
                 <th th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" style="width:10%">文件内容
-                    <a name="sort-link" th:attr="sort-column='FILE_CONTENT'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='FILE_CONTENT'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:10%">类型
-                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:10%">大小
-                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:10%">修改时间
-                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="thImg"/></a>
+                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="fontSizeImg"/></a>
                 </th>
                 <th style="width:10%">操作</th>
             </tr>
@@ -138,6 +198,8 @@
             <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${pageObject.pageSize}">
             <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
             <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
+            <input type="hidden" name="directory" th:if="${advancedSearchCondition != null && advancedSearchCondition.directory != null}" th:value="${advancedSearchCondition.directory}">
+            <input type="hidden" name="lastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedLower != null}" th:value="${advancedSearchCondition.lastModifiedLower}">
             <label for="page-no">页数:</label>
             <input type="text" size="2" id="page-no" name="pageNo" th:value="${pageObject.currentPage}">
             <label for="page-size-select">每页数量:</label>
@@ -152,8 +214,181 @@
     </div>
     <script th:src="${#request.contextPath} + '/static/common.js'"></script>
     <script th:src="${#request.contextPath} + '/static/dialog.js'"></script>
-    <script type="text/javascript" th:inline="javascript" th:if="${pageObject != null}">
+    <script type="text/javascript" th:inline="javascript">
         var contextPath = [[${#request.contextPath}]];
+        var CHECK_PASSED = '校验通过' + (isIE6() ? '√' : '✔');
+        var advancedSearchCondition = [[${advancedSearchCondition}]];
+        var keyword = [[${keyword}]];
+        var dateAndTimeInputSupported = isDateAndTimeInputSupported();
+        if(!dateAndTimeInputSupported) {
+            //日期时间input不支持的情况下移除相关元素并启用对话框式输入
+            removeElementById('lastModifiedLowerDate', 'advanced-condition-div');
+            removeElementById('lastModifiedLowerTime', 'advanced-condition-div');
+            document.getElementById('lastModifiedLower').style.display = '';
+            document.getElementById('lastModifiedLowerButton').style.display = '';
+        }
+        var advancedSearchSwitch = advancedSearchCondition === null ? false : !advancedSearchCondition.empty;
+        if(keyword && keyword.trim() !== '' && advancedSearchSwitch) {
+            //初始化高级搜索条件的选中状态和值等
+            if(advancedSearchCondition.directory !== null) {
+                var directoryRadios = getElementsByName('input', 'directory');
+                for(var i=0;i<directoryRadios.length;i++) {
+                    if(advancedSearchCondition.directory + '' === directoryRadios[i].value) {
+                        directoryRadios[i].checked = true;
+                    } else {
+                        directoryRadios[i].checked = false;
+                    }
+                }
+            }
+            if(advancedSearchCondition.lastModifiedLower !== null) {
+                var lastModifiedLowerDateObject = new Date(advancedSearchCondition.lastModifiedLower);
+                if(dateAndTimeInputSupported) {
+                    document.getElementById('lastModifiedLowerDate').value = formatDateDateStr(lastModifiedLowerDateObject);
+                    document.getElementById('lastModifiedLowerTime').value = formatDateTimeStr(lastModifiedLowerDateObject);
+                } else {
+                    document.getElementById('lastModifiedLower').value =
+                        formatDateDateStr(lastModifiedLowerDateObject) + ' ' + formatDateTimeStr(lastModifiedLowerDateObject);
+                }
+            }
+            switchAdvancedSearch(document.getElementById('switchAdvancedSearchButton'), true);
+        }
+
+        //deal with date time keyboard buttons
+        var keyboardIconSrc = contextPath + '/static/icon/keyboard_black_32px';
+        if(isIE6()) {
+            keyboardIconSrc = keyboardIconSrc + '_png8';
+        }
+        keyboardIconSrc = keyboardIconSrc + '.png';
+        var keyboardButtonIds = ['lastModifiedLowerButton'];
+        for(var i=0;i<keyboardButtonIds.length;i++) {
+            var keyboardButton = document.getElementById(keyboardButtonIds[i]);
+            var keyboardButtonChildren = keyboardButton.children;
+            if(keyboardButtonChildren && keyboardButtonChildren.length > 0) {
+                var firstChild = keyboardButtonChildren[0];
+                if(firstChild.tagName.toLowerCase() === 'img') {
+                    firstChild.setAttribute('src', keyboardIconSrc);
+                }
+            }
+        }
+
+        function switchAdvancedSearch(button,showAdvancedSearch) {
+            if(showAdvancedSearch !== undefined) {
+                advancedSearchSwitch = showAdvancedSearch;
+            } else {
+                advancedSearchSwitch = !advancedSearchSwitch;
+            }
+            if(advancedSearchSwitch) {
+                document.getElementById('advanced-condition-div').style.display = 'block';
+                button.innerText = '不使用高级搜索';
+            } else {
+                document.getElementById('advanced-condition-div').style.display = 'none';
+                button.innerText = '使用高级搜索';
+            }
+        }
+        function search() {
+            var hasError = false;
+            if(advancedSearchSwitch) {
+                var directory = getCheckedValue('directory');
+                if(directory !== 'true' && directory !== 'false' && directory !== '') {
+                    hasError = true;
+                    var msg = '类型字段' + (directory === null ? '没有选中值' : '选中了非法的值');
+                    updateMsg('directory-msg', msg, 'red');
+                } else {
+                    updateMsg('directory-msg', CHECK_PASSED, 'green');
+                }
+                if(dateAndTimeInputSupported) {
+                    var lastModifiedLowerDate = document.getElementById('lastModifiedLowerDate').value === null ? '' :
+                        document.getElementById('lastModifiedLowerDate').value.replace(/[.\/]/g,'-');
+                    var lastModifiedLowerTime = formatTimeInputTimeStr(document.getElementById('lastModifiedLowerTime'));
+                    if(lastModifiedLowerDate !== '' || lastModifiedLowerTime !== '') {
+                        if(lastModifiedLowerDate === '') {
+                            hasError = true;
+                            updateMsg('last-modified-lower-msg', '请输入日期', 'red');
+                        } else if(lastModifiedLowerTime === '') {
+                            hasError = true;
+                            updateMsg('last-modified-lower-msg', '请输入时间', 'red');
+                        } else {
+                            document.getElementById('lastModifiedLower').value = lastModifiedLowerDate + ' ' + lastModifiedLowerTime;
+                            updateMsg('last-modified-lower-msg', CHECK_PASSED, 'green');
+                        }
+                    } else {
+                        document.getElementById('lastModifiedLower').disabled = true;
+                    }
+                } else {
+                    var lastModifiedLower = document.getElementById('lastModifiedLower');
+                    if(lastModifiedLower.value === '') {
+                        lastModifiedLower.disabled = 'disabled';
+                    } else {
+                        var isValid = isValidDateTime(lastModifiedLower.value);
+                        if(isValid) {
+                            updateMsg('last-modified-lower-msg', CHECK_PASSED, 'green');
+                        } else {
+                            hasError = true;
+                            updateMsg('last-modified-lower-msg', '日期时间格式错误', 'green');
+                        }
+                    }
+                }
+            }
+            if(!hasError) {
+                if(!advancedSearchSwitch) {
+                    var ascChildren = document.getElementById('advanced-condition-div').children;
+                    for(var i=0;i<ascChildren.length;i++) {
+                        ascChildren[i].disabled = 'disabled';
+                    }
+                }
+                document.getElementById('search-form').submit();
+            }
+        }
+        function setDateTime(id,msgId) {
+            var targetInput = document.getElementById(id);
+            if(!targetInput) {
+                updateMsg('dateTimeCheckHint', "指定的input元素id无效", 'red');
+                return;
+            }
+            var sourceInput = document.getElementById('dateTimeInput');
+            if(!sourceInput) {
+                updateMsg('dateTimeCheckHint', "无法获取输入值", 'red');
+                return;
+            }
+            var isValid = isValidDateTime(sourceInput.value, 'yyyy-MM-dd');
+            var isDate = isValid;
+            if(!isValid) {
+                isValid = isValidDateTime(sourceInput.value, 'yyyy-MM-dd HH:mm:ss');
+            }
+            if(!isValid) {
+                updateMsg('dateTimeCheckHint', "日期时间格式错误", 'red');
+                return;
+            }
+            if(isDate) {
+                var newValue = sourceInput.value + ' 00:00:00';
+                targetInput.value = newValue;
+                sourceInput.value = newValue;
+            } else {
+                targetInput.value = sourceInput.value;
+            }
+            updateMsg('dateTimeCheckHint', CHECK_PASSED, 'green');
+            updateMsg(msgId, CHECK_PASSED, 'green');
+            hideDateTimeDialog();
+        }
+        function showDateTimeDialog(id, msgId, format) {
+            document.getElementById('dateTimeCheckHint').style.display = 'none';
+            document.getElementById('dateTimeConfirmButton').onclick = function () {
+                setDateTime(id, msgId);
+            };
+            var input = document.getElementById(id);
+            if(input && input.tagName.toLowerCase() === 'input') {
+                var value = input.value;
+                if(value !== '') {
+                    document.getElementById('dateTimeInput').value = value;
+                }
+            }
+            showDialog('dateTimeDialogDiv');
+        }
+        function hideDateTimeDialog() {
+            hideDialog('dateTimeDialogDiv');
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript" th:if="${pageObject != null}">
         var ftsPageSize = Number(document.getElementById("page-size").value);
         var sortColumn = [[${sortColumn}]];
         var sortOrder = [[${sortOrder}]];
