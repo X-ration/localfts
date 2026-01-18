@@ -58,13 +58,17 @@
             <br>
             修改时间不早于：
             <input type="text" id="lastModifiedLower" name="lastModifiedLower" readonly="readonly" style="display: none; width: 10em">
-            <button class="imgButton" type="button" id="lastModifiedLowerButton" onclick="showDateTimeDialog('lastModifiedLower', 'last-modified-lower-msg')" style="display: none"><img></button>
+            <button class="imgButton" type="button" id="lastModifiedLowerButton" onclick="showDateTimeDialog('lastModifiedLower')" style="display: none"><img alt="输入"></button>
             <input type="date" id="lastModifiedLowerDate">
             <input type="time" id="lastModifiedLowerTime" step="1">
-            <span class="inline" style="color:red; display:none" id="last-modified-lower-msg"></span>
+            <span class="inline" style="color:red; display:none" id="lastModifiedLowerMsg"></span>
             <br>
             修改时间不晚于：
-            <input type="text" id="lastModifiedUpper" name="lastModifiedUpper" readonly="readonly" style="display: none">
+            <input type="text" id="lastModifiedUpper" name="lastModifiedUpper" readonly="readonly" style="display: none; width: 10em">
+            <button class="imgButton" type="button" id="lastModifiedUpperButton" onclick="showDateTimeDialog('lastModifiedUpper')" style="display: none"><img alt="输入"></button>
+            <input type="date" id="lastModifiedUpperDate">
+            <input type="time" id="lastModifiedUpperTime" step="1">
+            <span class="inline" style="color:red; display:none" id="lastModifiedUpperMsg"></span>
             <br>
             文件大小不低于：
             <input type="text" id="fileSizeLowerInput" name="fileSizeLower" style="display:none">
@@ -93,8 +97,20 @@
             <input type="text" name="folderCompressStatus">
             <input type="text" name="compressedFileSizeLower">
             <input type="text" name="compressedFileSizeUpper">
-            <input type="text" name="compressedFileLastModifiedLower">
-            <input type="text" name="compressedFileLastModifiedUpper">
+            <br>
+            压缩文件修改时间不晚于：
+            <input type="text" id="compressedFileLastModifiedLower" name="compressedFileLastModifiedLower" readonly="readonly" style="display: none; width: 10em">
+            <button class="imgButton" type="button" id="compressedFileLastModifiedLowerButton" onclick="showDateTimeDialog('compressedFileLastModifiedLower')" style="display: none"><img alt="输入"></button>
+            <input type="date" id="compressedFileLastModifiedLowerDate">
+            <input type="time" id="compressedFileLastModifiedLowerTime" step="1">
+            <span class="inline" style="color:red; display:none" id="compressedFileLastModifiedLowerMsg"></span>
+            <br>
+            压缩文件修改时间不晚于：
+            <input type="text" id="compressedFileLastModifiedUpper" name="compressedFileLastModifiedUpper" readonly="readonly" style="display: none; width: 10em">
+            <button class="imgButton" type="button" id="compressedFileLastModifiedUpperButton" onclick="showDateTimeDialog('compressedFileLastModifiedUpper')" style="display: none"><img alt="输入"></button>
+            <input type="date" id="compressedFileLastModifiedUpperDate">
+            <input type="time" id="compressedFileLastModifiedUpperTime" step="1">
+            <span class="inline" style="color:red; display:none" id="compressedFileLastModifiedUpperMsg"></span>
         </div>
     </form>
     <div id="result-div" th:if="${pageObject != null}">
@@ -200,6 +216,9 @@
             <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
             <input type="hidden" name="directory" th:if="${advancedSearchCondition != null && advancedSearchCondition.directory != null}" th:value="${advancedSearchCondition.directory}">
             <input type="hidden" name="lastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedLower != null}" th:value="${advancedSearchCondition.lastModifiedLower}">
+            <input type="hidden" name="lastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedUpper != null}" th:value="${advancedSearchCondition.lastModifiedUpper}">
+            <input type="hidden" name="compressedFileLastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedLower != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedLower}">
+            <input type="hidden" name="compressedFileLastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedUpper != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedUpper}">
             <label for="page-no">页数:</label>
             <input type="text" size="2" id="page-no" name="pageNo" th:value="${pageObject.currentPage}">
             <label for="page-size-select">每页数量:</label>
@@ -221,12 +240,18 @@
         var advancedSearchCondition = [[${advancedSearchCondition}]];
         var keyword = [[${keyword}]];
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
+        var dateTimeInputIds = ['lastModifiedLower', 'lastModifiedUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
         if(!dateAndTimeInputSupported) {
             //日期时间input不支持的情况下移除相关元素并启用对话框式输入
-            removeElementById('lastModifiedLowerDate', 'advanced-condition-div');
-            removeElementById('lastModifiedLowerTime', 'advanced-condition-div');
-            document.getElementById('lastModifiedLower').style.display = '';
-            document.getElementById('lastModifiedLowerButton').style.display = '';
+            for(var i=0;i<dateTimeInputIds.length;i++) {
+                var inputId = dateTimeInputIds[i];
+                var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
+                    buttonId = inputId + 'Button';
+                removeElementById(dateInputId, 'advanced-condition-div');
+                removeElementById(timeInputId, 'advanced-condition-div');
+                document.getElementById(inputId).style.display = '';
+                document.getElementById(buttonId).style.display = '';
+            }
         }
         var advancedSearchSwitch = advancedSearchCondition === null ? false : !advancedSearchCondition.empty;
         if(keyword && keyword.trim() !== '' && advancedSearchSwitch) {
@@ -241,15 +266,19 @@
                     }
                 }
             }
-            if(advancedSearchCondition.lastModifiedLower !== null) {
-                var lastModifiedLowerDateObject = new Date(advancedSearchCondition.lastModifiedLower.replace(/-/g, '/'));
-                var formattedDateStr = formatDateDateStr(lastModifiedLowerDateObject);
-                var formattedTimeStr = formatDateTimeStr(lastModifiedLowerDateObject);
-                if(dateAndTimeInputSupported) {
-                    document.getElementById('lastModifiedLowerDate').value = formattedDateStr;
-                    document.getElementById('lastModifiedLowerTime').value = formattedTimeStr;
-                } else {
-                    document.getElementById('lastModifiedLower').value = formattedDateStr + ' ' + formattedTimeStr;
+            for(var i=0;i<dateTimeInputIds.length;i++) {
+                var inputId = dateTimeInputIds[i];
+                if(advancedSearchCondition[inputId] !== null) {
+                    var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time';
+                    var dateObject = new Date(advancedSearchCondition[inputId].replace(/-/g, '/'));
+                    var formattedDateStr = formatDateDateStr(dateObject);
+                    var formattedTimeStr = formatDateTimeStr(dateObject);
+                    if(dateAndTimeInputSupported) {
+                        document.getElementById(dateInputId).value = formattedDateStr;
+                        document.getElementById(timeInputId).value = formattedTimeStr;
+                    } else {
+                        document.getElementById(inputId).value = formattedDateStr + ' ' + formattedTimeStr;
+                    }
                 }
             }
             switchAdvancedSearch(document.getElementById('switchAdvancedSearchButton'), true);
@@ -261,7 +290,12 @@
             keyboardIconSrc = keyboardIconSrc + '_png8';
         }
         keyboardIconSrc = keyboardIconSrc + '.png';
-        var keyboardButtonIds = ['lastModifiedLowerButton'];
+        var keyboardButtonIds = [];
+        for(var i=0;i<dateTimeInputIds.length;i++) {
+            var inputId = dateTimeInputIds[i];
+            var buttonId = inputId + 'Button';
+            keyboardButtonIds[keyboardButtonIds.length] = buttonId;
+        }
         for(var i=0;i<keyboardButtonIds.length;i++) {
             var keyboardButton = document.getElementById(keyboardButtonIds[i]);
             var keyboardButtonChildren = keyboardButton.children;
@@ -290,6 +324,7 @@
         function search() {
             var hasError = false;
             if(advancedSearchSwitch) {
+                //检查高级搜索参数
                 var directory = getCheckedValue('directory');
                 if(directory !== 'true' && directory !== 'false' && directory !== '') {
                     hasError = true;
@@ -299,34 +334,46 @@
                     updateMsg('directory-msg', CHECK_PASSED, 'green');
                 }
                 if(dateAndTimeInputSupported) {
-                    var lastModifiedLowerDate = document.getElementById('lastModifiedLowerDate').value === null ? '' :
-                        document.getElementById('lastModifiedLowerDate').value.replace(/[.\/]/g,'-');
-                    var lastModifiedLowerTime = formatTimeInputTimeStr(document.getElementById('lastModifiedLowerTime'));
-                    if(lastModifiedLowerDate !== '' || lastModifiedLowerTime !== '') {
-                        if(lastModifiedLowerDate === '') {
-                            hasError = true;
-                            updateMsg('last-modified-lower-msg', '请输入日期', 'red');
-                        } else if(lastModifiedLowerTime === '') {
-                            hasError = true;
-                            updateMsg('last-modified-lower-msg', '请输入时间', 'red');
+                    //由浏览器直接渲染日期时间组件的情况
+                    for(var i=0;i<dateTimeInputIds.length;i++) {
+                        var inputId = dateTimeInputIds[i];
+                        var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
+                            msgId = inputId + 'Msg';
+                        var dateInputValue = document.getElementById(dateInputId).value === null ? '' :
+                            document.getElementById(dateInputId).value.replace(/[.\/]/g,'-');
+                        var timeInputValue = formatTimeInputTimeStr(document.getElementById(timeInputId));
+                        if(dateInputValue !== '' || timeInputValue !== '') {
+                            if(dateInputValue === '') {
+                                hasError = true;
+                                updateMsg(msgId, '请输入日期', 'red');
+                            } else if(timeInputValue === '') {
+                                hasError = true;
+                                updateMsg(msgId, '请输入时间', 'red');
+                            } else {
+                                document.getElementById(inputId).value = dateInputValue + ' ' + timeInputValue;
+                                updateMsg(msgId, CHECK_PASSED, 'green');
+                            }
                         } else {
-                            document.getElementById('lastModifiedLower').value = lastModifiedLowerDate + ' ' + lastModifiedLowerTime;
-                            updateMsg('last-modified-lower-msg', CHECK_PASSED, 'green');
+                            document.getElementById(inputId).disabled = true;
                         }
-                    } else {
-                        document.getElementById('lastModifiedLower').disabled = true;
                     }
                 } else {
-                    var lastModifiedLower = document.getElementById('lastModifiedLower');
-                    if(lastModifiedLower.value === '') {
-                        lastModifiedLower.disabled = 'disabled';
-                    } else {
-                        var isValid = isValidDateTime(lastModifiedLower.value);
-                        if(isValid) {
-                            updateMsg('last-modified-lower-msg', CHECK_PASSED, 'green');
+                    //通过对话框手动输入日期时间的情况
+                    for(var i=0;i<dateTimeInputIds.length;i++) {
+                        var inputId = dateTimeInputIds[i];
+                        var msgId = inputId + 'Msg';
+                        var input = document.getElementById(inputId);
+                        var inputValue = input.value;
+                        if(inputValue === '') {
+                            input.disabled = 'disabled';
                         } else {
-                            hasError = true;
-                            updateMsg('last-modified-lower-msg', '日期时间格式错误', 'green');
+                            var isValid = isValidDateTime(inputValue);
+                            if(isValid) {
+                                updateMsg(msgId, CHECK_PASSED, 'green');
+                            } else {
+                                hasError = true;
+                                updateMsg(msgId, '日期时间格式错误', 'green');
+                            }
                         }
                     }
                 }
@@ -372,17 +419,15 @@
             updateMsg(msgId, CHECK_PASSED, 'green');
             hideDateTimeDialog();
         }
-        function showDateTimeDialog(id, msgId, format) {
+        function showDateTimeDialog(id, format) {
             document.getElementById('dateTimeCheckHint').style.display = 'none';
             document.getElementById('dateTimeConfirmButton').onclick = function () {
-                setDateTime(id, msgId);
+                setDateTime(id, id+'Msg');
             };
             var input = document.getElementById(id);
             if(input && input.tagName.toLowerCase() === 'input') {
                 var value = input.value;
-                if(value !== '') {
-                    document.getElementById('dateTimeInput').value = value;
-                }
+                document.getElementById('dateTimeInput').value = value;
             }
             showDialog('dateTimeDialogDiv');
         }

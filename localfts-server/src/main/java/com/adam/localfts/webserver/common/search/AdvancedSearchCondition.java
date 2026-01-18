@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.common.search;
 
+import com.adam.localfts.webserver.common.FunctionThrowsException;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.util.Util;
 import lombok.AccessLevel;
@@ -8,9 +9,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.util.StringUtils;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.function.Function;
 
 @Getter
 @Setter
@@ -42,55 +43,59 @@ public class AdvancedSearchCondition {
                 && compressedFileLastModifiedLower == null && compressedFileLastModifiedUpper == null;
     }
 
-    public void setLastModifiedLower(String lastModifiedLower) throws ParseException {
-        this.lastModifiedLower = StringUtils.isEmpty(lastModifiedLower) ? null : simpleDateFormat.parse(lastModifiedLower);
+    public void setLastModifiedLower(String lastModifiedLower) throws Exception{
+        this.lastModifiedLower = safeConvertFromString(lastModifiedLower, simpleDateFormat::parse);
     }
 
     public String getLastModifiedLower() {
-        return lastModifiedLower == null ? null : simpleDateFormat.format(lastModifiedLower);
+        return safeConvertToString(lastModifiedLower, simpleDateFormat::format);
     }
 
-    public void setLastModifiedUpper(String lastModifiedUpper) throws ParseException{
-        this.lastModifiedUpper = StringUtils.isEmpty(lastModifiedUpper) ? null : simpleDateFormat.parse(lastModifiedUpper);
+    public void setLastModifiedUpper(String lastModifiedUpper) throws Exception{
+        this.lastModifiedUpper = safeConvertFromString(lastModifiedUpper, simpleDateFormat::parse);
     }
 
     public String getLastModifiedUpper() {
-        return lastModifiedUpper == null ? null : simpleDateFormat.format(lastModifiedUpper);
+        return safeConvertToString(lastModifiedUpper, simpleDateFormat::format);
     }
 
-    public void setCompressedFileLastModifiedLower(String compressedFileLastModifiedLower) throws ParseException{
-        this.compressedFileLastModifiedLower = StringUtils.isEmpty(compressedFileLastModifiedLower) ? null : simpleDateFormat.parse(compressedFileLastModifiedLower);
+    public void setCompressedFileLastModifiedLower(String compressedFileLastModifiedLower) throws Exception{
+        this.compressedFileLastModifiedLower = safeConvertFromString(compressedFileLastModifiedLower, simpleDateFormat::parse);
     }
 
     public String getCompressedFileLastModifiedLower() {
-        return compressedFileLastModifiedLower == null ? null : simpleDateFormat.format(compressedFileLastModifiedLower);
+        return safeConvertToString(compressedFileLastModifiedLower, simpleDateFormat::format);
     }
 
-    public void setCompressedFileLastModifiedUpper(String compressedFileLastModifiedUpper) throws ParseException{
-        this.compressedFileLastModifiedUpper = StringUtils.isEmpty(compressedFileLastModifiedUpper) ? null : simpleDateFormat.parse(compressedFileLastModifiedUpper);
+    public void setCompressedFileLastModifiedUpper(String compressedFileLastModifiedUpper) throws Exception {
+        this.compressedFileLastModifiedUpper = safeConvertFromString(compressedFileLastModifiedUpper, simpleDateFormat::parse);
     }
 
     public String getCompressedFileLastModifiedUpper() {
-        return compressedFileLastModifiedUpper == null ? null : simpleDateFormat.format(compressedFileLastModifiedUpper);
+        return safeConvertToString(compressedFileLastModifiedUpper, simpleDateFormat::format);
     }
 
-    private String formatDate(Date date) {
-        return date == null ? null : simpleDateFormat.format(date);
+    private <T> String safeConvertToString(T value, Function<T, String> function) {
+        return value == null ? null : function.apply(value);
+    }
+
+    private <T> T safeConvertFromString(String str, FunctionThrowsException<String, T> function) throws Exception{
+        return StringUtils.isEmpty(str) ? null : function.apply(str);
     }
 
     @Override
     public String toString() {
         return "AdvancedSearchCondition{" +
                 "directory=" + directory +
-                ", lastModifiedLower=" + formatDate(lastModifiedLower) +
-                ", lastModifiedUpper=" + formatDate(lastModifiedUpper) +
+                ", lastModifiedLower=" + getLastModifiedLower() +
+                ", lastModifiedUpper=" + getLastModifiedUpper() +
                 ", fileSizeLower=" + fileSizeLower +
                 ", fileSizeUpper=" + fileSizeUpper +
                 ", folderCompressStatus=" + folderCompressStatus +
                 ", compressedFileSizeLower=" + compressedFileSizeLower +
                 ", compressedFileSizeUpper=" + compressedFileSizeUpper +
-                ", compressedFileLastModifiedLower=" + formatDate(compressedFileLastModifiedLower) +
-                ", compressedFileLastModifiedUpper=" + formatDate(compressedFileLastModifiedUpper) +
+                ", compressedFileLastModifiedLower=" + getCompressedFileLastModifiedLower() +
+                ", compressedFileLastModifiedUpper=" + getCompressedFileLastModifiedUpper() +
                 '}';
     }
 }
