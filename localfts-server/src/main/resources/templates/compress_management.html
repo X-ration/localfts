@@ -133,6 +133,7 @@
 <script th:src="${#request.contextPath} + '/static/xhr_mi.js'"></script>
 <script type="text/javascript" th:inline="javascript">
 var contextPath = [[${#request.contextPath}]];
+var ieVersion = getIEVersion();
 var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
 var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
 var URL_COMPRESS_MANAGEMENT = concatUrlForConstant(contextPath, '/compressManagement');
@@ -208,7 +209,7 @@ for(var i=0;i<sortLinks.length;i++) {
     eSortOrder = undefined;
   }
   if(imgSrc) {
-    if(isIE6()) {
+    if(ieVersion && ieVersion < 8) {
       imgSrc = imgSrc + '_png8';
     }
     imgSrc = imgSrc + '.png';

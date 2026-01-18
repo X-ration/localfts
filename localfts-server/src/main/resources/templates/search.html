@@ -57,8 +57,8 @@
             <span class="inline" style="color:red; display:none" id="directory-msg"></span>
             <br>
             修改时间不早于：
-            <input class="inline" type="text" id="lastModifiedLower" name="lastModifiedLower" readonly="readonly" style="display: none">
-            <button class="inline imgButton" type="button" id="lastModifiedLowerButton" onclick="showDateTimeDialog('lastModifiedLower', 'last-modified-lower-msg')" style="display: none"><img></button>
+            <input type="text" id="lastModifiedLower" name="lastModifiedLower" readonly="readonly" style="display: none; width: 10em">
+            <button class="imgButton" type="button" id="lastModifiedLowerButton" onclick="showDateTimeDialog('lastModifiedLower', 'last-modified-lower-msg')" style="display: none"><img></button>
             <input type="date" id="lastModifiedLowerDate">
             <input type="time" id="lastModifiedLowerTime" step="1">
             <span class="inline" style="color:red; display:none" id="last-modified-lower-msg"></span>
@@ -216,7 +216,8 @@
     <script th:src="${#request.contextPath} + '/static/dialog.js'"></script>
     <script type="text/javascript" th:inline="javascript">
         var contextPath = [[${#request.contextPath}]];
-        var CHECK_PASSED = '校验通过' + (isIE6() ? '√' : '✔');
+        var ieVersion = getIEVersion();
+        var CHECK_PASSED = '校验通过' + (ieVersion && ieVersion < 9 ? '√' : '✔');
         var advancedSearchCondition = [[${advancedSearchCondition}]];
         var keyword = [[${keyword}]];
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
@@ -241,13 +242,14 @@
                 }
             }
             if(advancedSearchCondition.lastModifiedLower !== null) {
-                var lastModifiedLowerDateObject = new Date(advancedSearchCondition.lastModifiedLower);
+                var lastModifiedLowerDateObject = new Date(advancedSearchCondition.lastModifiedLower.replace(/-/g, '/'));
+                var formattedDateStr = formatDateDateStr(lastModifiedLowerDateObject);
+                var formattedTimeStr = formatDateTimeStr(lastModifiedLowerDateObject);
                 if(dateAndTimeInputSupported) {
-                    document.getElementById('lastModifiedLowerDate').value = formatDateDateStr(lastModifiedLowerDateObject);
-                    document.getElementById('lastModifiedLowerTime').value = formatDateTimeStr(lastModifiedLowerDateObject);
+                    document.getElementById('lastModifiedLowerDate').value = formattedDateStr;
+                    document.getElementById('lastModifiedLowerTime').value = formattedTimeStr;
                 } else {
-                    document.getElementById('lastModifiedLower').value =
-                        formatDateDateStr(lastModifiedLowerDateObject) + ' ' + formatDateTimeStr(lastModifiedLowerDateObject);
+                    document.getElementById('lastModifiedLower').value = formattedDateStr + ' ' + formattedTimeStr;
                 }
             }
             switchAdvancedSearch(document.getElementById('switchAdvancedSearchButton'), true);
@@ -255,7 +257,7 @@
 
         //deal with date time keyboard buttons
         var keyboardIconSrc = contextPath + '/static/icon/keyboard_black_32px';
-        if(isIE6()) {
+        if(ieVersion && ieVersion < 8) {
             keyboardIconSrc = keyboardIconSrc + '_png8';
         }
         keyboardIconSrc = keyboardIconSrc + '.png';
@@ -468,7 +470,7 @@
                     eSortOrder = undefined;
                 }
                 if(imgSrc) {
-                    if(isIE6()) {
+                    if(ieVersion && ieVersion < 8) {
                         imgSrc = imgSrc + '_png8';
                     }
                     imgSrc = imgSrc + '.png';

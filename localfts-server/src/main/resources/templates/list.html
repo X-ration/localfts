@@ -185,6 +185,7 @@
     <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
         var contextPath = [[${#request.contextPath}]];
+        var ieVersion = getIEVersion();
         var ftsPagePath = [[${currentPath}]];
         var ftsPageSize = Number(document.getElementById("page-size").value);
         var sortColumn = [[${sortColumn}]];
@@ -293,7 +294,7 @@
                     eSortOrder = undefined;
                 }
                 if(imgSrc) {
-                    if(isIE6()) {
+                    if(ieVersion && ieVersion < 8) {
                         imgSrc = imgSrc + '_png8';
                     }
                     imgSrc = imgSrc + '.png';
