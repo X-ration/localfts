@@ -51,6 +51,45 @@ if (!Array.prototype.indexOf) {
     };
 }
 
+function selectOption(select,value,isValue) {
+    if(select === undefined || value === undefined) {
+        return;
+    }
+    if(isValue === undefined) {
+        isValue = true;
+    }
+    var options = select.children;
+    for(var i=0;i<options.length;i++) {
+        var option = options[i];
+        var shouldSelect = (isValue && option.value === value) || (!isValue && option.innerText === value);
+        if(shouldSelect) {
+            if(IE_VERSION && IE_VERSION < 7) {
+                option.setAttribute("selected", "selected");
+            } else {
+                option.selected = true;
+            }
+            break;
+        }
+    }
+}
+
+function getSelectedOptionValue(select,isValue) {
+    if(select === undefined) {
+        return;
+    }
+    if(isValue === undefined) {
+        isValue = true;
+    }
+    var options = select.children;
+    for(var i=0;i<options.length;i++) {
+        var option = options[i];
+        if(option.selected) {
+            return isValue ? option.value : option.innerText;
+        }
+    }
+    return null;
+}
+
 function getElementsByName(tagName, name) {
     if(document.getElementsByName) {
         return document.getElementsByName(name);
@@ -108,6 +147,8 @@ function isIE6() {
         return false;
     }
 }
+
+var IE_VERSION = getIEVersion();
 
 function getIEVersion() {
   var userAgent = navigator.userAgent.toLowerCase();

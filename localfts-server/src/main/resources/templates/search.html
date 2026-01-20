@@ -71,8 +71,8 @@
             <span class="inline" style="color:red; display:none" id="lastModifiedUpperMsg"></span>
             <br>
             文件大小不低于：
-            <input type="text" id="fileSizeLowerInput" name="fileSizeLower" style="display:none">
-            <input type="text" id="fileSizeLowerLeftInput" style="width: 80px">
+            <input type="text" id="fileSizeLower" name="fileSizeLower" style="display:none">
+            <input type="text" id="fileSizeLowerNumber" style="width: 80px">
             <select id="fileSizeLowerSelect">
                 <option>B</option>
                 <option>KB</option>
@@ -80,11 +80,11 @@
                 <option>GB</option>
                 <option>TB</option>
             </select>
-            <span class="inline" style="color:red; display:none" id="file-size-lower-msg"></span>
+            <span class="inline" style="color:red; display:none" id="fileSizeLowerMsg"></span>
             <br>
             文件大小不高于：
-            <input type="text" id="fileSizeUpperInput" name="fileSizeUpper" style="display:none">
-            <input type="text" id="fileSizeUpperLeftInput" style="width:80px">
+            <input type="text" id="fileSizeUpper" name="fileSizeUpper" style="display:none">
+            <input type="text" id="fileSizeUpperNumber" style="width:80px">
             <select id="fileSizeUpperSelect">
                 <option>B</option>
                 <option>KB</option>
@@ -92,11 +92,40 @@
                 <option>GB</option>
                 <option>TB</option>
             </select>
-            <span class="inline" style="color:red; display:none" id="file-size-upper-msg"></span>
+            <span class="inline" style="color:red; display:none" id="fileSizeUpperMsg"></span>
             <br>
-            <input type="text" name="folderCompressStatus">
-            <input type="text" name="compressedFileSizeLower">
-            <input type="text" name="compressedFileSizeUpper">
+<!--            <input type="text" name="folderCompressStatus">-->
+            文件夹压缩状态：
+            <select id="folderCompressStatusSelect" name="folderCompressStatus">
+                <option value="">未选择</option>
+                <option value="NOT_COMPRESSED">未压缩</option>
+                <option value="COMPRESSING">压缩中</option>
+                <option value="COMPRESSED">已压缩</option>
+            </select>
+            <br>
+            压缩文件大小不低于：
+            <input type="text" id="compressedFileSizeLower" name="compressedFileSizeLower" style="display:none">
+            <input type="text" id="compressedFileSizeLowerNumber" style="width:80px">
+            <select id="compressedFileSizeLowerSelect">
+                <option>B</option>
+                <option>KB</option>
+                <option>MB</option>
+                <option>GB</option>
+                <option>TB</option>
+            </select>
+            <span class="inline" style="color:red; display:none" id="compressedFileSizeLowerMsg"></span>
+            <br>
+            压缩文件大小不高于：
+            <input type="text" id="compressedFileSizeUpper" name="compressedFileSizeUpper" style="display:none">
+            <input type="text" id="compressedFileSizeUpperNumber" style="width:80px">
+            <select id="compressedFileSizeUpperSelect">
+                <option>B</option>
+                <option>KB</option>
+                <option>MB</option>
+                <option>GB</option>
+                <option>TB</option>
+            </select>
+            <span class="inline" style="color:red; display:none" id="compressedFileSizeUpperMsg"></span>
             <br>
             压缩文件修改时间不晚于：
             <input type="text" id="compressedFileLastModifiedLower" name="compressedFileLastModifiedLower" readonly="readonly" style="display: none; width: 10em">
@@ -215,8 +244,13 @@
             <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
             <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
             <input type="hidden" name="directory" th:if="${advancedSearchCondition != null && advancedSearchCondition.directory != null}" th:value="${advancedSearchCondition.directory}">
+            <input type="hidden" name="fileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeLowerStr != null}" th:value="${advancedSearchCondition.fileSizeLowerStr}">
+            <input type="hidden" name="fileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeUpperStr != null}" th:value="${advancedSearchCondition.fileSizeUpperStr}">
             <input type="hidden" name="lastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedLower != null}" th:value="${advancedSearchCondition.lastModifiedLower}">
             <input type="hidden" name="lastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedUpper != null}" th:value="${advancedSearchCondition.lastModifiedUpper}">
+            <input type="hidden" name="folderCompressStatus" th:if="${advancedSearchCondition != null && advancedSearchCondition.folderCompressStatus != null}" th:value="${advancedSearchCondition.folderCompressStatus.name()}">
+            <input type="hidden" name="compressedFileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeLowerStr != null}" th:value="${advancedSearchCondition.compressedFileSizeLowerStr}">
+            <input type="hidden" name="compressedFileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeUpperStr != null}" th:value="${advancedSearchCondition.compressedFileSizeUpperStr}">
             <input type="hidden" name="compressedFileLastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedLower != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedLower}">
             <input type="hidden" name="compressedFileLastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedUpper != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedUpper}">
             <label for="page-no">页数:</label>
@@ -240,9 +274,21 @@
         var advancedSearchCondition = [[${advancedSearchCondition}]];
         var keyword = [[${keyword}]];
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
+
         var dateTimeInputIds = ['lastModifiedLower', 'lastModifiedUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
-        if(!dateAndTimeInputSupported) {
-            //日期时间input不支持的情况下移除相关元素并启用对话框式输入
+        var keyboardButtonIds = [];
+        for(var i=0;i<dateTimeInputIds.length;i++) {
+            var inputId = dateTimeInputIds[i];
+            var buttonId = inputId + 'Button';
+            keyboardButtonIds[keyboardButtonIds.length] = buttonId;
+        }
+        if(dateAndTimeInputSupported) {
+            //日期时间input支持的情况下移除相关按钮
+            for(var i=0;i<keyboardButtonIds.length;i++) {
+                removeElementById(keyboardButtonIds[i], 'advanced-condition-div');
+            }
+        } else {
+            //日期时间input不支持的情况下移除元素并启用对话框式输入
             for(var i=0;i<dateTimeInputIds.length;i++) {
                 var inputId = dateTimeInputIds[i];
                 var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
@@ -252,7 +298,27 @@
                 document.getElementById(inputId).style.display = '';
                 document.getElementById(buttonId).style.display = '';
             }
+            var keyboardIconSrc = contextPath + '/static/icon/keyboard_black_32px';
+            if(ieVersion && ieVersion < 8) {
+                keyboardIconSrc = keyboardIconSrc + '_png8';
+            }
+            keyboardIconSrc = keyboardIconSrc + '.png';
+            for(var i=0;i<keyboardButtonIds.length;i++) {
+                var keyboardButton = document.getElementById(keyboardButtonIds[i]);
+                var keyboardButtonChildren = keyboardButton.children;
+                if(keyboardButtonChildren && keyboardButtonChildren.length > 0) {
+                    var firstChild = keyboardButtonChildren[0];
+                    if(firstChild.tagName.toLowerCase() === 'img') {
+                        firstChild.setAttribute('src', keyboardIconSrc);
+                    }
+                }
+            }
         }
+
+        var fileSizeInputIds = ['fileSizeLower', 'fileSizeUpper', 'compressedFileSizeLower', 'compressedFileSizeUpper'];
+        var fileSizeRegex = /^(\d+)([KMGT]?B)$/;
+        var fileSizeNumberRegex = /^\d+$/;
+
         var advancedSearchSwitch = advancedSearchCondition === null ? false : !advancedSearchCondition.empty;
         if(keyword && keyword.trim() !== '' && advancedSearchSwitch) {
             //初始化高级搜索条件的选中状态和值等
@@ -281,36 +347,37 @@
                     }
                 }
             }
-            switchAdvancedSearch(document.getElementById('switchAdvancedSearchButton'), true);
-        }
-
-        //deal with date time keyboard buttons
-        var keyboardButtonIds = [];
-        for(var i=0;i<dateTimeInputIds.length;i++) {
-            var inputId = dateTimeInputIds[i];
-            var buttonId = inputId + 'Button';
-            keyboardButtonIds[keyboardButtonIds.length] = buttonId;
-        }
-        if(dateAndTimeInputSupported) {
-            for(var i=0;i<keyboardButtonIds.length;i++) {
-                removeElementById(keyboardButtonIds[i], 'advanced-condition-div');
-            }
-        } else {
-            var keyboardIconSrc = contextPath + '/static/icon/keyboard_black_32px';
-            if(ieVersion && ieVersion < 8) {
-                keyboardIconSrc = keyboardIconSrc + '_png8';
-            }
-            keyboardIconSrc = keyboardIconSrc + '.png';
-            for(var i=0;i<keyboardButtonIds.length;i++) {
-                var keyboardButton = document.getElementById(keyboardButtonIds[i]);
-                var keyboardButtonChildren = keyboardButton.children;
-                if(keyboardButtonChildren && keyboardButtonChildren.length > 0) {
-                    var firstChild = keyboardButtonChildren[0];
-                    if(firstChild.tagName.toLowerCase() === 'img') {
-                        firstChild.setAttribute('src', keyboardIconSrc);
+            for(var i=0;i<fileSizeInputIds.length;i++) {
+                var inputId = fileSizeInputIds[i];
+                var attrName = inputId + 'Str';
+                var attrValue = advancedSearchCondition[attrName];
+                if(attrValue !== null) {
+                    var matchResult = attrValue.match(fileSizeRegex);
+                    if(!matchResult) {
+                        if(window.console) {
+                            console.log('高级搜索条件key=', attrName, ',value=', attrValue, '不满足规则！');
+                        }
+                        continue;
+                    } else {
+                        var number = Number(matchResult[1]);
+                        var unit = matchResult[2];
+                        var inputs = getElementsByName('input', inputId);
+                        for(var j=0;j<inputs.length;j++) {
+                            var input = inputs[j];
+                            input.value = attrValue;
+                        }
+                        var numberInputId = inputId + 'Number',
+                            selectId = inputId + 'Select';
+                        document.getElementById(numberInputId).value = number;
+                        selectOption(document.getElementById(selectId),unit,false);
                     }
                 }
             }
+            if(advancedSearchCondition.folderCompressStatus !== null) {
+                var select = document.getElementById('folderCompressStatusSelect');
+                selectOption(select,advancedSearchCondition.folderCompressStatus);
+            }
+            switchAdvancedSearch(document.getElementById('switchAdvancedSearchButton'), true);
         }
 
         function switchAdvancedSearch(button,showAdvancedSearch) {
@@ -378,8 +445,38 @@
                                 updateMsg(msgId, CHECK_PASSED, 'green');
                             } else {
                                 hasError = true;
-                                updateMsg(msgId, '日期时间格式错误', 'green');
+                                updateMsg(msgId, '日期时间格式错误', 'red');
                             }
+                        }
+                    }
+                }
+                var fileSizeValidUnits = ['B','KB','MB','GB','TB'];
+                for(var i=0;i<fileSizeInputIds.length;i++) {
+                    var inputId = fileSizeInputIds[i];
+                    var numberInputId = inputId + 'Number',
+                        selectId = inputId + 'Select',
+                        msgId = inputId + 'Msg';
+                    var input = document.getElementById(inputId),
+                        numberInput = document.getElementById(numberInputId),
+                        select = document.getElementById(selectId);
+                    if(numberInput.value === '') {
+                        input.disabled = 'disabled';
+                    } else {
+                        var number = Number(numberInput.value);
+                        var unit = getSelectedOptionValue(select,false);
+                        var numberMatchResult = numberInput.value.match(fileSizeNumberRegex);
+                        if(!numberMatchResult) {
+                            hasError = true;
+                            updateMsg(msgId, '文件大小数值格式错误', 'red');
+                        } else if(unit === null) {
+                            hasError = true;
+                            updateMsg(msgId, '文件大小单位未选择', 'red');
+                        } else if(fileSizeValidUnits.indexOf(unit) === -1) {
+                            hasError = true;
+                            updateMsg(msgId, '非法的文件大小单位', 'red');
+                        } else {
+                            input.value = number + unit;
+                            updateMsg(msgId, CHECK_PASSED, 'green');
                         }
                     }
                 }

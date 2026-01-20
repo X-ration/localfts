@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.util.StringUtils;
+import org.springframework.util.unit.DataSize;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -24,12 +25,16 @@ public class AdvancedSearchCondition {
     /**
      * 只对文件生效
      */
+    @Getter(AccessLevel.NONE)
     private Long fileSizeLower, fileSizeUpper;
+    private String fileSizeLowerStr, fileSizeUpperStr;
     /**
      * 只对文件夹生效
      */
     private FolderCompressStatus folderCompressStatus;
+    @Getter(AccessLevel.NONE)
     private Long compressedFileSizeLower, compressedFileSizeUpper;
+    private String compressedFileSizeLowerStr, compressedFileSizeUpperStr;
     @Getter(AccessLevel.NONE)
     private Date compressedFileLastModifiedLower,compressedFileLastModifiedUpper;
 
@@ -43,44 +48,72 @@ public class AdvancedSearchCondition {
                 && compressedFileLastModifiedLower == null && compressedFileLastModifiedUpper == null;
     }
 
+    public void setFileSizeLower(String fileSizeLower) {
+        this.fileSizeLowerStr = safeConvertToStringNoEX(fileSizeLower, String::toString);
+        this.fileSizeLower = safeConvertFromStringNoEX(fileSizeLower, this::parseDataSizeStrToBytes);
+    }
+
+    public void setFileSizeUpper(String fileSizeUpper) {
+        this.fileSizeUpperStr = safeConvertToStringNoEX(fileSizeUpper, String::toString);
+        this.fileSizeUpper = safeConvertFromStringNoEX(fileSizeUpper, this::parseDataSizeStrToBytes);
+    }
+
+    public void setCompressedFileSizeLower(String compressedFileSizeLower) {
+        this.compressedFileSizeLowerStr = safeConvertToStringNoEX(compressedFileSizeLower, String::toString);
+        this.compressedFileSizeLower = safeConvertFromStringNoEX(compressedFileSizeLower, this::parseDataSizeStrToBytes);
+    }
+
+    public void setCompressedFileSizeUpper(String compressedFileSizeUpper) {
+        this.compressedFileSizeUpperStr = safeConvertToStringNoEX(compressedFileSizeUpper, String::toString);
+        this.compressedFileSizeUpper = safeConvertFromStringNoEX(compressedFileSizeUpper, this::parseDataSizeStrToBytes);
+    }
+
     public void setLastModifiedLower(String lastModifiedLower) throws Exception{
-        this.lastModifiedLower = safeConvertFromString(lastModifiedLower, simpleDateFormat::parse);
+        this.lastModifiedLower = safeConvertFromStringEX(lastModifiedLower, simpleDateFormat::parse);
     }
 
     public String getLastModifiedLower() {
-        return safeConvertToString(lastModifiedLower, simpleDateFormat::format);
+        return safeConvertToStringNoEX(lastModifiedLower, simpleDateFormat::format);
     }
 
     public void setLastModifiedUpper(String lastModifiedUpper) throws Exception{
-        this.lastModifiedUpper = safeConvertFromString(lastModifiedUpper, simpleDateFormat::parse);
+        this.lastModifiedUpper = safeConvertFromStringEX(lastModifiedUpper, simpleDateFormat::parse);
     }
 
     public String getLastModifiedUpper() {
-        return safeConvertToString(lastModifiedUpper, simpleDateFormat::format);
+        return safeConvertToStringNoEX(lastModifiedUpper, simpleDateFormat::format);
     }
 
     public void setCompressedFileLastModifiedLower(String compressedFileLastModifiedLower) throws Exception{
-        this.compressedFileLastModifiedLower = safeConvertFromString(compressedFileLastModifiedLower, simpleDateFormat::parse);
+        this.compressedFileLastModifiedLower = safeConvertFromStringEX(compressedFileLastModifiedLower, simpleDateFormat::parse);
     }
 
     public String getCompressedFileLastModifiedLower() {
-        return safeConvertToString(compressedFileLastModifiedLower, simpleDateFormat::format);
+        return safeConvertToStringNoEX(compressedFileLastModifiedLower, simpleDateFormat::format);
     }
 
     public void setCompressedFileLastModifiedUpper(String compressedFileLastModifiedUpper) throws Exception {
-        this.compressedFileLastModifiedUpper = safeConvertFromString(compressedFileLastModifiedUpper, simpleDateFormat::parse);
+        this.compressedFileLastModifiedUpper = safeConvertFromStringEX(compressedFileLastModifiedUpper, simpleDateFormat::parse);
     }
 
     public String getCompressedFileLastModifiedUpper() {
-        return safeConvertToString(compressedFileLastModifiedUpper, simpleDateFormat::format);
+        return safeConvertToStringNoEX(compressedFileLastModifiedUpper, simpleDateFormat::format);
     }
 
-    private <T> String safeConvertToString(T value, Function<T, String> function) {
+    private <T> String safeConvertToStringNoEX(T value, Function<T, String> function) {
         return value == null ? null : function.apply(value);
     }
 
-    private <T> T safeConvertFromString(String str, FunctionThrowsException<String, T> function) throws Exception{
+    private <T> T safeConvertFromStringEX(String str, FunctionThrowsException<String, T> function) throws Exception{
         return StringUtils.isEmpty(str) ? null : function.apply(str);
+    }
+
+    private <T> T safeConvertFromStringNoEX(String str, Function<String, T> function) {
+        return StringUtils.isEmpty(str) ? null : function.apply(str);
+    }
+
+    private Long parseDataSizeStrToBytes(String str) {
+        return DataSize.parse(str).toBytes();
     }
 
     @Override
@@ -89,11 +122,11 @@ public class AdvancedSearchCondition {
                 "directory=" + directory +
                 ", lastModifiedLower=" + getLastModifiedLower() +
                 ", lastModifiedUpper=" + getLastModifiedUpper() +
-                ", fileSizeLower=" + fileSizeLower +
-                ", fileSizeUpper=" + fileSizeUpper +
+                ", fileSizeLower=" + fileSizeLowerStr +
+                ", fileSizeUpper=" + fileSizeUpperStr +
                 ", folderCompressStatus=" + folderCompressStatus +
-                ", compressedFileSizeLower=" + compressedFileSizeLower +
-                ", compressedFileSizeUpper=" + compressedFileSizeUpper +
+                ", compressedFileSizeLower=" + compressedFileSizeLowerStr +
+                ", compressedFileSizeUpper=" + compressedFileSizeUpperStr +
                 ", compressedFileLastModifiedLower=" + getCompressedFileLastModifiedLower() +
                 ", compressedFileLastModifiedUpper=" + getCompressedFileLastModifiedUpper() +
                 '}';
