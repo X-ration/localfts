@@ -285,24 +285,30 @@
         }
 
         //deal with date time keyboard buttons
-        var keyboardIconSrc = contextPath + '/static/icon/keyboard_black_32px';
-        if(ieVersion && ieVersion < 8) {
-            keyboardIconSrc = keyboardIconSrc + '_png8';
-        }
-        keyboardIconSrc = keyboardIconSrc + '.png';
         var keyboardButtonIds = [];
         for(var i=0;i<dateTimeInputIds.length;i++) {
             var inputId = dateTimeInputIds[i];
             var buttonId = inputId + 'Button';
             keyboardButtonIds[keyboardButtonIds.length] = buttonId;
         }
-        for(var i=0;i<keyboardButtonIds.length;i++) {
-            var keyboardButton = document.getElementById(keyboardButtonIds[i]);
-            var keyboardButtonChildren = keyboardButton.children;
-            if(keyboardButtonChildren && keyboardButtonChildren.length > 0) {
-                var firstChild = keyboardButtonChildren[0];
-                if(firstChild.tagName.toLowerCase() === 'img') {
-                    firstChild.setAttribute('src', keyboardIconSrc);
+        if(dateAndTimeInputSupported) {
+            for(var i=0;i<keyboardButtonIds.length;i++) {
+                removeElementById(keyboardButtonIds[i], 'advanced-condition-div');
+            }
+        } else {
+            var keyboardIconSrc = contextPath + '/static/icon/keyboard_black_32px';
+            if(ieVersion && ieVersion < 8) {
+                keyboardIconSrc = keyboardIconSrc + '_png8';
+            }
+            keyboardIconSrc = keyboardIconSrc + '.png';
+            for(var i=0;i<keyboardButtonIds.length;i++) {
+                var keyboardButton = document.getElementById(keyboardButtonIds[i]);
+                var keyboardButtonChildren = keyboardButton.children;
+                if(keyboardButtonChildren && keyboardButtonChildren.length > 0) {
+                    var firstChild = keyboardButtonChildren[0];
+                    if(firstChild.tagName.toLowerCase() === 'img') {
+                        firstChild.setAttribute('src', keyboardIconSrc);
+                    }
                 }
             }
         }
