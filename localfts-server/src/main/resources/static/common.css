@@ -49,6 +49,15 @@ button.imgButton {
     border: 0 none;
     outline: none;
     background: transparent;
+    padding: 0;
+    margin: 0;
+    width: auto;
+    height: 2em;
+}
+img.buttonImg {
+    vertical-align: middle;
+    width: auto;
+    height: 2em;
 }
 .filled{
     width:100%; height:100%;
