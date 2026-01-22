@@ -255,7 +255,7 @@
         <a id="next-page">下一页</a>
         <a id="last-page">尾页</a>
 
-        <form th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
+        <form id="pageForm" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
             <input type="hidden" name="keyword" th:value="${keyword}">
             <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${pageObject.pageSize}">
             <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
@@ -279,7 +279,7 @@
                 <option value="20">20</option>
                 <option value="50">50</option>
             </select>
-            <input type="submit" value="跳转">
+            <button type="button" onclick="pageJump()">跳转</button>
         </form>
     </div>
     <script th:src="${#request.contextPath} + '/static/common.js'"></script>
@@ -297,6 +297,7 @@
         var fileSizeInputIds = ['fileSizeLower', 'fileSizeUpper', 'compressedFileSizeLower', 'compressedFileSizeUpper'];
         var fileGroupInputIds = ['fileSizeLower', 'fileSizeUpper'];
         var directoryGroupInputIds = ['folderCompressStatusSelect', 'compressedFileSizeLower', 'compressedFileSizeUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
+        var pageJumpKeyParams = ['keyword','pageNo','pageSize','page-size','sortColumn','sortOrder'];
         var fileAndDirectoryGroupInputIds = [];
         var keyboardButtonIds = [];
         var fileSizeRegex = /^(\d+)([KMGT]?B)$/;
@@ -647,6 +648,24 @@
         }
         function hideDateTimeDialog() {
             hideDialog('dateTimeDialogDiv');
+        }
+        function pageJump() {
+            var form = document.getElementById('pageForm');
+            if(!advancedSearchSwitch) {
+                var formChildren = form.children;
+                for(var i=0;i<formChildren.length;i++) {
+                    var formChild = formChildren[i];
+                    var formChildTagName = formChild.tagName.toLowerCase();
+                    if(formChildTagName === 'input' || formChildTagName === 'select') {
+                        var formChildName = formChild.getAttribute('name');
+                        if(pageJumpKeyParams.indexOf(formChildName) === -1) {
+                            formChild.disabled = 'disabled';
+                            alert('Disabled:' + formChildName);
+                        }
+                    }
+                }
+            }
+            form.submit();
         }
     </script>
     <script type="text/javascript" th:inline="javascript" th:if="${pageObject != null}">
