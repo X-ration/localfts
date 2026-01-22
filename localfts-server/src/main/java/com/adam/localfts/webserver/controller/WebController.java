@@ -73,7 +73,7 @@ public class WebController {
         if(pageSize <= 0) {
             pageSize = 20;
         }
-        if(!zipEnabled && (sortColumn == ListTableColumn.COMPRESS_STATUS || sortColumn == ListTableColumn.COMPRESS_FILE_LAST_MODIFIED)) {
+        if(!zipEnabled && ListTableColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
             sortColumn = null;
         }
         if(sortColumn != null && sortOrder == null) {
@@ -291,6 +291,7 @@ public class WebController {
         String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
         if(StringUtils.isEmpty(keyword)) {
+            LOGGER.debug("search with empty keyword");
             return "search";
         }
         LOGGER.debug("search keyword={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
@@ -305,7 +306,7 @@ public class WebController {
         if(pageSize <= 0) {
             pageSize = 20;
         }
-        if(!zipEnabled && (sortColumn == ListTableColumn.COMPRESS_STATUS || sortColumn == ListTableColumn.COMPRESS_FILE_LAST_MODIFIED)) {
+        if(!zipEnabled && ListTableColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
             sortColumn = null;
         }
         if(sortColumn != null && sortOrder == null) {
