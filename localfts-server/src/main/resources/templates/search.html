@@ -56,90 +56,107 @@
             <label for="directoryRadio3">不限类型</label>
             <span class="inline" style="color:red; display:none" id="directory-msg"></span>
             <br>
-            修改时间不早于：
-            <input type="text" id="lastModifiedLower" name="lastModifiedLower" readonly="readonly" style="display: none; width: 10em">
-            <button class="imgButton" type="button" id="lastModifiedLowerButton" onclick="showDateTimeDialog('lastModifiedLower')" style="display: none"><img class="buttonImg" alt="输入"></button>
-            <input type="date" id="lastModifiedLowerDate">
-            <input type="time" id="lastModifiedLowerTime" step="1">
-            <span class="inline" style="color:red; display:none" id="lastModifiedLowerMsg"></span>
-            <br>
-            修改时间不晚于：
-            <input type="text" id="lastModifiedUpper" name="lastModifiedUpper" readonly="readonly" style="display: none; width: 10em">
-            <button class="imgButton" type="button" id="lastModifiedUpperButton" onclick="showDateTimeDialog('lastModifiedUpper')" style="display: none"><img class="buttonImg" alt="输入"></button>
-            <input type="date" id="lastModifiedUpperDate">
-            <input type="time" id="lastModifiedUpperTime" step="1">
-            <span class="inline" style="color:red; display:none" id="lastModifiedUpperMsg"></span>
-            <br>
-            文件大小不低于：
-            <input type="text" id="fileSizeLower" name="fileSizeLower" style="display:none">
-            <input type="text" id="fileSizeLowerNumber" style="width: 80px">
-            <select id="fileSizeLowerSelect">
-                <option>B</option>
-                <option>KB</option>
-                <option>MB</option>
-                <option>GB</option>
-                <option>TB</option>
-            </select>
-            <span class="inline" style="color:red; display:none" id="fileSizeLowerMsg"></span>
-            <br>
-            文件大小不高于：
-            <input type="text" id="fileSizeUpper" name="fileSizeUpper" style="display:none">
-            <input type="text" id="fileSizeUpperNumber" style="width:80px">
-            <select id="fileSizeUpperSelect">
-                <option>B</option>
-                <option>KB</option>
-                <option>MB</option>
-                <option>GB</option>
-                <option>TB</option>
-            </select>
-            <span class="inline" style="color:red; display:none" id="fileSizeUpperMsg"></span>
-            <br>
-<!--            <input type="text" name="folderCompressStatus">-->
-            文件夹压缩状态：
-            <select id="folderCompressStatusSelect" name="folderCompressStatus">
-                <option value="">未选择</option>
-                <option value="NOT_COMPRESSED">未压缩</option>
-                <option value="COMPRESSING">压缩中</option>
-                <option value="COMPRESSED">已压缩</option>
-            </select>
-            <br>
-            压缩文件大小不低于：
-            <input type="text" id="compressedFileSizeLower" name="compressedFileSizeLower" style="display:none">
-            <input type="text" id="compressedFileSizeLowerNumber" style="width:80px">
-            <select id="compressedFileSizeLowerSelect">
-                <option>B</option>
-                <option>KB</option>
-                <option>MB</option>
-                <option>GB</option>
-                <option>TB</option>
-            </select>
-            <span class="inline" style="color:red; display:none" id="compressedFileSizeLowerMsg"></span>
-            <br>
-            压缩文件大小不高于：
-            <input type="text" id="compressedFileSizeUpper" name="compressedFileSizeUpper" style="display:none">
-            <input type="text" id="compressedFileSizeUpperNumber" style="width:80px">
-            <select id="compressedFileSizeUpperSelect">
-                <option>B</option>
-                <option>KB</option>
-                <option>MB</option>
-                <option>GB</option>
-                <option>TB</option>
-            </select>
-            <span class="inline" style="color:red; display:none" id="compressedFileSizeUpperMsg"></span>
-            <br>
-            压缩文件修改时间不晚于：
-            <input type="text" id="compressedFileLastModifiedLower" name="compressedFileLastModifiedLower" readonly="readonly" style="display: none; width: 10em">
-            <button class="imgButton" type="button" id="compressedFileLastModifiedLowerButton" onclick="showDateTimeDialog('compressedFileLastModifiedLower')" style="display: none"><img class="buttonImg" alt="输入"></button>
-            <input type="date" id="compressedFileLastModifiedLowerDate">
-            <input type="time" id="compressedFileLastModifiedLowerTime" step="1">
-            <span class="inline" style="color:red; display:none" id="compressedFileLastModifiedLowerMsg"></span>
-            <br>
-            压缩文件修改时间不晚于：
-            <input type="text" id="compressedFileLastModifiedUpper" name="compressedFileLastModifiedUpper" readonly="readonly" style="display: none; width: 10em">
-            <button class="imgButton" type="button" id="compressedFileLastModifiedUpperButton" onclick="showDateTimeDialog('compressedFileLastModifiedUpper')" style="display: none"><img class="buttonImg" alt="输入"></button>
-            <input type="date" id="compressedFileLastModifiedUpperDate">
-            <input type="time" id="compressedFileLastModifiedUpperTime" step="1">
-            <span class="inline" style="color:red; display:none" id="compressedFileLastModifiedUpperMsg"></span>
+            <div id="lastModifiedLowerDiv">
+                修改时间不早于：
+                <input type="text" id="lastModifiedLower" name="lastModifiedLower" readonly="readonly" style="display: none; width: 10em">
+                <button class="imgButton" type="button" id="lastModifiedLowerButton" onclick="showDateTimeDialog('lastModifiedLower')" style="display: none"><img class="buttonImg" alt="输入"></button>
+                <input type="date" id="lastModifiedLowerDate">
+                <input type="time" id="lastModifiedLowerTime" step="1">
+                <span class="inline" style="color:red; display:none" id="lastModifiedLowerMsg"></span>
+                <br>
+            </div>
+            <div id="lastModifiedUpperDiv">
+                修改时间不晚于：
+                <input type="text" id="lastModifiedUpper" name="lastModifiedUpper" readonly="readonly" style="display: none; width: 10em">
+                <button class="imgButton" type="button" id="lastModifiedUpperButton" onclick="showDateTimeDialog('lastModifiedUpper')" style="display: none"><img class="buttonImg" alt="输入"></button>
+                <input type="date" id="lastModifiedUpperDate">
+                <input type="time" id="lastModifiedUpperTime" step="1">
+                <span class="inline" style="color:red; display:none" id="lastModifiedUpperMsg"></span>
+                <br>
+            </div>
+            <div id="fileSizeLowerDiv">
+                文件大小不低于：
+                <input type="text" id="fileSizeLower" name="fileSizeLower" style="display:none">
+                <input type="text" id="fileSizeLowerNumber" style="width: 80px">
+                <select id="fileSizeLowerSelect">
+                    <option>B</option>
+                    <option>KB</option>
+                    <option>MB</option>
+                    <option>GB</option>
+                    <option>TB</option>
+                </select>
+                <span class="inline" style="color:red; display:none" id="fileSizeLowerMsg"></span>
+                <br>
+            </div>
+            <div id="fileSizeUpperDiv">
+                文件大小不高于：
+                <input type="text" id="fileSizeUpper" name="fileSizeUpper" style="display:none">
+                <input type="text" id="fileSizeUpperNumber" style="width:80px">
+                <select id="fileSizeUpperSelect">
+                    <option>B</option>
+                    <option>KB</option>
+                    <option>MB</option>
+                    <option>GB</option>
+                    <option>TB</option>
+                </select>
+                <span class="inline" style="color:red; display:none" id="fileSizeUpperMsg"></span>
+                <br>
+            </div>
+            <div id="folderCompressStatusSelectDiv">
+                文件夹压缩状态：
+                <select id="folderCompressStatusSelect" name="folderCompressStatus">
+                    <option value="">未选择</option>
+                    <option value="NOT_COMPRESSED">未压缩</option>
+                    <option value="COMPRESSING">压缩中</option>
+                    <option value="COMPRESSED">已压缩</option>
+                </select>
+                <br>
+            </div>
+            <div id="compressedFileSizeLowerDiv">
+                压缩文件大小不低于：
+                <input type="text" id="compressedFileSizeLower" name="compressedFileSizeLower" style="display:none">
+                <input type="text" id="compressedFileSizeLowerNumber" style="width:80px">
+                <select id="compressedFileSizeLowerSelect">
+                    <option>B</option>
+                    <option>KB</option>
+                    <option>MB</option>
+                    <option>GB</option>
+                    <option>TB</option>
+                </select>
+                <span class="inline" style="color:red; display:none" id="compressedFileSizeLowerMsg"></span>
+                <br>
+            </div>
+            <div id="compressedFileSizeUpperDiv">
+                压缩文件大小不高于：
+                <input type="text" id="compressedFileSizeUpper" name="compressedFileSizeUpper" style="display:none">
+                <input type="text" id="compressedFileSizeUpperNumber" style="width:80px">
+                <select id="compressedFileSizeUpperSelect">
+                    <option>B</option>
+                    <option>KB</option>
+                    <option>MB</option>
+                    <option>GB</option>
+                    <option>TB</option>
+                </select>
+                <span class="inline" style="color:red; display:none" id="compressedFileSizeUpperMsg"></span>
+                <br>
+            </div>
+            <div id="compressedFileLastModifiedLowerDiv">
+                压缩文件修改时间不晚于：
+                <input type="text" id="compressedFileLastModifiedLower" name="compressedFileLastModifiedLower" readonly="readonly" style="display: none; width: 10em">
+                <button class="imgButton" type="button" id="compressedFileLastModifiedLowerButton" onclick="showDateTimeDialog('compressedFileLastModifiedLower')" style="display: none"><img class="buttonImg" alt="输入"></button>
+                <input type="date" id="compressedFileLastModifiedLowerDate">
+                <input type="time" id="compressedFileLastModifiedLowerTime" step="1">
+                <span class="inline" style="color:red; display:none" id="compressedFileLastModifiedLowerMsg"></span>
+                <br>
+            </div>
+            <div id="compressedFileLastModifiedUpperDiv">
+                压缩文件修改时间不晚于：
+                <input type="text" id="compressedFileLastModifiedUpper" name="compressedFileLastModifiedUpper" readonly="readonly" style="display: none; width: 10em">
+                <button class="imgButton" type="button" id="compressedFileLastModifiedUpperButton" onclick="showDateTimeDialog('compressedFileLastModifiedUpper')" style="display: none"><img class="buttonImg" alt="输入"></button>
+                <input type="date" id="compressedFileLastModifiedUpperDate">
+                <input type="time" id="compressedFileLastModifiedUpperTime" step="1">
+                <span class="inline" style="color:red; display:none" id="compressedFileLastModifiedUpperMsg"></span>
+            </div>
         </div>
     </form>
     <div id="result-div" th:if="${pageObject != null}">
@@ -275,8 +292,21 @@
         var keyword = [[${keyword}]];
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
 
+        //定义inputId集合和正则表达式以便后续统一处理相关元素
         var dateTimeInputIds = ['lastModifiedLower', 'lastModifiedUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
+        var fileSizeInputIds = ['fileSizeLower', 'fileSizeUpper', 'compressedFileSizeLower', 'compressedFileSizeUpper'];
+        var fileGroupInputIds = ['fileSizeLower', 'fileSizeUpper'];
+        var directoryGroupInputIds = ['folderCompressStatusSelect', 'compressedFileSizeLower', 'compressedFileSizeUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
+        var fileAndDirectoryGroupInputIds = [];
         var keyboardButtonIds = [];
+        var fileSizeRegex = /^(\d+)([KMGT]?B)$/;
+        var fileSizeNumberRegex = /^\d+$/;
+        for(var i=0;i<fileGroupInputIds.length;i++) {
+            fileAndDirectoryGroupInputIds[fileAndDirectoryGroupInputIds.length] = fileGroupInputIds[i];
+        }
+        for(var i=0;i<directoryGroupInputIds.length;i++) {
+            fileAndDirectoryGroupInputIds[fileAndDirectoryGroupInputIds.length] = directoryGroupInputIds[i];
+        }
         for(var i=0;i<dateTimeInputIds.length;i++) {
             var inputId = dateTimeInputIds[i];
             var buttonId = inputId + 'Button';
@@ -285,16 +315,16 @@
         if(dateAndTimeInputSupported) {
             //日期时间input支持的情况下移除相关按钮
             for(var i=0;i<keyboardButtonIds.length;i++) {
-                removeElementById(keyboardButtonIds[i], 'advanced-condition-div');
+                removeElementById(keyboardButtonIds[i], dateTimeInputIds[i] + 'Div');
             }
         } else {
             //日期时间input不支持的情况下移除元素并启用对话框式输入
             for(var i=0;i<dateTimeInputIds.length;i++) {
                 var inputId = dateTimeInputIds[i];
                 var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
-                    buttonId = inputId + 'Button';
-                removeElementById(dateInputId, 'advanced-condition-div');
-                removeElementById(timeInputId, 'advanced-condition-div');
+                    buttonId = inputId + 'Button', divId = inputId + 'Div';
+                removeElementById(dateInputId, divId);
+                removeElementById(timeInputId, divId);
                 document.getElementById(inputId).style.display = '';
                 document.getElementById(buttonId).style.display = '';
             }
@@ -315,9 +345,19 @@
             }
         }
 
-        var fileSizeInputIds = ['fileSizeLower', 'fileSizeUpper', 'compressedFileSizeLower', 'compressedFileSizeUpper'];
-        var fileSizeRegex = /^(\d+)([KMGT]?B)$/;
-        var fileSizeNumberRegex = /^\d+$/;
+        //文件类型Radio选中事件
+        bindEventListener(document.getElementById('directoryRadio1'),'click', function () {
+            showOrHideGroupInputs(fileGroupInputIds);
+            showOrHideGroupInputs(directoryGroupInputIds, true);
+        });
+        bindEventListener(document.getElementById('directoryRadio2'),'click', function () {
+            showOrHideGroupInputs(fileGroupInputIds, true);
+            showOrHideGroupInputs(directoryGroupInputIds);
+        });
+        bindEventListener(document.getElementById('directoryRadio3'),'click', function () {
+            showOrHideGroupInputs(fileGroupInputIds, true);
+            showOrHideGroupInputs(directoryGroupInputIds, true);
+        });
 
         var advancedSearchSwitch = advancedSearchCondition === null ? false : !advancedSearchCondition.empty;
         if(keyword && keyword.trim() !== '' && advancedSearchSwitch) {
@@ -330,6 +370,11 @@
                     } else {
                         directoryRadios[i].checked = false;
                     }
+                }
+                if(advancedSearchCondition.directory) {
+                    showOrHideGroupInputs(fileGroupInputIds);
+                } else {
+                    showOrHideGroupInputs(directoryGroupInputIds);
                 }
             }
             for(var i=0;i<dateTimeInputIds.length;i++) {
@@ -380,6 +425,19 @@
             switchAdvancedSearch(document.getElementById('switchAdvancedSearchButton'), true);
         }
 
+        function showOrHideGroupInputs(groupInputIds,isShow) {
+            if(!groupInputIds || groupInputIds.length === 0) {
+                return;
+            }
+            if(isShow === undefined) {
+                isShow = false;
+            }
+            for(var i=0;i<groupInputIds.length;i++) {
+                var inputId = groupInputIds[i], divId = inputId + 'Div';
+                var displayValue = isShow ? 'block' : 'none';
+                document.getElementById(divId).style.display = displayValue;
+            }
+        }
         function switchAdvancedSearch(button,showAdvancedSearch) {
             if(showAdvancedSearch !== undefined) {
                 advancedSearchSwitch = showAdvancedSearch;
@@ -399,17 +457,30 @@
             if(advancedSearchSwitch) {
                 //检查高级搜索参数
                 var directory = getCheckedValue('directory');
+                var directoryValue = null;
                 if(directory !== 'true' && directory !== 'false' && directory !== '') {
                     hasError = true;
                     var msg = '类型字段' + (directory === null ? '没有选中值' : '选中了非法的值');
                     updateMsg('directory-msg', msg, 'red');
                 } else {
                     updateMsg('directory-msg', CHECK_PASSED, 'green');
+                    if(directory === 'true') {
+                        directoryValue = true;
+                    } else if(directory === 'false') {
+                        directoryValue = false;
+                    }
                 }
                 if(dateAndTimeInputSupported) {
                     //由浏览器直接渲染日期时间组件的情况
                     for(var i=0;i<dateTimeInputIds.length;i++) {
                         var inputId = dateTimeInputIds[i];
+                        if(directoryValue !== null) {
+                            if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
+                                continue;
+                            } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
+                                continue;
+                            }
+                        }
                         var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
                             msgId = inputId + 'Msg';
                         var dateInputValue = document.getElementById(dateInputId).value === null ? '' :
@@ -434,6 +505,13 @@
                     //通过对话框手动输入日期时间的情况
                     for(var i=0;i<dateTimeInputIds.length;i++) {
                         var inputId = dateTimeInputIds[i];
+                        if(directoryValue !== null) {
+                            if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
+                                continue;
+                            } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
+                                continue;
+                            }
+                        }
                         var msgId = inputId + 'Msg';
                         var input = document.getElementById(inputId);
                         var inputValue = input.value;
@@ -453,6 +531,13 @@
                 var fileSizeValidUnits = ['B','KB','MB','GB','TB'];
                 for(var i=0;i<fileSizeInputIds.length;i++) {
                     var inputId = fileSizeInputIds[i];
+                    if(directoryValue !== null) {
+                        if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
+                            continue;
+                        } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
+                            continue;
+                        }
+                    }
                     var numberInputId = inputId + 'Number',
                         selectId = inputId + 'Select',
                         msgId = inputId + 'Msg';
@@ -485,7 +570,33 @@
                 if(!advancedSearchSwitch) {
                     var ascChildren = document.getElementById('advanced-condition-div').children;
                     for(var i=0;i<ascChildren.length;i++) {
-                        ascChildren[i].disabled = 'disabled';
+                        //ascChildren[i].disabled = 'disabled';
+                        var ascChild = ascChildren[i];
+                        if(ascChild.tagName.toLowerCase() === 'input') {
+                            ascChild.disabled = 'disabled';
+                        } else if(ascChild.tagName.toLowerCase() === 'div') {
+                            var ascGrandChildren = ascChild.children;
+                            for(var j=0;j<ascGrandChildren.length;j++) {
+                                var ascGrandChild = ascGrandChildren[j];
+                                if(ascGrandChild.tagName.toLowerCase() === 'input') {
+                                    ascGrandChild.disabled = 'disabled';
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if(directoryValue !== null) {
+                        if(directoryValue) {
+                            for(var i=0;i<fileGroupInputIds.length;i++) {
+                                var inputId = fileGroupInputIds[i];
+                                document.getElementById(inputId).disabled = 'disabled';
+                            }
+                        } else {
+                            for(var i=0;i<directoryGroupInputIds.length;i++) {
+                                var inputId = directoryGroupInputIds[i];
+                                document.getElementById(inputId).disabled = 'disabled';
+                            }
+                        }
                     }
                 }
                 document.getElementById('search-form').submit();
@@ -519,7 +630,7 @@
                 targetInput.value = sourceInput.value;
             }
             updateMsg('dateTimeCheckHint', CHECK_PASSED, 'green');
-            updateMsg(msgId, CHECK_PASSED, 'green');
+            //updateMsg(msgId, CHECK_PASSED, 'green');
             hideDateTimeDialog();
         }
         function showDateTimeDialog(id, format) {

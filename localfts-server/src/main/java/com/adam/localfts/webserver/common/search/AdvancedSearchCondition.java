@@ -32,9 +32,15 @@ public class AdvancedSearchCondition {
      * 只对文件夹生效
      */
     private FolderCompressStatus folderCompressStatus;
+    /**
+     * 只对文件夹生效
+     */
     @Getter(AccessLevel.NONE)
     private Long compressedFileSizeLower, compressedFileSizeUpper;
     private String compressedFileSizeLowerStr, compressedFileSizeUpperStr;
+    /**
+     * 只对文件夹生效
+     */
     @Getter(AccessLevel.NONE)
     private Date compressedFileLastModifiedLower,compressedFileLastModifiedUpper;
 
@@ -88,12 +94,20 @@ public class AdvancedSearchCondition {
         this.compressedFileLastModifiedLower = safeConvertFromStringEX(compressedFileLastModifiedLower, simpleDateFormat::parse);
     }
 
+    public void setCompressedFileLastModifiedLower(Date compressedFileLastModifiedLower) {
+        this.compressedFileLastModifiedLower = compressedFileLastModifiedLower;
+    }
+
     public String getCompressedFileLastModifiedLower() {
         return safeConvertToStringNoEX(compressedFileLastModifiedLower, simpleDateFormat::format);
     }
 
     public void setCompressedFileLastModifiedUpper(String compressedFileLastModifiedUpper) throws Exception {
         this.compressedFileLastModifiedUpper = safeConvertFromStringEX(compressedFileLastModifiedUpper, simpleDateFormat::parse);
+    }
+
+    public void setCompressedFileLastModifiedUpper(Date compressedFileLastModifiedUpper) {
+        this.compressedFileLastModifiedUpper = compressedFileLastModifiedUpper;
     }
 
     public String getCompressedFileLastModifiedUpper() {
@@ -118,17 +132,41 @@ public class AdvancedSearchCondition {
 
     @Override
     public String toString() {
-        return "AdvancedSearchCondition{" +
-                "directory=" + directory +
-                ", lastModifiedLower=" + getLastModifiedLower() +
-                ", lastModifiedUpper=" + getLastModifiedUpper() +
-                ", fileSizeLower=" + fileSizeLowerStr +
-                ", fileSizeUpper=" + fileSizeUpperStr +
-                ", folderCompressStatus=" + folderCompressStatus +
-                ", compressedFileSizeLower=" + compressedFileSizeLowerStr +
-                ", compressedFileSizeUpper=" + compressedFileSizeUpperStr +
-                ", compressedFileLastModifiedLower=" + getCompressedFileLastModifiedLower() +
-                ", compressedFileLastModifiedUpper=" + getCompressedFileLastModifiedUpper() +
-                '}';
+        StringBuilder stringBuilder = new StringBuilder();
+        if(directory != null) {
+            stringBuilder.append(", directory=").append(directory);
+        }
+        if(lastModifiedLower != null) {
+            stringBuilder.append(", lastModifiedLower=").append(getLastModifiedLower());
+        }
+        if(lastModifiedUpper != null) {
+            stringBuilder.append(", lastModifiedUpper=").append(getLastModifiedUpper());
+        }
+        if(fileSizeLower != null) {
+            stringBuilder.append(", fileSizeLower=").append(fileSizeLowerStr);
+        }
+        if(fileSizeUpper != null) {
+            stringBuilder.append(", fileSizeUpper=").append(fileSizeUpperStr);
+        }
+        if(folderCompressStatus != null) {
+            stringBuilder.append(", folderCompressStatus=").append(folderCompressStatus);
+        }
+        if(compressedFileSizeLower != null) {
+            stringBuilder.append(", compressedFileSizeLower=").append(compressedFileSizeLowerStr);
+        }
+        if(compressedFileSizeUpper != null) {
+            stringBuilder.append(", compressedFileSizeUpper=").append(compressedFileSizeUpperStr);
+        }
+        if(compressedFileLastModifiedLower != null) {
+            stringBuilder.append(", compressedFileLastModifiedLower=").append(getCompressedFileLastModifiedLower());
+        }
+        if(compressedFileLastModifiedUpper != null) {
+            stringBuilder.append(", compressedFileLastModifiedUpper=").append(getCompressedFileLastModifiedUpper());
+        }
+        if(stringBuilder.length() > 0) {
+            stringBuilder.delete(0, 2);
+        }
+        stringBuilder.append("}");
+        return "AdvancedSearchCondition{" + stringBuilder;
     }
 }

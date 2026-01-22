@@ -14,6 +14,12 @@ function showDialog(id) {
             zIndex++;
         }
         setClass(id, 'show');
+        if(IE_VERSION && IE_VERSION < 8) {
+            var allSelect = document.getElementsByTagName('select');
+            for(var i=0;i<allSelect.length;i++) {
+                allSelect[i].style.display = 'none';
+            }
+        }
     }
 }
 
@@ -32,6 +38,12 @@ function hideDialog(id) {
             zIndex = 1;
         }*/
         setClass(id, 'hidden');
+        if(IE_VERSION && IE_VERSION < 8) {
+            var allSelect = document.getElementsByTagName('select');
+            for(var i=0;i<allSelect.length;i++) {
+                allSelect[i].style.display = '';
+            }
+        }
     }
 }
 

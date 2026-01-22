@@ -51,6 +51,24 @@ if (!Array.prototype.indexOf) {
     };
 }
 
+function bindEventListener(element,eventName,func) {
+    if(element === undefined || eventName == undefined || func === undefined) {
+        return false;
+    }
+    if(element.addEventListener) {
+        element.addEventListener(eventName, func);
+        return true;
+    } else if(element.attachEvent) {
+        element.attachEvent('on' + eventName, func);
+        return true;
+    } else {
+        if(window.console) {
+            console.error('Cannot bind event listener,eventName:',eventName,',element:',element);
+        }
+        return false;
+    }
+}
+
 function selectOption(select,value,isValue) {
     if(select === undefined || value === undefined) {
         return;
