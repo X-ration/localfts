@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.common.search;
 
+import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FunctionThrowsException;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.util.Util;
@@ -7,18 +8,32 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.util.unit.DataSize;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
 @NoArgsConstructor
 public class AdvancedSearchCondition {
 
+    /**
+     * 指定搜索的目标路径，可以有多个
+     */
+    @Getter(AccessLevel.NONE)
+    private List<String> searchPathList;
     private Boolean directory;
     @Getter(AccessLevel.NONE)
     private Date lastModifiedLower, lastModifiedUpper;
@@ -46,12 +61,76 @@ public class AdvancedSearchCondition {
 
     @Getter(AccessLevel.NONE)
     private final SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
+    @Getter(AccessLevel.NONE)
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public boolean isEmpty() {
-        return directory == null && fileSizeLower == null && fileSizeUpper == null
+        return CollectionUtils.isEmpty(searchPathList) && directory == null && fileSizeLower == null && fileSizeUpper == null
                 && lastModifiedLower == null && lastModifiedUpper == null && folderCompressStatus == null
                 && compressedFileSizeLower == null && compressedFileSizeUpper == null
                 && compressedFileLastModifiedLower == null && compressedFileLastModifiedUpper == null;
+    }
+
+    public void clean() {
+        if(!CollectionUtils.isEmpty(this.searchPathList)) {
+            this.searchPathList = this.searchPathList.stream()
+                    .filter(str -> !StringUtils.isEmpty(str))
+                    .collect(Collectors.toList());
+            List<String> recordList = new LinkedList<>();
+            for(String str: this.searchPathList) {
+                if(!recordList.contains(str)) {
+                    recordList.add(str);
+                } else {
+                    logger.warn("Duplicate search path '{}', discarding", str);
+                }
+            }
+            this.searchPathList = recordList;
+        }
+        if(this.directory != null) {
+            if(this.directory) {
+                //限制文件夹
+                setFileSizeLower(null);
+                setFileSizeLowerStr(null);
+                setFileSizeUpper(null);
+                setFileSizeUpperStr(null);
+            } else {
+                //限制文件
+                setFolderCompressStatus(null);
+                setCompressedFileSizeLower(null);
+                setCompressedFileSizeLowerStr(null);
+                setCompressedFileSizeUpper(null);
+                setCompressedFileSizeUpperStr(null);
+                setCompressedFileLastModifiedLower((Date) null);
+                setCompressedFileLastModifiedUpper((Date) null);
+            }
+        }
+    }
+
+    public void setSearchPaths(String[] searchPaths) {
+        if(searchPaths != null) {
+            this.searchPathList = Arrays.asList(searchPaths).stream()
+                    .filter(str -> !StringUtils.isEmpty(str))
+                    .filter(str -> {
+                        Matcher matcher;
+                        if(Util.isSystemWindows()) {
+                            matcher = Constants.PATTERN_PATH_WINDOWS_STANDARD_RELATIVE.matcher(str);
+                        } else {
+                            matcher = Constants.PATTERN_PATH_LINUX_MACOS_RELATIVE.matcher(str);
+                        }
+                        Assert.isTrue(matcher.matches(), "Search path '" + str + "' does not match rules!");
+                        return true;
+                    })
+                    .collect(Collectors.toList());
+            List<String> recordList = new LinkedList<>();
+            for(String str: this.searchPathList) {
+                Assert.isTrue(!recordList.contains(str), "Search path '" + str + "' duplicate!");
+                recordList.add(str);
+            }
+        }
+    }
+
+    public List<String> getSearchPaths() {
+        return searchPathList;
     }
 
     public void setFileSizeLower(String fileSizeLower) {
@@ -133,6 +212,9 @@ public class AdvancedSearchCondition {
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
+        if(!CollectionUtils.isEmpty(searchPathList)) {
+            stringBuilder.append(", searchPathList=").append(searchPathList);
+        }
         if(directory != null) {
             stringBuilder.append(", directory=").append(directory);
         }

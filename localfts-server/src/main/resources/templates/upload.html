@@ -6,7 +6,7 @@
     <link rel="stylesheet" th:href="${#request.contextPath} + '/static/common.css'">
 </head>
 <body>
-<h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="setClass('serverIpInfo','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
+<h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="setClassById('serverIpInfo','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
 <br><br><a id="visit-directory" th:if="${directoryExists}" th:text="${currentPath}">访问目录</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a>
 <hr>
 <br>当前路径：<span id="page-path" th:text="${currentPath}">path</span>
@@ -29,7 +29,7 @@
         </tr>
         </tbody>
     </table>
-    <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="setClass('serverIpInfo','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
+    <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="setClassById('serverIpInfo','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
 </div>
 <div th:if="${uploadFileRetObject != null && uploadFileRetObject.success}">
     <h4 th:text="|'${uploadFileRetObject.data}'上传成功！|"></h4>

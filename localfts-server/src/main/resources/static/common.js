@@ -136,15 +136,20 @@ function getCheckedValue(name) {
     return null;
 }
 
-function setClass(id, cn) {
+function setClassById(id, cn) {
     //deal with IE
     var element = document.getElementById(id);
+    setClass(element, cn);
+}
+
+function setClass(element, cn) {
     if(element) {
-        if(!element.getAttribute("class")) {
+        /*if(!element.getAttribute("class")) {
             element.setAttribute('className', cn);
         } else {
             element.setAttribute('class', cn);
-        }
+        }*/
+        element.className = cn;
     }
 }
 
@@ -364,11 +369,11 @@ function isDateAndTimeInputSupported() {
 }
 
 function removeElementById(id,parentId) {
-  var element = document.getElementById(id);
-  var parentElement = document.getElementById(parentId);
-  if(element && parentElement) {
-    parentElement.removeChild(element);
-  }
+    var element = document.getElementById(id);
+    var parentElement = document.getElementById(parentId);
+    if(element && parentElement) {
+        parentElement.removeChild(element);
+    }
 }
 
 function getElementsByClassName(className, tagName) {

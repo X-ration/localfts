@@ -17,7 +17,6 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
-import java.util.Date;
 
 @Service
 @DependsOn("ftsServerConfigService")
@@ -44,33 +43,11 @@ public class FtsSearchService {
         Assert.isTrue(pageNo > 0, "非法的页数：" + pageNo);
         Assert.isTrue(pageSize > 0, "非法的每页数量：" + pageSize);
         Assert.isTrue(sortColumn == null || sortOrder != null, "排序顺序为null");
-        preHandleAdvancedCondition(advancedSearchCondition);
+        if(advancedSearchCondition != null && !advancedSearchCondition.isEmpty()) {
+            advancedSearchCondition.clean();
+        }
         logger.debug("Actual advanced condition={}", advancedSearchCondition);
         return new PageObject<>(pageNo, pageSize, null);
-    }
-
-    private void preHandleAdvancedCondition(AdvancedSearchCondition advancedSearchCondition) {
-        if(advancedSearchCondition == null || advancedSearchCondition.isEmpty()) {
-            return;
-        }
-        if(advancedSearchCondition.getDirectory() != null) {
-            if(advancedSearchCondition.getDirectory()) {
-                //限制文件夹
-                advancedSearchCondition.setFileSizeLower(null);
-                advancedSearchCondition.setFileSizeLowerStr(null);
-                advancedSearchCondition.setFileSizeUpper(null);
-                advancedSearchCondition.setFileSizeUpperStr(null);
-            } else {
-                //限制文件
-                advancedSearchCondition.setFolderCompressStatus(null);
-                advancedSearchCondition.setCompressedFileSizeLower(null);
-                advancedSearchCondition.setCompressedFileSizeLowerStr(null);
-                advancedSearchCondition.setCompressedFileSizeUpper(null);
-                advancedSearchCondition.setCompressedFileSizeUpperStr(null);
-                advancedSearchCondition.setCompressedFileLastModifiedLower((Date) null);
-                advancedSearchCondition.setCompressedFileLastModifiedUpper((Date) null);
-            }
-        }
     }
 
     /**

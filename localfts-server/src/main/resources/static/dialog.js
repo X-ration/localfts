@@ -13,7 +13,7 @@ function showDialog(id) {
             element.style.zIndex = zIndex;
             zIndex++;
         }
-        setClass(id, 'show');
+        setClassById(id, 'show');
         if(IE_VERSION && IE_VERSION < 8) {
             var allSelect = document.getElementsByTagName('select');
             for(var i=0;i<allSelect.length;i++) {
@@ -37,7 +37,7 @@ function hideDialog(id) {
         if(!hasKey) {
             zIndex = 1;
         }*/
-        setClass(id, 'hidden');
+        setClassById(id, 'hidden');
         if(IE_VERSION && IE_VERSION < 8) {
             var allSelect = document.getElementsByTagName('select');
             for(var i=0;i<allSelect.length;i++) {

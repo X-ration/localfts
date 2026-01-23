@@ -12,6 +12,7 @@ public class Constants {
     public static final Pattern PATTERN_PATH_LINUX_MACOS_ABSOLUTE = Pattern.compile("/|(/[^/]+)+?");
     public static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\/:*?\"<>|]+)*?");
     public static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
+    public static final Pattern PATTERN_PATH_WINDOWS_STANDARD_RELATIVE = Pattern.compile("/[^\\\\/:*?\"<>|]+(/[^\\\\/:*?\"<>|]+)*?");
     public static final String ROOT_PATH_DEFAULT_WINDOWS = "C:";
     public static final String ROOT_PATH_DEFAULT_LINUX_MACOS = "/home";
 

@@ -285,11 +285,14 @@ public class WebController {
                          @RequestParam(defaultValue = "20") int pageSize,
                          @RequestParam(required = false)ListTableColumn sortColumn,
                          @RequestParam(required = false) SortOrder sortOrder,
+                         @RequestParam(required = false) List<String> searchPaths,
                          AdvancedSearchCondition advancedSearchCondition) {
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
+        String urlRelativePathPattern = ftsServerConfigService.getUrlRelativePathPattern().pattern();
+        model.addAttribute("urlRelativePathPattern", urlRelativePathPattern);
         if(StringUtils.isEmpty(keyword)) {
             LOGGER.debug("search with empty keyword");
             return "search";

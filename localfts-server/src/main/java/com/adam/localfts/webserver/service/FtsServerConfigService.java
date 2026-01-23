@@ -29,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.*;
 import java.util.*;
 import java.util.jar.JarFile;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -85,6 +86,14 @@ public class FtsServerConfigService implements DisposableBean {
         }
         this.rootPathInfo = new RootPathInfo(localFtsProperties.getRootPath());
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
+    }
+
+    public Pattern getUrlRelativePathPattern() {
+        if(Util.isSystemWindows()) {
+            return Constants.PATTERN_PATH_WINDOWS_STANDARD_RELATIVE;
+        } else {
+            return Constants.PATTERN_PATH_LINUX_MACOS_RELATIVE;
+        }
     }
 
     public long getPid(Class<? extends RuntimeException> exClass) {
