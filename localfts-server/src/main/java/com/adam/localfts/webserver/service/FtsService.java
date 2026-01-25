@@ -1,9 +1,6 @@
 package com.adam.localfts.webserver.service;
 
-import com.adam.localfts.webserver.common.Constants;
-import com.adam.localfts.webserver.common.FtsPageModel;
-import com.adam.localfts.webserver.common.HttpRangeObject;
-import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.common.*;
 import com.adam.localfts.webserver.common.compress.*;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
@@ -20,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
@@ -41,6 +39,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiFunction;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -121,6 +120,81 @@ public class FtsService {
         }
         File directory = IOUtil.getFile(actualPath);
         return directory.exists() && directory.isDirectory();
+    }
+
+    public ReturnObject<FtsSubDirectoryModel> getSubDirectoryModel(final String relativePath, boolean fromRoot) {
+        boolean condition = null != relativePath && relativePath.startsWith("/");
+        if(!condition) {
+            return ReturnObject.fail("非法请求参数");
+        }
+        Matcher matcher = ftsServerConfigService.getUrlRelativePathPattern().matcher(relativePath);
+        if(!matcher.matches()) {
+            return ReturnObject.fail("请求路径参数不符合规则");
+        }
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        File rootDirectory = new File(rootPath);
+        condition = rootDirectory.exists() && rootDirectory.isDirectory();
+        if(!condition) {
+            return ReturnObject.fail("根路径不存在或不是文件夹");
+        }
+        File directory = new File(rootDirectory, relativePath);
+        condition = directory.exists() && directory.isDirectory();
+        if(!condition) {
+            return ReturnObject.fail("请求路径不存在或不是文件夹");
+        }
+
+        FtsSubDirectoryModel model = new FtsSubDirectoryModel();
+        String[] pathSplits = relativePath.split("/");
+        List<String> pathList = Arrays.stream(pathSplits).filter(str -> !StringUtils.isEmpty(str)).collect(Collectors.toList());
+        File directoryToUse = fromRoot ? rootDirectory : directory;
+        String relativePathToUse = fromRoot ? null : relativePath;
+        setSubDirectoryModel(relativePathToUse, directoryToUse, model, pathList, 0, false, fromRoot);
+
+        return ReturnObject.success(model);
+    }
+
+    private void setSubDirectoryModel(final String relativePath, final File directory, final FtsSubDirectoryModel model,
+                                      final List<String> pathList, final int pathListIndex, final boolean isRecursiveCall,
+                                      final boolean fromRoot) {
+        String newRelativePath;
+        if(!isRecursiveCall) {
+            if(fromRoot) {
+                model.setName("/");
+                newRelativePath = "/";
+            } else {
+                model.setName(directory.getName());
+                newRelativePath = relativePath;
+            }
+        } else {
+            model.setName(directory.getName());
+            if(relativePath.equals("/")) {
+                newRelativePath = relativePath + directory.getName();
+            } else {
+                newRelativePath = relativePath + "/" + directory.getName();
+            }
+        }
+        model.setRelativePath(newRelativePath);
+        String path = null;
+        if(isRecursiveCall) {
+            if(pathListIndex < pathList.size() && pathListIndex >= 0) {
+                path = pathList.get(pathListIndex);
+            }
+            if(path == null || !path.equals(directory.getName())) {
+                return;
+            }
+        }
+
+        List<FtsSubDirectoryModel> subModelList = new LinkedList<>();
+        File[] subDirectories = directory.listFiles(f -> f.exists() && f.isDirectory());
+        int nextPathListIndex = isRecursiveCall ? pathListIndex + 1 : pathListIndex;
+        if(subDirectories != null) {
+            for(File subDirectory : subDirectories) {
+                FtsSubDirectoryModel subModel = new FtsSubDirectoryModel();
+                setSubDirectoryModel(newRelativePath, subDirectory, subModel, pathList, nextPathListIndex, true, fromRoot);
+                subModelList.add(subModel);
+            }
+        }
+        model.setSubModelList(subModelList);
     }
 
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize, ListTableColumn sortColumn, SortOrder sortOrder) {

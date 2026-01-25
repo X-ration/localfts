@@ -133,7 +133,6 @@
 <script th:src="${#request.contextPath} + '/static/xhr_mi.js'"></script>
 <script type="text/javascript" th:inline="javascript">
 var contextPath = [[${#request.contextPath}]];
-var ieVersion = getIEVersion();
 var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
 var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
 var URL_COMPRESS_MANAGEMENT = concatUrlForConstant(contextPath, '/compressManagement');
@@ -191,13 +190,13 @@ var sortLinks = getElementsByName("a", "sort-link");
 for(var i=0;i<sortLinks.length;i++) {
   var eSortColumn = sortLinks[i].getAttribute('sort-column');
   var eSortOrder = null, imgSrc = null;
-  if(sortColumn === null || sortColumn !== eSortColumn) {
+  if(!sortColumn || sortColumn !== eSortColumn) {
     eSortOrder = 'ASC';
     imgSrc = contextPath + '/static/icon/sort_32px_black';
-  } else if(sortColumn !== null && sortOrder === 'ASC') {
+  } else if(sortColumn && sortOrder === 'ASC') {
     eSortOrder = 'DESC';
     imgSrc = contextPath + '/static/icon/sort_asc_32px_black';
-  } else if(sortColumn !== null && sortOrder === 'DESC') {
+  } else if(sortColumn && sortOrder === 'DESC') {
     eSortColumn = undefined;
     eSortOrder = undefined;
     imgSrc = contextPath + '/static/icon/sort_desc_32px_black';
@@ -209,7 +208,7 @@ for(var i=0;i<sortLinks.length;i++) {
     eSortOrder = undefined;
   }
   if(imgSrc) {
-    if(ieVersion && ieVersion < 8) {
+    if(IE_VERSION && IE_VERSION < 8) {
       imgSrc = imgSrc + '_png8';
     }
     imgSrc = imgSrc + '.png';

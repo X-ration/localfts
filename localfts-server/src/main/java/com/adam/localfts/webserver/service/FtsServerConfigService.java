@@ -92,7 +92,7 @@ public class FtsServerConfigService implements DisposableBean {
         if(Util.isSystemWindows()) {
             return Constants.PATTERN_PATH_WINDOWS_STANDARD_RELATIVE;
         } else {
-            return Constants.PATTERN_PATH_LINUX_MACOS_RELATIVE;
+            return Constants.PATTERN_PATH_LINUX_MACOS_STANDARD_RELATIVE;
         }
     }
 

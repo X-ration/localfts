@@ -1,9 +1,6 @@
 package com.adam.localfts.webserver.controller;
 
-import com.adam.localfts.webserver.common.FtsPageModel;
-import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
-import com.adam.localfts.webserver.common.PageObject;
-import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.common.*;
 import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
 import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
@@ -94,6 +91,18 @@ public class WebController {
         String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
         return "list";
+    }
+
+    @PostMapping("/listSubDirectory")
+    @ResponseBody
+    public ReturnObject<FtsSubDirectoryModel> listSubDirectory(@RequestParam(name = "path") String relativePath,
+                                                               @RequestParam(required = false, defaultValue = "true") boolean fromRoot
+    ) {
+        boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        if(!directoryExists) {
+            return ReturnObject.fail("该路径不存在");
+        }
+        return ftsService.getSubDirectoryModel(relativePath, fromRoot);
     }
 
     /**

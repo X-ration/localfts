@@ -108,6 +108,22 @@ function getSelectedOptionValue(select,isValue) {
     return null;
 }
 
+function clearChildrenById(elementId) {
+    clearChildren(document.getElementById(elementId));
+}
+
+function clearChildren(element) {
+    if(element) {
+        var children = element.children;
+        if(children) {
+            for(var i=0;i<children.length;i++) {
+                element.removeChild(children[i]);
+            }
+        }
+        element.innerText = '';
+    }
+}
+
 function getElementsByName(tagName, name) {
     if(document.getElementsByName) {
         return document.getElementsByName(name);

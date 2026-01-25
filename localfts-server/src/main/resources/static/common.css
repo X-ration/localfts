@@ -1,3 +1,10 @@
+html, body {
+    height: 98%;
+    width: 98%;
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+}
 .hidden {
     display:none;
 }
@@ -67,4 +74,19 @@ img.buttonImg {
 }
 .inline {
     display: inline-block;*display: inline; zoom: 1;
+}
+.bg-black {
+    background: black;
+    color: white;
+}
+.bg-black ul {
+    background: white;
+    color: black;
+    margin: 0;
+    padding-left: 40px;
+}
+.bg-black ul li {
+    background: white;
+    color: black;
+    list-style-position: inside;
 }

@@ -45,11 +45,25 @@
             <input type="text" class="inputDefault" id="dateTimeInput"><br><br>
             <button id="dateTimeConfirmButton" type="button">确认</button><button type="button" onclick="hideDateTimeDialog()">取消</button><br><br>
         </div>
+        <div id="searchPathDialogDiv" class="hidden" style="text-align: center; height: 70%; overflow-y: auto">
+            <div class="dialogTitle">添加搜索路径</div>
+            <div style="height: 50%; border:2px solid #000">
+                <div style="height: 100%; overflow-y: auto">
+                    <ul id="searchPathDialogUl" style="text-align: left"></ul>
+                </div>
+            </div>
+            <br>
+            <h5 id="searchPathCheckHint" style="display:none"></h5>
+            <input type="text" class="inputDefault" id="searchPathDialogInput" readonly="readonly"><br><br>
+            <button type="button" onclick="refreshSearchPathDialog()">刷新</button>
+            <button id="searchPathConfirmButton" type="button">确认</button>
+            <button type="button" onclick="hideSearchPathDialog()">取消</button><br><br>
+        </div>
         <br>
         <div id="advanced-condition-div" style="display: none">
             <div id="searchPathsDiv">
                 目标路径：<button class="imgButton" type="button" id="searchPathsAddButton" onclick="addSearchPathElement()"><img class="buttonImg" alt="添加路径"></button>
-                <input type="text" id="searchPaths1" name="searchPaths" readonly="readonly">
+                <input style="width: 50%" type="text" id="searchPaths1" name="searchPaths" readonly="readonly">
                 <button class="imgButton" type="button" id="searchPathsKeyboardButton1" onclick="showSearchPathDialog(1)"><img class="buttonImg" alt="选择路径"></button>
                 <button class="imgButton" type="button" id="searchPathsDeleteButton1" onclick="deleteSearchPathElement(1)"><img class="buttonImg" alt="删除路径"></button>
                 <span class="inline" style="color:red; display:none" id="searchPathsMsg1"></span>
@@ -293,6 +307,8 @@
     </div>
     <script th:src="${#request.contextPath} + '/static/common.js'"></script>
     <script th:src="${#request.contextPath} + '/static/dialog.js'"></script>
+    <script th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
+    <script th:src="${#request.contextPath} + '/static/xhr_mi.js'"></script>
     <script type="text/javascript" th:inline="javascript">
         var contextPath = [[${#request.contextPath}]];
         var CHECK_PASSED = '校验通过' + (IE_VERSION && IE_VERSION < 9 ? '√' : '✔');
@@ -314,16 +330,29 @@
         var keyboardIconSrc = contextPath + '/static/icon/keyboard_black_32px';
         var addIconSrc = contextPath + '/static/icon/add_32px_black';
         var deleteIconSrc = contextPath + '/static/icon/delete_32px_black';
+        var expandBlackIconSrc = contextPath + '/static/icon/up_down_32px_black';
+        var foldBlackIconSrc = contextPath + '/static/icon/down_up_32px_black';
+        var expandWhiteIconSrc = contextPath + '/static/icon/up_down_32px_white';
+        var foldWhiteIconSrc = contextPath + '/static/icon/down_up_32px_white';
         var searchPathsKeyboardButtonIdRegex = /^searchPathsKeyboardButton(\d+)$/;
         var searchPathsInputIdRegex = /^searchPaths(\d+)$/;
+        var selectedSearchPathLis = [];
         if(IE_VERSION && IE_VERSION < 8) {
             keyboardIconSrc = keyboardIconSrc + '_png8';
             addIconSrc = addIconSrc + '_png8';
             deleteIconSrc = deleteIconSrc + '_png8';
+            expandBlackIconSrc = expandBlackIconSrc + '_png8';
+            foldBlackIconSrc = foldBlackIconSrc + '_png8';
+            expandWhiteIconSrc = expandWhiteIconSrc + '_png8';
+            foldWhiteIconSrc = foldWhiteIconSrc + '_png8';
         }
         keyboardIconSrc = keyboardIconSrc + '.png';
         addIconSrc = addIconSrc + '.png';
         deleteIconSrc = deleteIconSrc + '.png';
+        expandBlackIconSrc = expandBlackIconSrc + '.png';
+        foldBlackIconSrc = foldBlackIconSrc + '.png';
+        expandWhiteIconSrc = expandWhiteIconSrc + '.png';
+        foldWhiteIconSrc = foldWhiteIconSrc + '.png';
         for(var i=0;i<fileGroupInputIds.length;i++) {
             fileAndDirectoryGroupInputIds[fileAndDirectoryGroupInputIds.length] = fileGroupInputIds[i];
         }
@@ -744,6 +773,7 @@
             input.id = 'searchPaths' + newNumberId;
             input.name = 'searchPaths';
             input.readOnly = 'readonly';
+            input.style.width = '50%';
             div.appendChild(input);
             var keyboardButton = document.createElement('button');
             setClass(keyboardButton, 'imgButton');
@@ -796,8 +826,351 @@
             removeElementById(brId, 'searchPathsDiv');
         }
         function showSearchPathDialog(numberId) {
+            document.getElementById('searchPathCheckHint').style.display = 'none';
+            document.getElementById('searchPathConfirmButton').onclick = function () {
+                setSearchPath(numberId);
+            };
+            var inputId = 'searchPaths' + numberId;
+            var input = document.getElementById(inputId);
+            var searchPath = undefined;
+            if(input && input.tagName.toLowerCase() === 'input') {
+                searchPath = input.value;
+            }
+            refreshSearchPathDialog(searchPath);
+            showDialog('searchPathDialogDiv');
         }
         function hideSearchPathDialog() {
+            hideDialog('searchPathDialogDiv');
+        }
+        function setSearchPath(numberId) {
+            var dialogInput = document.getElementById('searchPathDialogInput');
+            var dialogInputValue = dialogInput.value;
+            var msgId = 'searchPathCheckHint';
+            if(!dialogInputValue || dialogInputValue === '') {
+                updateMsg(msgId, '搜索路径为空', 'red');
+                return;
+            } else {
+                var matchResult = dialogInputValue.match(urlRelativePathRegex);
+                if(!matchResult) {
+                    updateMsg(msgId, '搜索路径格式不符合规则', 'red');
+                    return;
+                }
+            }
+            updateMsg(msgId, CHECK_PASSED, 'green');
+            var inputId = 'searchPaths' + numberId;
+            document.getElementById(inputId).value = dialogInputValue;
+            hideSearchPathDialog();
+        }
+        function refreshSearchPathDialog(searchPath) {
+            var msgId = 'searchPathCheckHint';
+            document.getElementById(msgId).style.display = 'none';
+            if(!searchPath) {
+                searchPath = document.getElementById('searchPathDialogInput').value;
+            }
+            if(searchPath === '') {
+                searchPath = '/';
+            } else {
+                var matchResult = searchPath.match(urlRelativePathRegex);
+                if(!matchResult) {
+                    if(window.console) {
+                        if(console.warn) {
+                            console.warn('指定路径' + searchPath + '不符合规则，重置为默认路径');
+                        } else {
+                            console.log('指定路径' + searchPath + '不符合规则，重置为默认路径');
+                        }
+                    }
+                    searchPath = '/';
+                }
+            }
+            var searchPathDialogUl = document.getElementById('searchPathDialogUl');
+            abortXhr(searchPath);
+            clearChildren(searchPathDialogUl);
+            searchPathDialogUl.innerText = '正在列出文件列表...';
+            sendPostFormRequest(
+                contextPath + '/listSubDirectory',
+                'path=' + encodeURIComponent(searchPath),
+                true,
+                searchPath,
+                function (xhr) {
+                    if (xhr.readyState === 4) {
+                        //兼容IE9
+                        try {
+                            var xhrStatus = xhr.status;
+                        } catch(e) {
+                            if(window.console) {
+                                console.error('获取XMLHttpRequest状态码时发生异常:', e);
+                            }
+                            return;
+                        }
+                        searchPathDialogUl.innerText = '';
+                        var success = false;
+                        if (xhr.status === 200) {
+                            var returnObject = JSON.parse(xhr.responseText);
+                            if(returnObject.success) {
+                                success = true;
+                                fillSearchPathDialogRoot(searchPathDialogUl, returnObject.data);
+                            } else {
+                                searchPathDialogUl.innerText = '获取文件列表失败:' + returnObject.message;
+                            }
+                        } else {
+                            searchPathDialogUl.innerText = '获取文件列表失败，状态码:' + xhr.status;
+                        }
+                        if(!success) {
+                            var button = createRemoveUlButton();
+                            searchPathDialogUl.appendChild(button);
+                        }
+                    }
+                }
+            );
+        }
+        function fillSearchPathDialogRoot(parentUl,data) {
+            if(!parentUl || !data) {
+                return;
+            }
+            var li = document.createElement('li');
+            li.style.cursor = 'pointer';
+            li.innerText = data.name;
+            var relativePath = data.relativePath;
+            li.setAttribute('relative-path', relativePath);
+            li.onclick = chooseSearchPath;
+            var foldButton = createImgButton(foldBlackIconSrc,'折叠',null,foldButtonClickFunc);
+            li.appendChild(foldButton);
+            if(data.subModelList !== null) {
+                var liUl = document.createElement('ul');
+                if(data.subModelList.length > 0) {
+                    fillSearchPathDialog(liUl,data.subModelList);
+                } else {
+                    liUl.innerText = '无项目';
+                }
+                li.appendChild(liUl);
+            }
+            parentUl.appendChild(li);
+        }
+        function fillSearchPathDialog(parentUl,modelList) {
+            if(!parentUl || !modelList) {
+                return;
+            }
+            for(var i=0;i<modelList.length;i++) {
+                var model = modelList[i];
+                var li = document.createElement('li');
+                li.style.cursor = 'pointer';
+                li.innerText = model.name;
+                var relativePath = model.relativePath;
+                li.setAttribute('relative-path', relativePath);
+                li.onclick = chooseSearchPath;
+                if(model.subModelList !== null) {
+                    var foldButton = createImgButton(foldBlackIconSrc,'折叠',null,foldButtonClickFunc);
+                    li.appendChild(foldButton);
+                    var liUl = document.createElement('ul');
+                    if(model.subModelList.length > 0) {
+                        fillSearchPathDialog(liUl,model.subModelList);
+                    } else {
+                        liUl.innerText = '无项目';
+                    }
+                    li.appendChild(liUl);
+                } else {
+                    var expandButton = createImgButton(expandBlackIconSrc,'展开',null,expandButtonClickFunc);
+                    li.appendChild(expandButton);
+                }
+                parentUl.appendChild(li);
+            }
+        }
+        function createRemoveUlButton() {
+            var button = document.createElement('button');
+            bindEventListener(button, 'click', function(e) {
+                e = e || window.event;
+                if(IE_VERSION && IE_VERSION < 9) {
+                    e.cancelBubble = true;
+                } else {
+                    e.stopPropagation();
+                }
+                var ul = this.parentElement;
+                var ulParent = ul.parentElement;
+                ulParent.removeChild(ul);
+            });
+            return button;
+        }
+        function foldButtonClickFunc(e) {
+            e = e || window.event;
+            if(IE_VERSION && IE_VERSION < 9) {
+                e.cancelBubble = true;
+            } else {
+                e.stopPropagation();
+            }
+            var parentLi = this.parentElement;
+            var children = parentLi.children;
+            for(var i=0;i<children.length;i++) {
+                if(children[i].tagName.toLowerCase() === 'ul') {
+                    children[i].style.display = 'none';
+                }
+            }
+            setButtonImgSrcBOW(this, expandBlackIconSrc, expandWhiteIconSrc);
+            this.setAttribute('alt', '展开');
+            this.onclick = expandButtonClickFunc;
+        }
+        function expandButtonClickFunc(e) {
+            e = e || window.event;
+            if(IE_VERSION && IE_VERSION < 9) {
+                e.cancelBubble = true;
+            } else {
+                e.stopPropagation();
+            }
+            var parentLi = this.parentElement;
+            var children = parentLi.children;
+            var foundUl = false;
+            for(var i=0;i<children.length;i++) {
+                if(children[i].tagName.toLowerCase() === 'ul') {
+                    children[i].style.display = '';
+                    foundUl = true;
+                }
+            }
+            if(!foundUl) {
+                var liUl = document.createElement('ul');
+                liUl.innerText = '正在列出文件列表...';
+                parentLi.appendChild(liUl);
+                var searchPath = parentLi.getAttribute('relative-path');
+                sendPostFormRequest(
+                    contextPath + '/listSubDirectory',
+                    'path=' + encodeURIComponent(searchPath) + '&fromRoot=false',
+                    true,
+                    searchPath,
+                    function (xhr) {
+                        if (xhr.readyState === 4) {
+                            //兼容IE9
+                            try {
+                                var xhrStatus = xhr.status;
+                            } catch(e) {
+                                if(window.console) {
+                                    console.error('获取XMLHttpRequest状态码时发生异常:', e);
+                                }
+                                return;
+                            }
+                            liUl.innerText = '';
+                            var success = false;
+                            if (xhr.status === 200) {
+                                var returnObject = JSON.parse(xhr.responseText);
+                                if(returnObject.success) {
+                                    success = true;
+                                    if(returnObject.data.subModelList === null) {
+                                        li.removeChild(liUl);
+                                    } else if(returnObject.data.subModelList.length > 0) {
+                                        fillSearchPathDialog(liUl, returnObject.data.subModelList);
+                                    } else {
+                                        liUl.innerText = '无项目';
+                                    }
+                                } else {
+                                    liUl.innerText = '获取文件列表失败:' + returnObject.message;
+                                }
+                            } else {
+                                liUl.innerText = '获取文件列表失败，状态码:' + xhr.status;
+                            }
+                            if(!success) {
+                                var button = createRemoveUlButton();
+                                liUl.appendChild(button);
+                            }
+                        }
+                    }
+                );
+            }
+            setButtonImgSrcBOW(this, foldBlackIconSrc, foldWhiteIconSrc);
+            this.setAttribute('alt', '折叠');
+            this.onclick = foldButtonClickFunc;
+        }
+        function createImgButton(imgSrc,imgAlt,buttonId,clickFunc) {
+            if(!imgSrc) {
+                return;
+            }
+            var button = document.createElement('button');
+            setClass(button, 'imgButton');
+            button.setAttribute('type', 'button');
+            if(buttonId) {
+                button.id = buttonId;
+            }
+            if(clickFunc) {
+                button.onclick = clickFunc;
+            }
+            var img = document.createElement('img');
+            setClass(img, 'buttonImg');
+            if(imgAlt) {
+                img.setAttribute('alt', imgAlt);
+            }
+            button.appendChild(img);
+            setButtonImgSrc(button, imgSrc);
+            return button;
+        }
+        function chooseSearchPath(e) {
+            e = e || window.event;
+            if(IE_VERSION && IE_VERSION < 9) {
+                e.cancelBubble = true;
+            } else {
+                e.stopPropagation();
+            }
+            for(var i=0;i<selectedSearchPathLis.length;i++) {
+                var li = selectedSearchPathLis[i];
+                setClass(li, '');
+                var liChildren = li.children;
+                if(liChildren) {
+                    for(var j=0;j<liChildren.length;j++) {
+                        if(liChildren[j].tagName.toLowerCase() === 'button') {
+                            var button = liChildren[j];
+                            button.setAttribute('localfts-selected', 'false');
+                            var buttonImgSrc = getButtonImgSrc(button);
+                            if(buttonImgSrc === foldWhiteIconSrc) {
+                                setButtonImgSrc(button, foldBlackIconSrc);
+                            } else {
+                                setButtonImgSrc(button, expandBlackIconSrc);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            selectedSearchPathLis[selectedSearchPathLis.length] = this;
+            setClass(this, 'bg-black');
+            var children = this.children;
+            if(children) {
+                for(var j=0;j<children.length;j++) {
+                    if(children[j].tagName.toLowerCase() === 'button') {
+                        var button = children[j];
+                        button.setAttribute('localfts-selected', 'true');
+                        var buttonImgSrc = getButtonImgSrc(button);
+                        if(buttonImgSrc === foldBlackIconSrc) {
+                            setButtonImgSrc(button, foldWhiteIconSrc);
+                        } else {
+                            setButtonImgSrc(button, expandWhiteIconSrc);
+                        }
+                        break;
+                    }
+                }
+            }
+            document.getElementById('searchPathDialogInput').value = this.getAttribute('relative-path');
+        }
+        function getButtonImgSrc(element) {
+            if(!element) {
+                return null;
+            }
+            if(element.tagName.toLowerCase() !== 'button') {
+                return null;
+            }
+            var elementChildren = element.children;
+            if(elementChildren && elementChildren.length > 0) {
+                var firstChild = elementChildren[0];
+                if(firstChild.tagName.toLowerCase() === 'img') {
+                    return firstChild.getAttribute('src');
+                }
+            }
+            return null;
+        }
+        function setButtonImgSrcBOW(element,blackSrc,whiteSrc) {
+            if(!element || !blackSrc || !whiteSrc) {
+                return;
+            }
+            var mode = element.getAttribute('localfts-selected');
+            var src = blackSrc;
+            if(mode && mode === 'true') {
+                src = whiteSrc;
+            }
+            setButtonImgSrc(element,src);
         }
         function setButtonImgSrc(element,src) {
             if(!element || !src) {

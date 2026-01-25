@@ -185,7 +185,6 @@
     <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
     <script type="text/javascript" th:inline="javascript" th:if="${directoryExists}">
         var contextPath = [[${#request.contextPath}]];
-        var ieVersion = getIEVersion();
         var ftsPagePath = [[${currentPath}]];
         var ftsPageSize = Number(document.getElementById("page-size").value);
         var sortColumn = [[${sortColumn}]];
@@ -237,13 +236,12 @@
             if(dividingTds && dividingTds.length > 0) {
                 var bb = '0.1em';
                 var chromiumVersion = getChromiumVersion();
-                var ieVersion = getIEVersion();
-                if(isFirefox() || (chromiumVersion && chromiumVersion < 71) || (ieVersion && ieVersion < 7)) {
+                if(isFirefox() || (chromiumVersion && chromiumVersion < 71) || (IE_VERSION && IE_VERSION < 7)) {
                     bb = '2px';
                 }
                 bb = bb + ' solid #000';
                 for(var i=0;i<dividingTds.length;i++) {
-                    if(ieVersion && ieVersion < 7) {
+                    if(IE_VERSION && IE_VERSION < 7) {
                         dividingTds[i].style.borderBottom = bb;
                     } else {
                         setStyle(dividingTds[i],'border-bottom',bb);
@@ -276,13 +274,13 @@
             for(var i=0;i<sortLinks.length;i++) {
                 var eSortColumn = sortLinks[i].getAttribute('sort-column');
                 var eSortOrder = null, imgSrc = null;
-                if(sortColumn === null || sortColumn !== eSortColumn) {
+                if(!sortColumn || sortColumn !== eSortColumn) {
                     eSortOrder = 'ASC';
                     imgSrc = contextPath + '/static/icon/sort_32px_black';
-                } else if(sortColumn !== null && sortOrder === 'ASC') {
+                } else if(sortColumn && sortOrder === 'ASC') {
                     eSortOrder = 'DESC';
                     imgSrc = contextPath + '/static/icon/sort_asc_32px_black';
-                } else if(sortColumn !== null && sortOrder === 'DESC') {
+                } else if(sortColumn && sortOrder === 'DESC') {
                     eSortColumn = undefined;
                     eSortOrder = undefined;
                     imgSrc = contextPath + '/static/icon/sort_desc_32px_black';
@@ -294,7 +292,7 @@
                     eSortOrder = undefined;
                 }
                 if(imgSrc) {
-                    if(ieVersion && ieVersion < 8) {
+                    if(IE_VERSION && IE_VERSION < 8) {
                         imgSrc = imgSrc + '_png8';
                     }
                     imgSrc = imgSrc + '.png';
