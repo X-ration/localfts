@@ -63,7 +63,7 @@
         <div id="advanced-condition-div" style="display: none">
             <div id="searchPathsDiv">
                 目标路径：<button class="imgButton" type="button" id="searchPathsAddButton" onclick="addSearchPathElement()"><img class="buttonImg" alt="添加路径"></button>
-                <input style="width: 50%" type="text" id="searchPaths1" name="searchPaths" readonly="readonly">
+                <input style="width: 50%; text-align: center" type="text" id="searchPaths1" name="searchPaths" readonly="readonly">
                 <button class="imgButton" type="button" id="searchPathsKeyboardButton1" onclick="showSearchPathDialog(1)"><img class="buttonImg" alt="选择路径"></button>
                 <button class="imgButton" type="button" id="searchPathsDeleteButton1" onclick="deleteSearchPathElement(1)"><img class="buttonImg" alt="删除路径"></button>
                 <span class="inline" style="color:red; display:none" id="searchPathsMsg1"></span>
@@ -317,7 +317,7 @@
         var keyword = [[${keyword}]];
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
 
-        //定义inputId集合和正则表达式以便后续统一处理相关元素
+        //定义inputId集合和其他公共变量以便后续统一处理相关元素
         var dateTimeInputIds = ['lastModifiedLower', 'lastModifiedUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
         var fileSizeInputIds = ['fileSizeLower', 'fileSizeUpper', 'compressedFileSizeLower', 'compressedFileSizeUpper'];
         var fileGroupInputIds = ['fileSizeLower', 'fileSizeUpper'];
@@ -364,6 +364,7 @@
             var buttonId = inputId + 'Button';
             keyboardButtonIds[keyboardButtonIds.length] = buttonId;
         }
+
         if(dateAndTimeInputSupported) {
             //日期时间input支持的情况下移除相关按钮
             for(var i=0;i<keyboardButtonIds.length;i++) {
@@ -774,6 +775,7 @@
             input.name = 'searchPaths';
             input.readOnly = 'readonly';
             input.style.width = '50%';
+            input.style.textAlign = 'center';
             div.appendChild(input);
             var keyboardButton = document.createElement('button');
             setClass(keyboardButton, 'imgButton');
