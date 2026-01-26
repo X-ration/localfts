@@ -554,48 +554,37 @@
                         false,
                         xhrKey,
                         function (xhr) {
-                            if (xhr.readyState === 4) {
-                                //兼容IE9
-                                try {
-                                    var xhrStatus = xhr.status;
-                                } catch(e) {
-                                    if(window.console) {
-                                        console.error('获取XMLHttpRequest状态码时发生异常:', e);
-                                    }
-                                    return;
-                                }
-                                var success = false;
-                                var failMsg = null;
-                                if (xhr.status === 200) {
-                                    var returnObject = JSON.parse(xhr.responseText);
-                                    if(returnObject.success) {
-                                        var existsMap = returnObject.data;
-                                        if(existsMap) {
-                                            success = true;
-                                            for(var i=0;i<validInputValues.length;i++) {
-                                                var path = validInputValues[i];
-                                                var numberId = validInputNumberIds[i];
-                                                var msgId = 'searchPathsMsg' + numberId;
-                                                if(existsMap[path]) {
-                                                    updateMsg(msgId, CHECK_PASSED, 'green');
-                                                } else {
-                                                    hasError = true;
-                                                    updateMsg(msgId, '该路径不存在！', 'red');
-                                                }
+                            var success = false;
+                            var failMsg = null;
+                            if (xhr.status === 200) {
+                                var returnObject = JSON.parse(xhr.responseText);
+                                if(returnObject.success) {
+                                    var existsMap = returnObject.data;
+                                    if(existsMap) {
+                                        success = true;
+                                        for(var i=0;i<validInputValues.length;i++) {
+                                            var path = validInputValues[i];
+                                            var numberId = validInputNumberIds[i];
+                                            var msgId = 'searchPathsMsg' + numberId;
+                                            if(existsMap[path]) {
+                                                updateMsg(msgId, CHECK_PASSED, 'green');
+                                            } else {
+                                                hasError = true;
+                                                updateMsg(msgId, '该路径不存在！', 'red');
                                             }
                                         }
-                                    } else {
-                                        failMsg = returnObject.message;
                                     }
                                 } else {
-                                    failMsg = '状态码=' + xhr.status;
+                                    failMsg = returnObject.message;
                                 }
-                                if(!success) {
-                                    hasError = true;
-                                    for(var i=0;i<validInputNumberIds.length;i++) {
-                                        var msgId = 'searchPathsMsg' + validInputNumberIds[i];
-                                        updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
-                                    }
+                            } else {
+                                failMsg = '状态码=' + xhr.status;
+                            }
+                            if(!success) {
+                                hasError = true;
+                                for(var i=0;i<validInputNumberIds.length;i++) {
+                                    var msgId = 'searchPathsMsg' + validInputNumberIds[i];
+                                    updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
                                 }
                             }
                         }, function(e) {
@@ -1028,33 +1017,22 @@
                 false,
                 searchPath,
                 function (xhr) {
-                    if (xhr.readyState === 4) {
-                        //兼容IE9
-                        try {
-                            var xhrStatus = xhr.status;
-                        } catch(e) {
-                            if(window.console) {
-                                console.error('获取XMLHttpRequest状态码时发生异常:', e);
-                            }
-                            return;
-                        }
-                        searchPathDialogUl.innerText = '';
-                        var success = false;
-                        if (xhr.status === 200) {
-                            var returnObject = JSON.parse(xhr.responseText);
-                            if(returnObject.success) {
-                                success = true;
-                                fillSearchPathDialogRoot(searchPathDialogUl, returnObject.data);
-                            } else {
-                                searchPathDialogUl.innerText = '获取文件列表失败:' + returnObject.message;
-                            }
+                    searchPathDialogUl.innerText = '';
+                    var success = false;
+                    if (xhr.status === 200) {
+                        var returnObject = JSON.parse(xhr.responseText);
+                        if(returnObject.success) {
+                            success = true;
+                            fillSearchPathDialogRoot(searchPathDialogUl, returnObject.data);
                         } else {
-                            searchPathDialogUl.innerText = '获取文件列表失败，状态码:' + xhr.status;
+                            searchPathDialogUl.innerText = '获取文件列表失败:' + returnObject.message;
                         }
-                        if(!success) {
-                            var button = createRemoveUlButton();
-                            searchPathDialogUl.appendChild(button);
-                        }
+                    } else {
+                        searchPathDialogUl.innerText = '获取文件列表失败，状态码:' + xhr.status;
+                    }
+                    if(!success) {
+                        var button = createRemoveUlButton();
+                        searchPathDialogUl.appendChild(button);
                     }
                 }
             );
@@ -1165,45 +1143,35 @@
                 liUl.innerText = '正在列出文件列表...';
                 parentLi.appendChild(liUl);
                 var searchPath = parentLi.getAttribute('relative-path');
+                abortXhr(searchPath);
                 sendPostFormRequest(
                     contextPath + '/listSubDirectory',
                     'path=' + encodeURIComponent(searchPath) + '&fromRoot=false',
                     true,
                     searchPath,
                     function (xhr) {
-                        if (xhr.readyState === 4) {
-                            //兼容IE9
-                            try {
-                                var xhrStatus = xhr.status;
-                            } catch(e) {
-                                if(window.console) {
-                                    console.error('获取XMLHttpRequest状态码时发生异常:', e);
-                                }
-                                return;
-                            }
-                            liUl.innerText = '';
-                            var success = false;
-                            if (xhr.status === 200) {
-                                var returnObject = JSON.parse(xhr.responseText);
-                                if(returnObject.success) {
-                                    success = true;
-                                    if(returnObject.data.subModelList === null) {
-                                        li.removeChild(liUl);
-                                    } else if(returnObject.data.subModelList.length > 0) {
-                                        fillSearchPathDialog(liUl, returnObject.data.subModelList);
-                                    } else {
-                                        liUl.innerText = '无项目';
-                                    }
+                        liUl.innerText = '';
+                        var success = false;
+                        if (xhr.status === 200) {
+                            var returnObject = JSON.parse(xhr.responseText);
+                            if(returnObject.success) {
+                                success = true;
+                                if(returnObject.data.subModelList === null) {
+                                    li.removeChild(liUl);
+                                } else if(returnObject.data.subModelList.length > 0) {
+                                    fillSearchPathDialog(liUl, returnObject.data.subModelList);
                                 } else {
-                                    liUl.innerText = '获取文件列表失败:' + returnObject.message;
+                                    liUl.innerText = '无项目';
                                 }
                             } else {
-                                liUl.innerText = '获取文件列表失败，状态码:' + xhr.status;
+                                liUl.innerText = '获取文件列表失败:' + returnObject.message;
                             }
-                            if(!success) {
-                                var button = createRemoveUlButton();
-                                liUl.appendChild(button);
-                            }
+                        } else {
+                            liUl.innerText = '获取文件列表失败，状态码:' + xhr.status;
+                        }
+                        if(!success) {
+                            var button = createRemoveUlButton();
+                            liUl.appendChild(button);
                         }
                     }
                 );
