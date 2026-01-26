@@ -601,10 +601,12 @@
                         }, function(e) {
                             hasError = true;
                             var errorMsg = '检查路径是否存在失败:连接服务器失败';
-                            if(e.name) {
-                                errorMsg = errorMsg + '(' + e.name + ')';
-                            } else {
-                                errorMsg = errorMsg + '(' + e.message + ')';
+                            if(e) {
+                                if(e.name) {
+                                    errorMsg = errorMsg + '(' + e.name + ')';
+                                } else if(e.message) {
+                                    errorMsg = errorMsg + '(' + e.message + ')';
+                                }
                             }
                             for(var i=0;i<validInputNumberIds.length;i++) {
                                 var msgId = 'searchPathsMsg' + validInputNumberIds[i];

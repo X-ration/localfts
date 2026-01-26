@@ -29,23 +29,56 @@ function sendPostFormRequest(url, data, isAsync, xhrKey, func, errorFunc, timeou
 
   xhrObject[xhrKey] = xhr;
 
+  var ie6TimeoutTimer = null;
+
   // 监听请求状态变化
   xhr.onreadystatechange = function() {
-    func(xhr);
+    if(xhr && xhr.readyState === 4) {
+      //兼容IE9
+      try {
+        var xhrStatus = xhr.status;
+      } catch(e) {
+        if(window.console) {
+          console.error('获取XMLHttpRequest状态码时发生异常:', e);
+        }
+        return;
+      }
+      if(IE_VERSION && IE_VERSION < 7 && isAsync && timeout) {
+        if(ie6TimeoutTimer) {
+          clearTimeout(ie6TimeoutTimer);
+          ie6TimeoutTimer = null;
+        }
+      };
+      func(xhr);
+    }
   };
 
-  if(errorFunc) {
-    xhr.onerror = errorFunc;
-  }
-  if(isAsync && timeout) {
-    xhr.timeout = timeout;
-    if(timeoutFunc) {
-      xhr.ontimeout = timeoutFunc;
-    }
-  }
-
+  // 兼容IE9（必须在open和send之间设置timeout）
   // 初始化请求（POST 方法，目标 URL，异步请求）
   xhr.open("POST", url, isAsync);
+
+  if(!IE_VERSION || IE_VERSION > 6) {
+    if(errorFunc) {
+      xhr.onerror = errorFunc;
+    }
+    if(isAsync && timeout) {
+      xhr.timeout = timeout;
+      if(timeoutFunc) {
+        xhr.ontimeout = timeoutFunc;
+      }
+    }
+  } else {
+    if(isAsync && timeout) {
+      ie6TimeoutTimer = setTimeout(function () {
+        if(xhr && xhr.readyState !== 4) {
+          xhr.abort();
+          if(timeoutFunc) {
+            timeoutFunc();
+          }
+        }
+      }, timeout);
+    }
+  }
 
   // 设置请求头：POST 请求需指定 Content-Type，否则服务器可能无法解析数据
   // 表单格式数据通常用 application/x-www-form-urlencoded
