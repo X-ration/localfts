@@ -524,6 +524,7 @@
                 var searchPathsInputs = searchPathsDiv.getElementsByTagName('input');
                 if(searchPathsInputs) {
                     var validInputValues = [];
+                    var validInputNumberIds = [];
                     for(var i=0;i<searchPathsInputs.length;i++) {
                         var input = searchPathsInputs[i];
                         var inputValue = input.value;
@@ -540,10 +541,77 @@
                                 updateMsg(msgId, '搜索路径重复', 'red');
                             } else {
                                 validInputValues[validInputValues.length] = inputValue;
-                                updateMsg(msgId, CHECK_PASSED, 'green');
+                                validInputNumberIds[validInputNumberIds.length] = numberId;
+                                //updateMsg(msgId, CHECK_PASSED, 'green');
                             }
                         }
                     }
+                    var xhrKey = 'checkPathExists';
+                    abortXhr(xhrKey);
+                    sendPostFormRequest(
+                        contextPath + '/checkPathExists',
+                        'paths=' + encodeURIComponent(validInputValues),
+                        false,
+                        xhrKey,
+                        function (xhr) {
+                            if (xhr.readyState === 4) {
+                                //兼容IE9
+                                try {
+                                    var xhrStatus = xhr.status;
+                                } catch(e) {
+                                    if(window.console) {
+                                        console.error('获取XMLHttpRequest状态码时发生异常:', e);
+                                    }
+                                    return;
+                                }
+                                var success = false;
+                                var failMsg = null;
+                                if (xhr.status === 200) {
+                                    var returnObject = JSON.parse(xhr.responseText);
+                                    if(returnObject.success) {
+                                        var existsMap = returnObject.data;
+                                        if(existsMap) {
+                                            success = true;
+                                            for(var i=0;i<validInputValues.length;i++) {
+                                                var path = validInputValues[i];
+                                                var numberId = validInputNumberIds[i];
+                                                var msgId = 'searchPathsMsg' + numberId;
+                                                if(existsMap[path]) {
+                                                    updateMsg(msgId, CHECK_PASSED, 'green');
+                                                } else {
+                                                    hasError = true;
+                                                    updateMsg(msgId, '该路径不存在！', 'red');
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        failMsg = returnObject.message;
+                                    }
+                                } else {
+                                    failMsg = '状态码=' + xhr.status;
+                                }
+                                if(!success) {
+                                    hasError = true;
+                                    for(var i=0;i<validInputNumberIds.length;i++) {
+                                        var msgId = 'searchPathsMsg' + validInputNumberIds[i];
+                                        updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
+                                    }
+                                }
+                            }
+                        }, function(e) {
+                            hasError = true;
+                            var errorMsg = '检查路径是否存在失败:连接服务器失败';
+                            if(e.name) {
+                                errorMsg = errorMsg + '(' + e.name + ')';
+                            } else {
+                                errorMsg = errorMsg + '(' + e.message + ')';
+                            }
+                            for(var i=0;i<validInputNumberIds.length;i++) {
+                                var msgId = 'searchPathsMsg' + validInputNumberIds[i];
+                                updateMsg(msgId, errorMsg, 'red');
+                            }
+                        }
+                    );
                 }
                 var directory = getCheckedValue('directory');
                 var directoryValue = null;
@@ -838,8 +906,72 @@
             if(input && input.tagName.toLowerCase() === 'input') {
                 searchPath = input.value;
             }
+            var searchPathDialogInput = document.getElementById('searchPathDialogInput');
             refreshSearchPathDialog(searchPath);
+            var searchPathDialogUl = document.getElementById('searchPathDialogUl');
+            var scrollDiv = searchPathDialogUl.parentElement;
+            var searchPathLi = findSearchPathDialogLiFromRoot(searchPathDialogUl, searchPath);
+            if(searchPathLi) {
+                searchPathDialogInput.value = searchPath;
+                searchPathLi.click();
+            } else {
+                searchPathDialogInput.value = '';
+            }
             showDialog('searchPathDialogDiv');
+            scrollDiv.scrollTop = 0;
+        }
+        function findSearchPathDialogLiFromRoot(parentUl,searchPath) {
+            if(!parentUl || !searchPath) {
+                return null;
+            }
+            if(parentUl.tagName.toLowerCase() !== 'ul') {
+                return null;
+            }
+            var ulChildren = parentUl.children;
+            if(ulChildren) {
+                for(var i=0;i<ulChildren.length;i++) {
+                    if(ulChildren[i].tagName.toLowerCase() === 'li') {
+                        return findSearchPathDialogLi(ulChildren[i], searchPath);
+                    }
+                }
+            }
+            return null;
+        }
+        function findSearchPathDialogLi(parentLi,searchPath) {
+            if(!parentLi|| !searchPath) {
+                return null;
+            }
+            if(parentLi.tagName.toLowerCase() !== 'li') {
+                return null;
+            }
+            if(parentLi.getAttribute('relative-path') === searchPath) {
+                return parentLi;
+            }
+            var liUl = null;
+            var liChildren = parentLi.children;
+            if(liChildren) {
+                for(var i=0;i<liChildren.length;i++) {
+                    if(liChildren[i].tagName.toLowerCase() === 'ul') {
+                        liUl = liChildren[i];
+                    }
+                }
+            }
+            if(!liUl) {
+                return null;
+            }
+            var liUlChildren = liUl.children;
+            if(liUlChildren) {
+                for(var i=0;i<liUlChildren.length;i++) {
+                    var liUlChild = liUlChildren[i];
+                    if(liUlChild.tagName.toLowerCase() === 'li') {
+                        var foundLi = findSearchPathDialogLi(liUlChild, searchPath);
+                        if(foundLi) {
+                            return foundLi;
+                        }
+                    }
+                }
+            }
+            return null;
         }
         function hideSearchPathDialog() {
             hideDialog('searchPathDialogDiv');
@@ -891,7 +1023,7 @@
             sendPostFormRequest(
                 contextPath + '/listSubDirectory',
                 'path=' + encodeURIComponent(searchPath),
-                true,
+                false,
                 searchPath,
                 function (xhr) {
                     if (xhr.readyState === 4) {

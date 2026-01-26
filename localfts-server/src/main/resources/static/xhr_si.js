@@ -18,8 +18,12 @@ function createXHR() {
   return xhr;
 }
 
-// 发送 POST 请求
-function sendPostFormRequest(url, data, isAsync, func) {
+/** 发送 POST 请求
+  @param errorFunc 错误处理函数，同时用于处理catch块捕获的异常(DOMException)和onerror事件(ErrorEvent)
+  @param timeout 超时时间，只在异步请求中有效
+  @param timeoutFunc 超时处理函数，只在异步请求中有效
+*/
+function sendPostFormRequest(url, data, isAsync, func, errorFunc, timeout, timeoutFunc) {
   var xhr = createXHR();
   if (!xhr) return;
 
@@ -27,6 +31,16 @@ function sendPostFormRequest(url, data, isAsync, func) {
   xhr.onreadystatechange = function() {
     func(xhr);
   };
+
+  if(errorFunc) {
+    xhr.onerror = errorFunc;
+  }
+  if(isAsync && timeout) {
+    xhr.timeout = timeout;
+    if(timeoutFunc) {
+      xhr.ontimeout = timeoutFunc;
+    }
+  }
 
   // 初始化请求（POST 方法，目标 URL，异步请求）
   xhr.open("POST", url, isAsync);
@@ -37,8 +51,16 @@ function sendPostFormRequest(url, data, isAsync, func) {
   xhr.setRequestHeader("Accept", "application/json");
 
   // 发送数据（格式为 key=value&key2=value2，与表单提交格式一致）
-  xhr.send(data);
-}
+  try {
+    xhr.send(data);
+  } catch (e) {
+    if(window.console) {
+      console.error('发起XHR请求失败', e);
+    }
+    if(errorFunc) {
+      errorFunc(e);
+    }
+  }
 
 function abortXhr() {
   if(xhr && xhr.readyState != 4) {

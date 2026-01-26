@@ -122,6 +122,16 @@ public class FtsService {
         return directory.exists() && directory.isDirectory();
     }
 
+    public ReturnObject<Map<String, Boolean>> checkPathExists(String[] relativePaths) {
+        Assert.isTrue(relativePaths != null, "relativePaths is null!");
+        Map<String, Boolean> pathExistsMap = new HashMap<>();
+        for(String relativePath: relativePaths) {
+            boolean pathExists = checkDirectoryExists(relativePath, false);
+            pathExistsMap.put(relativePath, pathExists);
+        }
+        return ReturnObject.success(pathExistsMap);
+    }
+
     public ReturnObject<FtsSubDirectoryModel> getSubDirectoryModel(final String relativePath, boolean fromRoot) {
         boolean condition = null != relativePath && relativePath.startsWith("/");
         if(!condition) {

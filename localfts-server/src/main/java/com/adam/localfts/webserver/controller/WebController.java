@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("")
@@ -103,6 +104,15 @@ public class WebController {
             return ReturnObject.fail("该路径不存在");
         }
         return ftsService.getSubDirectoryModel(relativePath, fromRoot);
+    }
+
+    @PostMapping("/checkPathExists")
+    @ResponseBody
+    public ReturnObject<Map<String, Boolean>> checkPathExists(@RequestParam(name = "paths") String[] relativePaths) {
+        if(relativePaths == null || relativePaths.length == 0) {
+            return ReturnObject.fail("请求参数未传入");
+        }
+        return ftsService.checkPathExists(relativePaths);
     }
 
     /**
