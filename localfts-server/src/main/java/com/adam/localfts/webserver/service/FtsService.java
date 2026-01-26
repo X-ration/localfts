@@ -137,7 +137,7 @@ public class FtsService {
         if(!condition) {
             return ReturnObject.fail("非法请求参数");
         }
-        Matcher matcher = ftsServerConfigService.getUrlRelativePathPattern().matcher(relativePath);
+        Matcher matcher = ftsServerConfigService.getStandardRelativePathPattern().matcher(relativePath);
         if(!matcher.matches()) {
             return ReturnObject.fail("请求路径参数不符合规则");
         }

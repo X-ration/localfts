@@ -14,9 +14,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @DependsOn("ftsServerConfigService")
@@ -24,6 +28,8 @@ public class FtsSearchService {
 
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
+    @Autowired
+    private FtsService ftsService;
     @Autowired
     private WebServerStartListener webServerStartListener;
     private final Logger logger = LoggerFactory.getLogger(FtsSearchService.class);
@@ -44,10 +50,23 @@ public class FtsSearchService {
         Assert.isTrue(pageSize > 0, "非法的每页数量：" + pageSize);
         Assert.isTrue(sortColumn == null || sortOrder != null, "排序顺序为null");
         if(advancedSearchCondition != null && !advancedSearchCondition.isEmpty()) {
-            advancedSearchCondition.clean();
+            preHandleAdvancedSearchCondition(advancedSearchCondition);
         }
         logger.debug("Actual advanced condition={}", advancedSearchCondition);
         return new PageObject<>(pageNo, pageSize, null);
+    }
+
+    private void preHandleAdvancedSearchCondition(AdvancedSearchCondition advancedSearchCondition) {
+        advancedSearchCondition.clean();
+        List<String> searchPathList = advancedSearchCondition.getSearchPaths();
+        Pattern standardPathPattern = ftsServerConfigService.getStandardRelativePathPattern();
+        if(!CollectionUtils.isEmpty(searchPathList)) {
+            searchPathList = searchPathList.stream()
+                    .filter(path -> standardPathPattern.matcher(path).matches())
+                    .filter(path -> ftsService.checkDirectoryExists(path, false))
+                    .collect(Collectors.toList());
+            advancedSearchCondition.setSearchPathList(searchPathList);
+        }
     }
 
     /**

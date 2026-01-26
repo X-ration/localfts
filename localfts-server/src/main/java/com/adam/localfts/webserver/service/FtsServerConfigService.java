@@ -88,7 +88,11 @@ public class FtsServerConfigService implements DisposableBean {
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
     }
 
-    public Pattern getUrlRelativePathPattern() {
+    /**
+     * 根据服务器系统获取标准相对路径的正则表达式
+     * @return
+     */
+    public Pattern getStandardRelativePathPattern() {
         if(Util.isSystemWindows()) {
             return Constants.PATTERN_PATH_WINDOWS_STANDARD_RELATIVE;
         } else {

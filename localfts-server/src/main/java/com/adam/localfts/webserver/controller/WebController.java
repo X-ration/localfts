@@ -310,7 +310,7 @@ public class WebController {
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();
         model.addAttribute("serverTime", serverTime);
-        String urlRelativePathPattern = ftsServerConfigService.getUrlRelativePathPattern().pattern();
+        String urlRelativePathPattern = ftsServerConfigService.getStandardRelativePathPattern().pattern();
         model.addAttribute("urlRelativePathPattern", urlRelativePathPattern);
         if(StringUtils.isEmpty(keyword)) {
             LOGGER.debug("search with empty keyword");
