@@ -154,6 +154,16 @@ function deleteCompressFile() {
             } else {
                 updateCompressingHint('删除失败，状态码：' + xhr.status);
             }
+        }, function(e) {
+            var errorMsg = '删除失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCompressingHint(errorMsg);
         }
     );
 }
@@ -218,6 +228,16 @@ function cancelCompress() {
             } else {
                 updateCompressingHint('取消失败，状态码：' + xhr.status);
             }
+        }, function(e) {
+            var errorMsg = '取消失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCompressingHint(errorMsg);
         }
     );
 }
@@ -341,6 +361,17 @@ function compressFolder() {
                 updateCompressingHint('压缩失败，状态码：' + xhr.status);
                 removeElementById('cancelCompressButton', 'compressingDiv');
             }
+        }, function(e) {
+            compressStatus = 'NOT_COMPRESSED';
+            var errorMsg = '压缩失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCompressingHint(errorMsg);
         }
     );
 }

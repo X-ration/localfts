@@ -313,7 +313,6 @@ public class WebController {
         String urlRelativePathPattern = ftsServerConfigService.getStandardRelativePathPattern().pattern();
         model.addAttribute("urlRelativePathPattern", urlRelativePathPattern);
         if(StringUtils.isEmpty(keyword)) {
-            LOGGER.debug("search with empty keyword");
             return "search";
         }
         LOGGER.debug("search keyword={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",

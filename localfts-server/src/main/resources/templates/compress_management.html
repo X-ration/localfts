@@ -293,6 +293,16 @@ function deleteCompressFile(currentPath,button) {
             } else {
                 updateCmTrHint('删除失败，状态码：' + xhr.status,button,currentPath);
             }
+        }, function(e) {
+            var errorMsg = '删除失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCmTrHint(errorMsg,button,currentPath);
         }
     );
 }
@@ -324,6 +334,16 @@ function cancelCompress(currentPath,button) {
             } else {
                 updateCmTrHint('取消失败，状态码：' + xhr.status,button,currentPath);
             }
+        }, function(e) {
+            var errorMsg = '取消失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCmTrHint(errorMsg,button,currentPath);
         }
     );
 }
@@ -487,6 +507,16 @@ function compressFolder(currentPath,button) {
                       console.error("请求失败，状态码：", xhr.status);
                   }
               }
+        }, function(e) {
+            var errorMsg = '压缩失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCmTrHint(errorMsg,button,currentPath);
         }
     );
 }

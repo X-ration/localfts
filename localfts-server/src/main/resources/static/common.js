@@ -8,6 +8,14 @@ if (!String.prototype.startsWith) {
     };
 }
 
+if (!String.prototype.endsWith) {
+    String.prototype.endsWith = function(search, pos) {
+        pos = !pos || pos < 0 || isNaN(+pos) ? this.length : Math.min(+pos, this.length);
+        var startPos = Math.max(pos - search.length, 0);
+        return this.substr(startPos, search.length) === search;
+    };
+}
+
 /**
     兼容IE6的字符串trim方法
 */

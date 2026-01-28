@@ -898,18 +898,18 @@
                 searchPath = input.value;
             }
             var searchPathDialogInput = document.getElementById('searchPathDialogInput');
-            refreshSearchPathDialog(searchPath);
             var searchPathDialogUl = document.getElementById('searchPathDialogUl');
             var scrollDiv = searchPathDialogUl.parentElement;
-            var searchPathLi = findSearchPathDialogLiFromRoot(searchPathDialogUl, searchPath);
-            if(searchPathLi) {
-                searchPathDialogInput.value = searchPath;
-                searchPathLi.click();
-            } else {
-                searchPathDialogInput.value = '';
-            }
+
             showDialog('searchPathDialogDiv');
             scrollDiv.scrollTop = 0;
+            refreshSearchPathDialog(searchPath, false, function(searchPathLi) {
+                if(searchPathLi) {
+                    searchPathDialogInput.value = searchPath;
+                } else {
+                    searchPathDialogInput.value = '';
+                }
+            });
         }
         function findSearchPathDialogLiFromRoot(parentUl,searchPath) {
             if(!parentUl || !searchPath) {
@@ -986,13 +986,16 @@
             document.getElementById(inputId).value = dialogInputValue;
             hideSearchPathDialog();
         }
-        function refreshSearchPathDialog(searchPath) {
+        function refreshSearchPathDialog(searchPath,selectLi, successFunc) {
             var msgId = 'searchPathCheckHint';
             document.getElementById(msgId).style.display = 'none';
             if(!searchPath) {
                 searchPath = document.getElementById('searchPathDialogInput').value;
             }
-            if(searchPath === '') {
+            if(searchPath && searchPath.trim() !== '' && !selectLi) {
+                selectLi = true;
+            }
+            if(searchPath.trim() === '') {
                 searchPath = '/';
             } else {
                 var matchResult = searchPath.match(urlRelativePathRegex);
@@ -1014,26 +1017,51 @@
             sendPostFormRequest(
                 contextPath + '/listSubDirectory',
                 'path=' + encodeURIComponent(searchPath),
-                false,
+                true,
                 searchPath,
                 function (xhr) {
                     searchPathDialogUl.innerText = '';
-                    var success = false;
                     if (xhr.status === 200) {
                         var returnObject = JSON.parse(xhr.responseText);
                         if(returnObject.success) {
-                            success = true;
                             fillSearchPathDialogRoot(searchPathDialogUl, returnObject.data);
+                            var searchPathLi = findSearchPathDialogLiFromRoot(searchPathDialogUl, searchPath);
+                            if(searchPathLi) {
+                                var searchPathLiChildren = searchPathLi.children;
+                                for(var i=0;i<searchPathLiChildren.length;i++) {
+                                    if(searchPathLiChildren[i].tagName.toLowerCase() === 'button') {
+                                        var button = searchPathLiChildren[i];
+                                        setButtonImgSrc(button, foldBlackIconSrc, '折叠');
+                                        button.onclick = foldButtonClickFunc;
+                                        break;
+                                    }
+                                }
+                                if(selectLi) {
+                                    searchPathLi.click();
+                                }
+                            }
+                            if(successFunc) {
+                                successFunc(searchPathLi);
+                            }
                         } else {
                             searchPathDialogUl.innerText = '获取文件列表失败:' + returnObject.message;
                         }
                     } else {
                         searchPathDialogUl.innerText = '获取文件列表失败，状态码:' + xhr.status;
                     }
-                    if(!success) {
-                        var button = createRemoveUlButton();
-                        searchPathDialogUl.appendChild(button);
+                }, function(e) {
+                    var errorMsg = '获取文件列表失败:连接服务器失败';
+                    if(e) {
+                        if(e.name) {
+                            errorMsg = errorMsg + '(' + e.name + ')';
+                        } else if(e.message) {
+                            errorMsg = errorMsg + '(' + e.message + ')';
+                        }
                     }
+                    searchPathDialogUl.innerText = errorMsg;
+                }, 10000, function() {
+                    var errorMsg = '获取文件列表失败:接口超时';
+                    searchPathDialogUl.innerText = errorMsg;
                 }
             );
         }
@@ -1089,21 +1117,6 @@
                 parentUl.appendChild(li);
             }
         }
-        function createRemoveUlButton() {
-            var button = document.createElement('button');
-            bindEventListener(button, 'click', function(e) {
-                e = e || window.event;
-                if(IE_VERSION && IE_VERSION < 9) {
-                    e.cancelBubble = true;
-                } else {
-                    e.stopPropagation();
-                }
-                var ul = this.parentElement;
-                var ulParent = ul.parentElement;
-                ulParent.removeChild(ul);
-            });
-            return button;
-        }
         function foldButtonClickFunc(e) {
             e = e || window.event;
             if(IE_VERSION && IE_VERSION < 9) {
@@ -1118,8 +1131,7 @@
                     children[i].style.display = 'none';
                 }
             }
-            setButtonImgSrcBOW(this, expandBlackIconSrc, expandWhiteIconSrc);
-            this.setAttribute('alt', '展开');
+            setButtonImgSrcBOW(this, expandBlackIconSrc, expandWhiteIconSrc, '展开');
             this.onclick = expandButtonClickFunc;
         }
         function expandButtonClickFunc(e) {
@@ -1151,11 +1163,9 @@
                     searchPath,
                     function (xhr) {
                         liUl.innerText = '';
-                        var success = false;
                         if (xhr.status === 200) {
                             var returnObject = JSON.parse(xhr.responseText);
                             if(returnObject.success) {
-                                success = true;
                                 if(returnObject.data.subModelList === null) {
                                     li.removeChild(liUl);
                                 } else if(returnObject.data.subModelList.length > 0) {
@@ -1169,15 +1179,23 @@
                         } else {
                             liUl.innerText = '获取文件列表失败，状态码:' + xhr.status;
                         }
-                        if(!success) {
-                            var button = createRemoveUlButton();
-                            liUl.appendChild(button);
+                    }, function(e) {
+                        var errorMsg = '获取文件列表失败:连接服务器失败';
+                        if(e) {
+                            if(e.name) {
+                                errorMsg = errorMsg + '(' + e.name + ')';
+                            } else if(e.message) {
+                                errorMsg = errorMsg + '(' + e.message + ')';
+                            }
                         }
+                        liUl.innerText = errorMsg;
+                    }, 10000, function() {
+                        var errorMsg = '获取文件列表失败:接口超时';
+                        liUl.innerText = errorMsg;
                     }
                 );
             }
-            setButtonImgSrcBOW(this, foldBlackIconSrc, foldWhiteIconSrc);
-            this.setAttribute('alt', '折叠');
+            setButtonImgSrcBOW(this, foldBlackIconSrc, foldWhiteIconSrc, '折叠');
             this.onclick = foldButtonClickFunc;
         }
         function createImgButton(imgSrc,imgAlt,buttonId,clickFunc) {
@@ -1219,10 +1237,10 @@
                             var button = liChildren[j];
                             button.setAttribute('localfts-selected', 'false');
                             var buttonImgSrc = getButtonImgSrc(button);
-                            if(buttonImgSrc === foldWhiteIconSrc) {
-                                setButtonImgSrc(button, foldBlackIconSrc);
+                            if(buttonImgSrc.endsWith(foldWhiteIconSrc)) {
+                                setButtonImgSrc(button, foldBlackIconSrc, '折叠');
                             } else {
-                                setButtonImgSrc(button, expandBlackIconSrc);
+                                setButtonImgSrc(button, expandBlackIconSrc, '展开');
                             }
                             break;
                         }
@@ -1238,10 +1256,10 @@
                         var button = children[j];
                         button.setAttribute('localfts-selected', 'true');
                         var buttonImgSrc = getButtonImgSrc(button);
-                        if(buttonImgSrc === foldBlackIconSrc) {
-                            setButtonImgSrc(button, foldWhiteIconSrc);
+                        if(buttonImgSrc.endsWith(foldBlackIconSrc)) {
+                            setButtonImgSrc(button, foldWhiteIconSrc, '折叠');
                         } else {
-                            setButtonImgSrc(button, expandWhiteIconSrc);
+                            setButtonImgSrc(button, expandWhiteIconSrc, '展开');
                         }
                         break;
                     }
@@ -1265,7 +1283,7 @@
             }
             return null;
         }
-        function setButtonImgSrcBOW(element,blackSrc,whiteSrc) {
+        function setButtonImgSrcBOW(element,blackSrc,whiteSrc,alt) {
             if(!element || !blackSrc || !whiteSrc) {
                 return;
             }
@@ -1274,9 +1292,9 @@
             if(mode && mode === 'true') {
                 src = whiteSrc;
             }
-            setButtonImgSrc(element,src);
+            setButtonImgSrc(element,src,alt);
         }
-        function setButtonImgSrc(element,src) {
+        function setButtonImgSrc(element,src,alt) {
             if(!element || !src) {
                 return;
             }
@@ -1288,6 +1306,9 @@
                 var firstChild = elementChildren[0];
                 if(firstChild.tagName.toLowerCase() === 'img') {
                     firstChild.setAttribute('src', src);
+                    if(alt) {
+                        firstChild.setAttribute('alt', alt);
+                    }
                 }
             }
         }
