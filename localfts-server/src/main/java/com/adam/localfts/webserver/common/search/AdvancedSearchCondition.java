@@ -34,6 +34,7 @@ public class AdvancedSearchCondition {
      */
     @Getter(AccessLevel.NONE)
     private List<String> searchPathList;
+    private SearchType searchType;
     private Boolean directory;
     @Getter(AccessLevel.NONE)
     private Date lastModifiedLower, lastModifiedUpper;
@@ -65,27 +66,14 @@ public class AdvancedSearchCondition {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public boolean isEmpty() {
-        return CollectionUtils.isEmpty(searchPathList) && directory == null && fileSizeLower == null && fileSizeUpper == null
+        return searchType == null
+                && CollectionUtils.isEmpty(searchPathList) && directory == null && fileSizeLower == null && fileSizeUpper == null
                 && lastModifiedLower == null && lastModifiedUpper == null && folderCompressStatus == null
                 && compressedFileSizeLower == null && compressedFileSizeUpper == null
                 && compressedFileLastModifiedLower == null && compressedFileLastModifiedUpper == null;
     }
 
     public void clean() {
-        if(!CollectionUtils.isEmpty(this.searchPathList)) {
-            this.searchPathList = this.searchPathList.stream()
-                    .filter(str -> !StringUtils.isEmpty(str))
-                    .collect(Collectors.toList());
-            List<String> recordList = new LinkedList<>();
-            for(String str: this.searchPathList) {
-                if(!recordList.contains(str)) {
-                    recordList.add(str);
-                } else {
-                    logger.warn("Duplicate search path '{}', discarding", str);
-                }
-            }
-            this.searchPathList = recordList;
-        }
         if(this.directory != null) {
             if(this.directory) {
                 //限制文件夹
@@ -214,6 +202,10 @@ public class AdvancedSearchCondition {
         StringBuilder stringBuilder = new StringBuilder();
         if(!CollectionUtils.isEmpty(searchPathList)) {
             stringBuilder.append(", searchPathList=").append(searchPathList);
+        }
+        if(searchType != null) {
+            stringBuilder.append(", searchType=").append(searchType);
+
         }
         if(directory != null) {
             stringBuilder.append(", directory=").append(directory);

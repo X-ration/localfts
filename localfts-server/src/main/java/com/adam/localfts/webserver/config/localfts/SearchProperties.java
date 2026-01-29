@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.config.localfts;
 
+import com.adam.localfts.webserver.common.search.SearchMode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

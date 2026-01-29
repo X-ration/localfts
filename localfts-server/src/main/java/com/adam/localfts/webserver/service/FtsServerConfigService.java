@@ -2,6 +2,7 @@ package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
+import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.config.localfts.*;
 import com.adam.localfts.webserver.exception.LocalFtsCriticalException;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;

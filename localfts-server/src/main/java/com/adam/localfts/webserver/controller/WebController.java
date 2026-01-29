@@ -8,8 +8,9 @@ import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
+import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
-import com.adam.localfts.webserver.config.localfts.SearchMode;
+import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.service.FtsSearchService;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
@@ -304,7 +305,7 @@ public class WebController {
     public String search(Model model, @RequestParam(defaultValue = "") String keyword,
                          @RequestParam(defaultValue = "1") int pageNo,
                          @RequestParam(defaultValue = "20") int pageSize,
-                         @RequestParam(required = false)ListTableColumn sortColumn,
+                         @RequestParam(required = false) SearchColumn sortColumn,
                          @RequestParam(required = false) SortOrder sortOrder,
                          AdvancedSearchCondition advancedSearchCondition) {
         if(!ftsServerConfigService.getLocalFtsProperties().getSearch().getEnabled()) {
@@ -331,7 +332,7 @@ public class WebController {
         if(pageSize <= 0) {
             pageSize = 20;
         }
-        if(!zipEnabled && ListTableColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
+        if(!zipEnabled && SearchColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
             sortColumn = null;
         }
         if(sortColumn != null && sortOrder == null) {

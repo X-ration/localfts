@@ -69,7 +69,16 @@
                 <span class="inline" style="color:red; display:none" id="searchPathsMsg1"></span>
                 <br id="searchPathsBr1">
             </div>
-            类型：
+            搜索关键字匹配类型：
+            <input type="radio" id="searchTypeRadio1" name="searchType" value="FILENAME_ONLY" checked="checked">
+            <label for="searchTypeRadio1">只匹配文件/文件夹名</label>
+            <input type="radio" id="searchTypeRadio2" name="searchType" value="FILE_CONTENT_ONLY">
+            <label for="searchTypeRadio2">只匹配文件内容</label>
+            <input type="radio" id="searchTypeRadio3" name="searchType" value="BOTH">
+            <label for="searchTypeRadio3">同时匹配</label>
+            <span class="inline" style="color:red; display:none" id="searchTypeMsg"></span>
+            <br>
+            文件类型：
             <input type="radio" id="directoryRadio1" name="directory" value="true">
             <label for="directoryRadio1">文件夹</label>
             <input type="radio" id="directoryRadio2" name="directory" value="false">
@@ -283,6 +292,7 @@
             <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${pageObject.pageSize}">
             <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
             <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
+            <input type="hidden" name="searchType" th:if="${advancedSearchCondition != null && advancedSearchCondition.searchType != null}" th:value="${advancedSearchCondition.searchType}">
             <input type="hidden" name="directory" th:if="${advancedSearchCondition != null && advancedSearchCondition.directory != null}" th:value="${advancedSearchCondition.directory}">
             <input type="hidden" name="fileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeLowerStr != null}" th:value="${advancedSearchCondition.fileSizeLowerStr}">
             <input type="hidden" name="fileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeUpperStr != null}" th:value="${advancedSearchCondition.fileSizeUpperStr}">
@@ -389,6 +399,21 @@
         var searchPathsAddButton = document.getElementById('searchPathsAddButton');
         setButtonImgSrc(searchPathsAddButton, addIconSrc);
 
+        //搜索关键字匹配类型Radio选中事件
+        bindEventListener(document.getElementById('searchTypeRadio2'),'click', function () {
+            document.getElementById('directoryRadio2').click();
+            document.getElementById('directoryRadio1').disabled = 'disabled';
+            document.getElementById('directoryRadio3').disabled = 'disabled';
+        });
+        bindEventListener(document.getElementById('searchTypeRadio1'),'click', function () {
+            document.getElementById('directoryRadio1').disabled = '';
+            document.getElementById('directoryRadio3').disabled = '';
+        });
+        bindEventListener(document.getElementById('searchTypeRadio3'),'click', function () {
+            document.getElementById('directoryRadio1').disabled = '';
+            document.getElementById('directoryRadio3').disabled = '';
+        });
+
         //文件类型Radio选中事件
         bindEventListener(document.getElementById('directoryRadio1'),'click', function () {
             showOrHideGroupInputs(fileGroupInputIds);
@@ -413,6 +438,14 @@
                     var numberId = addSearchPathElement();
                     var inputId = 'searchPaths' + numberId;
                     document.getElementById(inputId).value = searchPath;
+                }
+            }
+            if(advancedSearchCondition.searchType !== null) {
+                var radios = getElementsByName('input', 'searchType');
+                for(var i=0;i<radios.length;i++) {
+                    if(advancedSearchCondition.searchType + '' === radios[i].value) {
+                        radios[i].click();
+                    }
                 }
             }
             if(advancedSearchCondition.directory !== null) {
@@ -546,69 +579,81 @@
                             }
                         }
                     }
-                    var xhrKey = 'checkPathExists';
-                    abortXhr(xhrKey);
-                    sendPostFormRequest(
-                        contextPath + '/checkPathExists',
-                        'paths=' + encodeURIComponent(validInputValues),
-                        false,
-                        xhrKey,
-                        function (xhr) {
-                            var success = false;
-                            var failMsg = null;
-                            if (xhr.status === 200) {
-                                var returnObject = JSON.parse(xhr.responseText);
-                                if(returnObject.success) {
-                                    var existsMap = returnObject.data;
-                                    if(existsMap) {
-                                        success = true;
-                                        for(var i=0;i<validInputValues.length;i++) {
-                                            var path = validInputValues[i];
-                                            var numberId = validInputNumberIds[i];
-                                            var msgId = 'searchPathsMsg' + numberId;
-                                            if(existsMap[path]) {
-                                                updateMsg(msgId, CHECK_PASSED, 'green');
-                                            } else {
-                                                hasError = true;
-                                                updateMsg(msgId, '该路径不存在！', 'red');
+                    if(validInputValues.length > 0) {
+                        var xhrKey = 'checkPathExists';
+                        abortXhr(xhrKey);
+                        sendPostFormRequest(
+                            contextPath + '/checkPathExists',
+                            'paths=' + encodeURIComponent(validInputValues),
+                            false,
+                            xhrKey,
+                            function (xhr) {
+                                var success = false;
+                                var failMsg = null;
+                                if (xhr.status === 200) {
+                                    var returnObject = JSON.parse(xhr.responseText);
+                                    if(returnObject.success) {
+                                        var existsMap = returnObject.data;
+                                        if(existsMap) {
+                                            success = true;
+                                            for(var i=0;i<validInputValues.length;i++) {
+                                                var path = validInputValues[i];
+                                                var numberId = validInputNumberIds[i];
+                                                var msgId = 'searchPathsMsg' + numberId;
+                                                if(existsMap[path]) {
+                                                    updateMsg(msgId, CHECK_PASSED, 'green');
+                                                } else {
+                                                    hasError = true;
+                                                    updateMsg(msgId, '该路径不存在！', 'red');
+                                                }
                                             }
                                         }
+                                    } else {
+                                        failMsg = returnObject.message;
                                     }
                                 } else {
-                                    failMsg = returnObject.message;
+                                    failMsg = '状态码=' + xhr.status;
                                 }
-                            } else {
-                                failMsg = '状态码=' + xhr.status;
-                            }
-                            if(!success) {
+                                if(!success) {
+                                    hasError = true;
+                                    for(var i=0;i<validInputNumberIds.length;i++) {
+                                        var msgId = 'searchPathsMsg' + validInputNumberIds[i];
+                                        updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
+                                    }
+                                }
+                            }, function(e) {
                                 hasError = true;
+                                var errorMsg = '检查路径是否存在失败:连接服务器失败';
+                                if(e) {
+                                    if(e.name) {
+                                        errorMsg = errorMsg + '(' + e.name + ')';
+                                    } else if(e.message) {
+                                        errorMsg = errorMsg + '(' + e.message + ')';
+                                    }
+                                }
                                 for(var i=0;i<validInputNumberIds.length;i++) {
                                     var msgId = 'searchPathsMsg' + validInputNumberIds[i];
-                                    updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
+                                    updateMsg(msgId, errorMsg, 'red');
                                 }
                             }
-                        }, function(e) {
-                            hasError = true;
-                            var errorMsg = '检查路径是否存在失败:连接服务器失败';
-                            if(e) {
-                                if(e.name) {
-                                    errorMsg = errorMsg + '(' + e.name + ')';
-                                } else if(e.message) {
-                                    errorMsg = errorMsg + '(' + e.message + ')';
-                                }
-                            }
-                            for(var i=0;i<validInputNumberIds.length;i++) {
-                                var msgId = 'searchPathsMsg' + validInputNumberIds[i];
-                                updateMsg(msgId, errorMsg, 'red');
-                            }
-                        }
-                    );
+                        );
+                    }
+                }
+                var searchType = getCheckedValue('searchType');
+                var searchTypeValue = null;
+                if(searchType !== 'FILENAME_ONLY' && searchType !== 'FILE_CONTENT_ONLY' && searchType !== 'BOTH') {
+                    hasError = true;
+                    var msg = '搜索关键字匹配类型字段' + (!searchType ? '没有选中值' : '选中了非法的值');
+                    updateMsg('searchTypeMsg', msg, 'red');
+                } else {
+                    updateMsg('searchTypeMsg', CHECK_PASSED, 'green');
+                    searchTypeValue = searchType;
                 }
                 var directory = getCheckedValue('directory');
                 var directoryValue = null;
                 if(directory !== 'true' && directory !== 'false' && directory !== '') {
                     hasError = true;
-                    var msg = '类型字段' + (directory === null ? '没有选中值' : '选中了非法的值');
+                    var msg = '类型字段' + (!directory ? '没有选中值' : '选中了非法的值');
                     updateMsg('directory-msg', msg, 'red');
                 } else {
                     updateMsg('directory-msg', CHECK_PASSED, 'green');
@@ -629,6 +674,9 @@
                                 continue;
                             }
                         }
+                        if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
+                            continue;
+                        }
                         var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
                             msgId = inputId + 'Msg';
                         var dateInputValue = document.getElementById(dateInputId).value === null ? '' :
@@ -645,8 +693,6 @@
                                 document.getElementById(inputId).value = dateInputValue + ' ' + timeInputValue;
                                 updateMsg(msgId, CHECK_PASSED, 'green');
                             }
-                        } else {
-                            document.getElementById(inputId).disabled = true;
                         }
                     }
                 } else {
@@ -659,6 +705,9 @@
                             } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
                                 continue;
                             }
+                        }
+                        if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
+                            continue;
                         }
                         var msgId = inputId + 'Msg';
                         var input = document.getElementById(inputId);
@@ -676,16 +725,18 @@
                         }
                     }
                 }
-                var validFolderCompressStatuses = ['NOT_COMPRESSED', 'COMPRESSING', 'COMPRESSED'];
-                var folderCompressStatusSelect = document.getElementById('folderCompressStatusSelect');
-                var folderCompressStatus = getSelectedOptionValue(folderCompressStatusSelect);
-                var folderCompressStatusMsgId = 'folderCompressStatusSelectMsg';
-                if(folderCompressStatus && folderCompressStatus !== '') {
-                    if(validFolderCompressStatuses.indexOf(folderCompressStatus) !== -1) {
-                        updateMsg(folderCompressStatusMsgId, CHECK_PASSED, 'green');
-                    } else {
-                        hasError = true;
-                        updateMsg(folderCompressStatusMsgId, '非法的压缩状态', 'red');
+                if(searchTypeValue && searchTypeValue !== 'FILE_CONTENT_ONLY' && (directoryValue === null || directoryValue)) {
+                    var validFolderCompressStatuses = ['NOT_COMPRESSED', 'COMPRESSING', 'COMPRESSED'];
+                    var folderCompressStatusSelect = document.getElementById('folderCompressStatusSelect');
+                    var folderCompressStatus = getSelectedOptionValue(folderCompressStatusSelect);
+                    var folderCompressStatusMsgId = 'folderCompressStatusSelectMsg';
+                    if(folderCompressStatus && folderCompressStatus !== '') {
+                        if(validFolderCompressStatuses.indexOf(folderCompressStatus) !== -1) {
+                            updateMsg(folderCompressStatusMsgId, CHECK_PASSED, 'green');
+                        } else {
+                            hasError = true;
+                            updateMsg(folderCompressStatusMsgId, '非法的压缩状态', 'red');
+                        }
                     }
                 }
                 var fileSizeValidUnits = ['B','KB','MB','GB','TB'];
@@ -697,6 +748,9 @@
                         } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
                             continue;
                         }
+                    }
+                    if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
+                        continue;
                     }
                     var numberInputId = inputId + 'Number',
                         selectId = inputId + 'Select',
@@ -756,6 +810,12 @@
                                 var inputId = directoryGroupInputIds[i];
                                 document.getElementById(inputId).disabled = 'disabled';
                             }
+                        }
+                    }
+                    if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY') {
+                        for(var i=0;i<directoryGroupInputIds.length;i++) {
+                            var inputId = directoryGroupInputIds[i];
+                            document.getElementById(inputId).disabled = 'disabled';
                         }
                     }
                 }
