@@ -271,8 +271,7 @@ public class FtsServerConfigService implements DisposableBean {
                 .append("[Mkdir enabled]").append(localFtsProperties.getMkdir().getEnabled()).append(System.lineSeparator());
         stringBuilder.append("[Search enabled]").append(localFtsProperties.getSearch().getEnabled()).append(System.lineSeparator());
         if(localFtsProperties.getSearch().getEnabled()) {
-            stringBuilder.append("[Advanced search enabled]").append(localFtsProperties.getSearch().getAdvancedSearchEnabled()).append(System.lineSeparator())
-                    .append("[Search mode]").append(localFtsProperties.getSearch().getMode()).append(System.lineSeparator());
+            stringBuilder.append("[Search mode]").append(localFtsProperties.getSearch().getMode()).append(System.lineSeparator());
             if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
                 stringBuilder.append("[Search index path]").append(localFtsProperties.getSearch().getIndexPath()).append(System.lineSeparator())
                         .append("[Search index before start]").append(localFtsProperties.getSearch().getIndexBeforeStart()).append(System.lineSeparator())
@@ -335,7 +334,6 @@ public class FtsServerConfigService implements DisposableBean {
         setMkdirEnabledIfNull();
         setSearchEnabledIfNull();
         if(localFtsProperties.getSearch().getEnabled()) {
-            setAdvancedSearchEnabledIfNull();
             if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
                 setIndexBeforeStartIfNull();
                 setUseExistingIndexIfNull();
@@ -362,13 +360,6 @@ public class FtsServerConfigService implements DisposableBean {
         Boolean indexBeforeStart = localFtsProperties.getSearch().getIndexBeforeStart();
         if(indexBeforeStart == null) {
             localFtsProperties.getSearch().setIndexBeforeStart(false);
-        }
-    }
-
-    private void setAdvancedSearchEnabledIfNull() {
-        Boolean advancedSearchEnabled = localFtsProperties.getSearch().getAdvancedSearchEnabled();
-        if(advancedSearchEnabled == null) {
-            localFtsProperties.getSearch().setAdvancedSearchEnabled(false);
         }
     }
 

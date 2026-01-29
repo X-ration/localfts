@@ -17,11 +17,13 @@ import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriUtils;
 import org.thymeleaf.util.StringUtils;
@@ -304,8 +306,10 @@ public class WebController {
                          @RequestParam(defaultValue = "20") int pageSize,
                          @RequestParam(required = false)ListTableColumn sortColumn,
                          @RequestParam(required = false) SortOrder sortOrder,
-                         @RequestParam(required = false) List<String> searchPaths,
                          AdvancedSearchCondition advancedSearchCondition) {
+        if(!ftsServerConfigService.getLocalFtsProperties().getSearch().getEnabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
         model.addAttribute("serverIpInfo", serverIpInfoModel);
         String serverTime = Util.getServerTimeFormattedString();

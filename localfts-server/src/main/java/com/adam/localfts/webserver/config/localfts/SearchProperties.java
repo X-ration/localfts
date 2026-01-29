@@ -9,7 +9,6 @@ import lombok.ToString;
 @ToString
 public class SearchProperties {
     private Boolean enabled;
-    private Boolean advancedSearchEnabled;
     private SearchMode mode;
     private Boolean indexBeforeStart;
     private String indexPath;
