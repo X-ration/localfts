@@ -10,4 +10,8 @@ public class LocalFtsRuntimeException extends RuntimeException{
         super(message);
     }
 
+    public LocalFtsRuntimeException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }

@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 @NoArgsConstructor
-public class AdvancedSearchCondition {
+public class AdvancedSearchCondition implements Cloneable{
 
     /**
      * 指定搜索的目标路径，可以有多个
@@ -35,6 +35,7 @@ public class AdvancedSearchCondition {
     @Getter(AccessLevel.NONE)
     private List<String> searchPathList;
     private SearchType searchType;
+    private Boolean caseSensitive;
     private Boolean directory;
     @Getter(AccessLevel.NONE)
     private Date lastModifiedLower, lastModifiedUpper;
@@ -66,11 +67,15 @@ public class AdvancedSearchCondition {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public boolean isEmpty() {
-        return searchType == null
+        return searchType == null && caseSensitive == null
                 && CollectionUtils.isEmpty(searchPathList) && directory == null && fileSizeLower == null && fileSizeUpper == null
                 && lastModifiedLower == null && lastModifiedUpper == null && folderCompressStatus == null
                 && compressedFileSizeLower == null && compressedFileSizeUpper == null
                 && compressedFileLastModifiedLower == null && compressedFileLastModifiedUpper == null;
+    }
+
+    public AdvancedSearchCondition copy() throws CloneNotSupportedException {
+        return (AdvancedSearchCondition) clone();
     }
 
     public void clean() {
@@ -237,7 +242,9 @@ public class AdvancedSearchCondition {
         }
         if(searchType != null) {
             stringBuilder.append(", searchType=").append(searchType);
-
+        }
+        if(caseSensitive != null) {
+            stringBuilder.append(", caseSensitive=").append(caseSensitive);
         }
         if(directory != null) {
             stringBuilder.append(", directory=").append(directory);

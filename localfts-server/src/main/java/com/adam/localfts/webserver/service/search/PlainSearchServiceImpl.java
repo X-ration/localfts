@@ -23,7 +23,6 @@ import java.text.Collator;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 public class PlainSearchServiceImpl implements SearchServiceInterface{
@@ -48,10 +47,15 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
         } else {
             searchPathFileList = Collections.singletonList(rootDirectory);
         }
+
+        long startMills = System.currentTimeMillis();
         SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
-        Stream<SearchDTO> searchDTOStream = searchPathFileList.stream()
+        List<SearchDTO> searchDTOList = searchPathFileList.stream()
                 .flatMap(searchPathFile -> searchAllUnderPath(searchPathFile, keyword, advancedSearchCondition, rootPath).stream())
-                .map(file -> mapToDTO(file, simpleDateFormat, rootPath));
+                .map(file -> mapToDTO(file, simpleDateFormat, rootPath))
+                .collect(Collectors.toList());
+        long endMills = System.currentTimeMillis();
+        logger.debug("搜索耗时{}ms", endMills - startMills);
 
         if(sortColumn != null) {
             Comparator<SearchDTO> comparator = searchComparatorMap.get(sortColumn);
@@ -61,10 +65,12 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 if(sortOrder == SortOrder.DESC) {
                     comparator = comparator.reversed();
                 }
-                searchDTOStream = searchDTOStream.sorted(comparator);
+                startMills = System.currentTimeMillis();
+                searchDTOList.sort(comparator);
+                endMills = System.currentTimeMillis();
+                logger.debug("排序耗时{}ms", endMills - startMills);
             }
         }
-        List<SearchDTO> searchDTOList = searchDTOStream.collect(Collectors.toList());
         return new PageObject<>(pageNo, pageSize, searchDTOList);
     }
 
@@ -165,7 +171,9 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 if(Util.isSystemWindows()) {
                     relativePath = relativePath.replaceAll("\\\\", "/");
                 }
-                if(relativePath.contains(keyword)) {
+                boolean keywordMatches = advancedSearchCondition.getCaseSensitive() ? relativePath.contains(keyword) :
+                        relativePath.toLowerCase().contains(keyword.toLowerCase());
+                if(keywordMatches) {
                     boolean checkSearchCondition = checkSearchCondition(file, advancedSearchCondition);
                     if(checkSearchCondition) {
                         resultList.add(file);

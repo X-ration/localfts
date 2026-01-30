@@ -80,6 +80,13 @@
             <label th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" for="searchTypeRadio3">同时匹配</label>
             <span class="inline" style="color:red; display:none" id="searchTypeMsg"></span>
             <br>
+            是否区分大小写：
+            <input type="radio" id="caseSensitiveRadio1" name="caseSensitive" value="true" checked="checked">
+            <label for="caseSensitiveRadio1">区分大小写</label>
+            <input type="radio" id="caseSensitiveRadio2" name="caseSensitive" value="false">
+            <label for="caseSensitiveRadio2">不区分大小写</label>
+            <span class="inline" style="color:red; display:none" id="caseSensitiveMsg"></span>
+            <br>
             文件类型：
             <input type="radio" id="directoryRadio1" name="directory" value="true">
             <label for="directoryRadio1">文件夹</label>
@@ -303,6 +310,7 @@
             <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
             <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
             <input type="hidden" name="searchType" th:if="${advancedSearchCondition != null && advancedSearchCondition.searchType != null}" th:value="${advancedSearchCondition.searchType}">
+            <input type="hidden" name="caseSensitive" th:if="${advancedSearchCondition != null && advancedSearchCondition.caseSensitive != null}" th:value="${advancedSearchCondition.caseSensitive}">
             <input type="hidden" name="directory" th:if="${advancedSearchCondition != null && advancedSearchCondition.directory != null}" th:value="${advancedSearchCondition.directory}">
             <input type="hidden" name="fileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeLowerStr != null}" th:value="${advancedSearchCondition.fileSizeLowerStr}">
             <input type="hidden" name="fileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeUpperStr != null}" th:value="${advancedSearchCondition.fileSizeUpperStr}">
@@ -459,6 +467,14 @@
                 var radios = getElementsByName('input', 'searchType');
                 for(var i=0;i<radios.length;i++) {
                     if(advancedSearchCondition.searchType + '' === radios[i].value) {
+                        radios[i].click();
+                    }
+                }
+            }
+            if(advancedSearchCondition.caseSensitive !== null) {
+                var radios = getElementsByName('input', 'caseSensitive');
+                for(var i=0;i<radios.length;i++) {
+                    if(advancedSearchCondition.caseSensitive + '' === radios[i].value) {
                         radios[i].click();
                     }
                 }
@@ -694,6 +710,20 @@
                     } else {
                         updateMsg('searchTypeMsg', CHECK_PASSED, 'green');
                         searchTypeValue = searchType;
+                    }
+                    var caseSensitive = getCheckedValue('caseSensitive');
+                    var caseSensitiveValue = null;
+                    if(caseSensitive !== 'true' && caseSensitive !== 'false') {
+                        hasError = true;
+                        var msg = '类型字段' + (!caseSensitive ? '没有选中值' : '选中了非法的值');
+                        updateMsg('caseSensitiveMsg', msg, 'red');
+                    } else {
+                        updateMsg('caseSensitiveMsg', CHECK_PASSED, 'green');
+                        if(caseSensitive === 'true') {
+                            caseSensitiveValue = true;
+                        } else if(caseSensitive === 'false') {
+                            caseSensitiveValue = false;
+                        }
                     }
                     var directory = getCheckedValue('directory');
                     var directoryValue = null;

@@ -9,6 +9,7 @@ import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.WebServerStartListener;
 import com.adam.localfts.webserver.config.localfts.SearchProperties;
+import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
@@ -58,16 +59,23 @@ public class FtsSearchService implements DisposableBean {
         Assert.isTrue(pageNo > 0, "非法的页数：" + pageNo);
         Assert.isTrue(pageSize > 0, "非法的每页数量：" + pageSize);
         Assert.isTrue(sortColumn == null || sortOrder != null, "排序顺序为null");
-        if(advancedSearchCondition != null && !advancedSearchCondition.isEmpty()) {
-            preHandleAdvancedSearchCondition(advancedSearchCondition);
+        AdvancedSearchCondition advancedSearchConditionCopy = null;
+        if(advancedSearchCondition != null) {
+            try {
+                advancedSearchConditionCopy = advancedSearchCondition.copy();
+            } catch (CloneNotSupportedException e) {
+                logger.error("克隆高级高级搜索条件时发生异常", e);
+                throw new LocalFtsRuntimeException("搜索时发生" + CloneNotSupportedException.class.getName() + "异常", e);
+            }
+            preHandleAdvancedSearchCondition(advancedSearchConditionCopy);
         }
-        logger.debug("Actual advanced condition={}", advancedSearchCondition);
+        logger.debug("Actual advanced condition={}", advancedSearchConditionCopy);
         SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         switch (searchMode) {
             case PLAIN:
-                return plainSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+                return plainSearchService.search(keyword, advancedSearchConditionCopy, pageNo, pageSize, sortColumn, sortOrder);
             case INDEXED:
-                return luceneSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+                return luceneSearchService.search(keyword, advancedSearchConditionCopy, pageNo, pageSize, sortColumn, sortOrder);
             default:
                 logger.warn("Unknown search mode:{}", searchMode);
                 return new PageObject<>(pageNo, pageSize, null);
@@ -93,6 +101,9 @@ public class FtsSearchService implements DisposableBean {
                     })
                     .collect(Collectors.toList());
             advancedSearchCondition.setSearchPathList(newSearchPathList);
+        }
+        if(advancedSearchCondition.getCaseSensitive() == null) {
+            advancedSearchCondition.setCaseSensitive(true);
         }
         if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() == SearchMode.PLAIN) {
             advancedSearchCondition.setSearchType(SearchType.FILENAME_ONLY);
