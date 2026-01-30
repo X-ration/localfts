@@ -89,6 +89,14 @@ public class FtsServerConfigService implements DisposableBean {
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
     }
 
+    public String[] getFileInvalidCharacters() {
+        if(Util.isSystemWindows()) {
+            return Constants.FILE_INVALID_CHARACTER_WINDOWS.split(" ");
+        } else {
+            return Constants.FILE_INVALID_CHARACTER_LINUX_MACOS.split(" ");
+        }
+    }
+
     /**
      * 根据服务器系统获取标准相对路径的正则表达式
      * @return

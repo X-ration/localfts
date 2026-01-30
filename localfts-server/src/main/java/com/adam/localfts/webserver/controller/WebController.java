@@ -7,11 +7,11 @@ import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
 import com.adam.localfts.webserver.common.search.SearchDTO;
+import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
-import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.service.FtsSearchService;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
@@ -318,6 +318,12 @@ public class WebController {
         model.addAttribute("serverTime", serverTime);
         String urlRelativePathPattern = ftsServerConfigService.getStandardRelativePathPattern().pattern();
         model.addAttribute("urlRelativePathPattern", urlRelativePathPattern);
+        String [] fileInvalidCharacters = ftsServerConfigService.getFileInvalidCharacters();
+        model.addAttribute("fileInvalidCharacters", fileInvalidCharacters);
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
+        model.addAttribute("searchMode", searchMode);
+        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
+        model.addAttribute("indexFileContent", indexFileContent);
         if(StringUtils.isEmpty(keyword)) {
             return "search";
         }
@@ -341,10 +347,6 @@ public class WebController {
         }
         model.addAttribute("sortColumn", sortColumn);
         model.addAttribute("sortOrder", sortOrder);
-        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
-        model.addAttribute("searchMode", searchMode);
-        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
-        model.addAttribute("indexFileContent", indexFileContent);
         PageObject<SearchDTO> pageObject = ftsSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
         model.addAttribute("pageObject", pageObject);
         return "search";

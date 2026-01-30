@@ -32,7 +32,9 @@
     <br>
     <form id="search-form" th:action="@{/search}" method="post" enctype="application/x-www-form-urlencoded" style="text-align: center">
         <label for="keyword" style="font-size: 30px">文件搜索</label><br><br>
-        <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="width:80%; text-align:center"><br><br>
+        <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="width:80%; text-align:center">
+        <span class="inline" style="color:red; display:none" id="keywordMsg"></span>
+        <br><br>
         <button id="switchAdvancedSearchButton" type="button" onclick="switchAdvancedSearch(this)">使用高级搜索</button>
         <button type="button" onclick="search()">搜索</button>
         <div id="dateTimeDialogDiv" class="hidden" style="text-align: center">
@@ -328,6 +330,7 @@
         var searchMode = [[${searchMode}]];
         var indexFileContent = [[${indexFileContent}]];
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
+        var fileInvalidCharacters = [[${fileInvalidCharacters}]];
 
         //定义inputId集合和其他公共变量以便后续统一处理相关元素
         var dateTimeInputIds = ['lastModifiedLower', 'lastModifiedUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
@@ -555,156 +558,228 @@
         }
         function search() {
             var hasError = false;
-            if(advancedSearchSwitch) {
-                //检查高级搜索参数
-                var searchPathsDiv = document.getElementById('searchPathsDiv');
-                var searchPathsInputs = searchPathsDiv.getElementsByTagName('input');
-                if(searchPathsInputs) {
-                    var validInputValues = [];
-                    var validInputNumberIds = [];
-                    for(var i=0;i<searchPathsInputs.length;i++) {
-                        var input = searchPathsInputs[i];
-                        var inputValue = input.value;
-                        var matchResult = input.id.match(searchPathsInputIdRegex);
-                        var numberId = Number(matchResult[1]);
-                        var msgId = 'searchPathsMsg' + numberId;
-                        if(inputValue && inputValue !== '') {
-                            var matchResult = inputValue.match(urlRelativePathRegex);
-                            if(!matchResult) {
-                                hasError = true;
-                                updateMsg(msgId, '搜索路径格式不符合规则', 'red');
-                            } else if(validInputValues.indexOf(inputValue) !== -1) {
-                                hasError = true;
-                                updateMsg(msgId, '搜索路径重复', 'red');
-                            } else {
-                                validInputValues[validInputValues.length] = inputValue;
-                                validInputNumberIds[validInputNumberIds.length] = numberId;
-                                //updateMsg(msgId, CHECK_PASSED, 'green');
+            var keywordInput = document.getElementById('keyword');
+            var keywordInputValue = keywordInput.value;
+            if(keywordInputValue && keywordInputValue !== '') {
+                var ics = [];
+                for(var i=0;i<keywordInputValue.length;i++) {
+                    var char = keywordInputValue.charAt(i);
+                    for(var j=0;j<fileInvalidCharacters.length;j++) {
+                        if(char === fileInvalidCharacters[j]) {
+                            hasError = true;
+                            if(ics.indexOf(char) === -1) {
+                                ics[ics.length] = char;
                             }
                         }
                     }
-                    if(validInputValues.length > 0) {
-                        var xhrKey = 'checkPathExists';
-                        abortXhr(xhrKey);
-                        sendPostFormRequest(
-                            contextPath + '/checkPathExists',
-                            'paths=' + encodeURIComponent(validInputValues),
-                            false,
-                            xhrKey,
-                            function (xhr) {
-                                var success = false;
-                                var failMsg = null;
-                                if (xhr.status === 200) {
-                                    var returnObject = JSON.parse(xhr.responseText);
-                                    if(returnObject.success) {
-                                        var existsMap = returnObject.data;
-                                        if(existsMap) {
-                                            success = true;
-                                            for(var i=0;i<validInputValues.length;i++) {
-                                                var path = validInputValues[i];
-                                                var numberId = validInputNumberIds[i];
-                                                var msgId = 'searchPathsMsg' + numberId;
-                                                if(existsMap[path]) {
-                                                    updateMsg(msgId, CHECK_PASSED, 'green');
-                                                } else {
-                                                    hasError = true;
-                                                    updateMsg(msgId, '该路径不存在！', 'red');
+                }
+                if(hasError) {
+                    var errorMsg = '搜索关键字包含非法字符';
+                    var icsStr = '';
+                    for(var i=0;i<ics.length;i++) {
+                        icsStr = icsStr + ' ' + ics[i];
+                    }
+                    icsStr = icsStr.substring(1);
+                    errorMsg = errorMsg + icsStr;
+                    updateMsg('keywordMsg', errorMsg, 'red');
+                } else {
+                    updateMsg('keywordMsg', CHECK_PASSED, 'green');
+                }
+            }
+            if(advancedSearchSwitch) {
+                if(keywordInputValue && keywordInputValue !== '') {
+                    //检查高级搜索参数
+                    var searchPathsDiv = document.getElementById('searchPathsDiv');
+                    var searchPathsInputs = searchPathsDiv.getElementsByTagName('input');
+                    if(searchPathsInputs) {
+                        var validInputValues = [];
+                        var validInputNumberIds = [];
+                        for(var i=0;i<searchPathsInputs.length;i++) {
+                            var input = searchPathsInputs[i];
+                            var inputValue = input.value;
+                            var matchResult = input.id.match(searchPathsInputIdRegex);
+                            var numberId = Number(matchResult[1]);
+                            var msgId = 'searchPathsMsg' + numberId;
+                            if(inputValue && inputValue !== '') {
+                                var matchResult = inputValue.match(urlRelativePathRegex);
+                                if(!matchResult) {
+                                    hasError = true;
+                                    updateMsg(msgId, '搜索路径格式不符合规则', 'red');
+                                } else if(validInputValues.indexOf(inputValue) !== -1) {
+                                    hasError = true;
+                                    updateMsg(msgId, '搜索路径重复', 'red');
+                                } else {
+                                    validInputValues[validInputValues.length] = inputValue;
+                                    validInputNumberIds[validInputNumberIds.length] = numberId;
+                                    //updateMsg(msgId, CHECK_PASSED, 'green');
+                                }
+                            }
+                        }
+                        if(validInputValues.length > 0) {
+                            var xhrKey = 'checkPathExists';
+                            abortXhr(xhrKey);
+                            sendPostFormRequest(
+                                contextPath + '/checkPathExists',
+                                'paths=' + encodeURIComponent(validInputValues),
+                                false,
+                                xhrKey,
+                                function (xhr) {
+                                    var success = false;
+                                    var failMsg = null;
+                                    if (xhr.status === 200) {
+                                        var returnObject = JSON.parse(xhr.responseText);
+                                        if(returnObject.success) {
+                                            var existsMap = returnObject.data;
+                                            if(existsMap) {
+                                                success = true;
+                                                for(var i=0;i<validInputValues.length;i++) {
+                                                    var path = validInputValues[i];
+                                                    var numberId = validInputNumberIds[i];
+                                                    var msgId = 'searchPathsMsg' + numberId;
+                                                    if(existsMap[path]) {
+                                                        updateMsg(msgId, CHECK_PASSED, 'green');
+                                                    } else {
+                                                        hasError = true;
+                                                        updateMsg(msgId, '该路径不存在！', 'red');
+                                                    }
                                                 }
                                             }
+                                        } else {
+                                            failMsg = returnObject.message;
                                         }
                                     } else {
-                                        failMsg = returnObject.message;
+                                        failMsg = '状态码=' + xhr.status;
                                     }
-                                } else {
-                                    failMsg = '状态码=' + xhr.status;
-                                }
-                                if(!success) {
+                                    if(!success) {
+                                        hasError = true;
+                                        for(var i=0;i<validInputNumberIds.length;i++) {
+                                            var msgId = 'searchPathsMsg' + validInputNumberIds[i];
+                                            updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
+                                        }
+                                    }
+                                }, function(e) {
                                     hasError = true;
+                                    var errorMsg = '检查路径是否存在失败:连接服务器失败';
+                                    if(e) {
+                                        if(e.name) {
+                                            errorMsg = errorMsg + '(' + e.name + ')';
+                                        } else if(e.message) {
+                                            errorMsg = errorMsg + '(' + e.message + ')';
+                                        }
+                                    }
                                     for(var i=0;i<validInputNumberIds.length;i++) {
                                         var msgId = 'searchPathsMsg' + validInputNumberIds[i];
-                                        updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
+                                        updateMsg(msgId, errorMsg, 'red');
                                     }
                                 }
-                            }, function(e) {
-                                hasError = true;
-                                var errorMsg = '检查路径是否存在失败:连接服务器失败';
-                                if(e) {
-                                    if(e.name) {
-                                        errorMsg = errorMsg + '(' + e.name + ')';
-                                    } else if(e.message) {
-                                        errorMsg = errorMsg + '(' + e.message + ')';
-                                    }
-                                }
-                                for(var i=0;i<validInputNumberIds.length;i++) {
-                                    var msgId = 'searchPathsMsg' + validInputNumberIds[i];
-                                    updateMsg(msgId, errorMsg, 'red');
+                            );
+                        }
+                    }
+                    var searchType = getCheckedValue('searchType');
+                    var searchTypeValue = null;
+                    var validSearchTypeValues = (searchMode === 'INDEXED' && indexFileContent) ?
+                        ['FILENAME_ONLY','FILE_CONTENT_ONLY','BOTH'] : ['FILENAME_ONLY'];
+                    if(!searchType || validSearchTypeValues.indexOf(searchType) === -1) {
+                        hasError = true;
+                        var msg = '搜索关键字匹配类型字段' + (!searchType ? '没有选中值' : '选中了非法的值');
+                        updateMsg('searchTypeMsg', msg, 'red');
+                    } else {
+                        updateMsg('searchTypeMsg', CHECK_PASSED, 'green');
+                        searchTypeValue = searchType;
+                    }
+                    var directory = getCheckedValue('directory');
+                    var directoryValue = null;
+                    if(directory !== 'true' && directory !== 'false' && directory !== '') {
+                        hasError = true;
+                        var msg = '类型字段' + (!directory ? '没有选中值' : '选中了非法的值');
+                        updateMsg('directory-msg', msg, 'red');
+                    } else {
+                        updateMsg('directory-msg', CHECK_PASSED, 'green');
+                        if(directory === 'true') {
+                            directoryValue = true;
+                        } else if(directory === 'false') {
+                            directoryValue = false;
+                        }
+                    }
+                    if(dateAndTimeInputSupported) {
+                        //由浏览器直接渲染日期时间组件的情况
+                        for(var i=0;i<dateTimeInputIds.length;i++) {
+                            var inputId = dateTimeInputIds[i];
+                            if(directoryValue !== null) {
+                                if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
+                                    continue;
+                                } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
+                                    continue;
                                 }
                             }
-                        );
-                    }
-                }
-                var searchType = getCheckedValue('searchType');
-                var searchTypeValue = null;
-                var validSearchTypeValues = (searchMode === 'INDEXED' && indexFileContent) ?
-                    ['FILENAME_ONLY','FILE_CONTENT_ONLY','BOTH'] : ['FILENAME_ONLY'];
-                if(!searchType || validSearchTypeValues.indexOf(searchType) === -1) {
-                    hasError = true;
-                    var msg = '搜索关键字匹配类型字段' + (!searchType ? '没有选中值' : '选中了非法的值');
-                    updateMsg('searchTypeMsg', msg, 'red');
-                } else {
-                    updateMsg('searchTypeMsg', CHECK_PASSED, 'green');
-                    searchTypeValue = searchType;
-                }
-                var directory = getCheckedValue('directory');
-                var directoryValue = null;
-                if(directory !== 'true' && directory !== 'false' && directory !== '') {
-                    hasError = true;
-                    var msg = '类型字段' + (!directory ? '没有选中值' : '选中了非法的值');
-                    updateMsg('directory-msg', msg, 'red');
-                } else {
-                    updateMsg('directory-msg', CHECK_PASSED, 'green');
-                    if(directory === 'true') {
-                        directoryValue = true;
-                    } else if(directory === 'false') {
-                        directoryValue = false;
-                    }
-                }
-                if(dateAndTimeInputSupported) {
-                    //由浏览器直接渲染日期时间组件的情况
-                    for(var i=0;i<dateTimeInputIds.length;i++) {
-                        var inputId = dateTimeInputIds[i];
-                        if(directoryValue !== null) {
-                            if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
-                                continue;
-                            } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
+                            if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
                                 continue;
                             }
+                            var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
+                                msgId = inputId + 'Msg';
+                            var dateInputValue = document.getElementById(dateInputId).value === null ? '' :
+                                document.getElementById(dateInputId).value.replace(/[.\/]/g,'-');
+                            var timeInputValue = formatTimeInputTimeStr(document.getElementById(timeInputId));
+                            if(dateInputValue !== '' || timeInputValue !== '') {
+                                if(dateInputValue === '') {
+                                    hasError = true;
+                                    updateMsg(msgId, '请输入日期', 'red');
+                                } else if(timeInputValue === '') {
+                                    hasError = true;
+                                    updateMsg(msgId, '请输入时间', 'red');
+                                } else {
+                                    document.getElementById(inputId).value = dateInputValue + ' ' + timeInputValue;
+                                    updateMsg(msgId, CHECK_PASSED, 'green');
+                                }
+                            }
                         }
-                        if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
-                            continue;
-                        }
-                        var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
-                            msgId = inputId + 'Msg';
-                        var dateInputValue = document.getElementById(dateInputId).value === null ? '' :
-                            document.getElementById(dateInputId).value.replace(/[.\/]/g,'-');
-                        var timeInputValue = formatTimeInputTimeStr(document.getElementById(timeInputId));
-                        if(dateInputValue !== '' || timeInputValue !== '') {
-                            if(dateInputValue === '') {
-                                hasError = true;
-                                updateMsg(msgId, '请输入日期', 'red');
-                            } else if(timeInputValue === '') {
-                                hasError = true;
-                                updateMsg(msgId, '请输入时间', 'red');
+                    } else {
+                        //通过对话框手动输入日期时间的情况
+                        for(var i=0;i<dateTimeInputIds.length;i++) {
+                            var inputId = dateTimeInputIds[i];
+                            if(directoryValue !== null) {
+                                if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
+                                    continue;
+                                } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
+                                    continue;
+                                }
+                            }
+                            if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
+                                continue;
+                            }
+                            var msgId = inputId + 'Msg';
+                            var input = document.getElementById(inputId);
+                            var inputValue = input.value;
+                            if(inputValue === '') {
+                                input.disabled = 'disabled';
                             } else {
-                                document.getElementById(inputId).value = dateInputValue + ' ' + timeInputValue;
-                                updateMsg(msgId, CHECK_PASSED, 'green');
+                                var isValid = isValidDateTime(inputValue);
+                                if(isValid) {
+                                    updateMsg(msgId, CHECK_PASSED, 'green');
+                                } else {
+                                    hasError = true;
+                                    updateMsg(msgId, '日期时间格式错误', 'red');
+                                }
                             }
                         }
                     }
-                } else {
-                    //通过对话框手动输入日期时间的情况
-                    for(var i=0;i<dateTimeInputIds.length;i++) {
-                        var inputId = dateTimeInputIds[i];
+                    if(searchTypeValue && searchTypeValue !== 'FILE_CONTENT_ONLY' && (directoryValue === null || directoryValue)) {
+                        var validFolderCompressStatuses = ['NOT_COMPRESSED', 'COMPRESSING', 'COMPRESSED'];
+                        var folderCompressStatusSelect = document.getElementById('folderCompressStatusSelect');
+                        var folderCompressStatus = getSelectedOptionValue(folderCompressStatusSelect);
+                        var folderCompressStatusMsgId = 'folderCompressStatusSelectMsg';
+                        if(folderCompressStatus && folderCompressStatus !== '') {
+                            if(validFolderCompressStatuses.indexOf(folderCompressStatus) !== -1) {
+                                updateMsg(folderCompressStatusMsgId, CHECK_PASSED, 'green');
+                            } else {
+                                hasError = true;
+                                updateMsg(folderCompressStatusMsgId, '非法的压缩状态', 'red');
+                            }
+                        }
+                    }
+                    var fileSizeValidUnits = ['B','KB','MB','GB','TB'];
+                    for(var i=0;i<fileSizeInputIds.length;i++) {
+                        var inputId = fileSizeInputIds[i];
                         if(directoryValue !== null) {
                             if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
                                 continue;
@@ -715,73 +790,31 @@
                         if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
                             continue;
                         }
-                        var msgId = inputId + 'Msg';
-                        var input = document.getElementById(inputId);
-                        var inputValue = input.value;
-                        if(inputValue === '') {
+                        var numberInputId = inputId + 'Number',
+                            selectId = inputId + 'Select',
+                            msgId = inputId + 'Msg';
+                        var input = document.getElementById(inputId),
+                            numberInput = document.getElementById(numberInputId),
+                            select = document.getElementById(selectId);
+                        if(numberInput.value === '') {
                             input.disabled = 'disabled';
                         } else {
-                            var isValid = isValidDateTime(inputValue);
-                            if(isValid) {
-                                updateMsg(msgId, CHECK_PASSED, 'green');
-                            } else {
+                            var number = Number(numberInput.value);
+                            var unit = getSelectedOptionValue(select,false);
+                            var numberMatchResult = numberInput.value.match(fileSizeNumberRegex);
+                            if(!numberMatchResult) {
                                 hasError = true;
-                                updateMsg(msgId, '日期时间格式错误', 'red');
+                                updateMsg(msgId, '文件大小数值格式错误', 'red');
+                            } else if(unit === null) {
+                                hasError = true;
+                                updateMsg(msgId, '文件大小单位未选择', 'red');
+                            } else if(fileSizeValidUnits.indexOf(unit) === -1) {
+                                hasError = true;
+                                updateMsg(msgId, '非法的文件大小单位', 'red');
+                            } else {
+                                input.value = number + unit;
+                                updateMsg(msgId, CHECK_PASSED, 'green');
                             }
-                        }
-                    }
-                }
-                if(searchTypeValue && searchTypeValue !== 'FILE_CONTENT_ONLY' && (directoryValue === null || directoryValue)) {
-                    var validFolderCompressStatuses = ['NOT_COMPRESSED', 'COMPRESSING', 'COMPRESSED'];
-                    var folderCompressStatusSelect = document.getElementById('folderCompressStatusSelect');
-                    var folderCompressStatus = getSelectedOptionValue(folderCompressStatusSelect);
-                    var folderCompressStatusMsgId = 'folderCompressStatusSelectMsg';
-                    if(folderCompressStatus && folderCompressStatus !== '') {
-                        if(validFolderCompressStatuses.indexOf(folderCompressStatus) !== -1) {
-                            updateMsg(folderCompressStatusMsgId, CHECK_PASSED, 'green');
-                        } else {
-                            hasError = true;
-                            updateMsg(folderCompressStatusMsgId, '非法的压缩状态', 'red');
-                        }
-                    }
-                }
-                var fileSizeValidUnits = ['B','KB','MB','GB','TB'];
-                for(var i=0;i<fileSizeInputIds.length;i++) {
-                    var inputId = fileSizeInputIds[i];
-                    if(directoryValue !== null) {
-                        if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
-                            continue;
-                        } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
-                            continue;
-                        }
-                    }
-                    if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
-                        continue;
-                    }
-                    var numberInputId = inputId + 'Number',
-                        selectId = inputId + 'Select',
-                        msgId = inputId + 'Msg';
-                    var input = document.getElementById(inputId),
-                        numberInput = document.getElementById(numberInputId),
-                        select = document.getElementById(selectId);
-                    if(numberInput.value === '') {
-                        input.disabled = 'disabled';
-                    } else {
-                        var number = Number(numberInput.value);
-                        var unit = getSelectedOptionValue(select,false);
-                        var numberMatchResult = numberInput.value.match(fileSizeNumberRegex);
-                        if(!numberMatchResult) {
-                            hasError = true;
-                            updateMsg(msgId, '文件大小数值格式错误', 'red');
-                        } else if(unit === null) {
-                            hasError = true;
-                            updateMsg(msgId, '文件大小单位未选择', 'red');
-                        } else if(fileSizeValidUnits.indexOf(unit) === -1) {
-                            hasError = true;
-                            updateMsg(msgId, '非法的文件大小单位', 'red');
-                        } else {
-                            input.value = number + unit;
-                            updateMsg(msgId, CHECK_PASSED, 'green');
                         }
                     }
                 }
