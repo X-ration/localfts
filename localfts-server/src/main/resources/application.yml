@@ -43,7 +43,7 @@ localfts:
     enabled: true  #创建文件夹功能开关
   search:
     enabled: true  #搜索功能开关
-    mode: INDEXED  #模式：PLAIN-直接搜索，INDEXED-索引搜索
+    mode: PLAIN  #模式：PLAIN-直接搜索，INDEXED-索引搜索
     index-path: index-dir  #索引相对路径
     index-before-start: false  #是否在启动Web服务器前创建索引
     use-existing-index: false  #是否使用已有的索引，不使用则在启动时删除已有索引并重新创建

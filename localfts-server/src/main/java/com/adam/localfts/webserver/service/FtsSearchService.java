@@ -3,11 +3,11 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.PageObject;
 import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
 import com.adam.localfts.webserver.common.search.SearchDTO;
+import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.common.search.SearchType;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.WebServerStartListener;
-import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.config.localfts.SearchProperties;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
@@ -75,16 +75,24 @@ public class FtsSearchService implements DisposableBean {
     }
 
     private void preHandleAdvancedSearchCondition(AdvancedSearchCondition advancedSearchCondition) {
-        List<String> searchPathList = advancedSearchCondition.getSearchPaths();
+        final List<String> searchPathList = advancedSearchCondition.getSearchPaths();
         Pattern standardPathPattern = ftsServerConfigService.getStandardRelativePathPattern();
         if(!CollectionUtils.isEmpty(searchPathList)) {
-            searchPathList = searchPathList.stream()
+            List<String> newSearchPathList = searchPathList.stream()
                     .distinct()
                     .filter(path -> !StringUtils.isEmpty(path))
                     .filter(path -> standardPathPattern.matcher(path).matches())
                     .filter(path -> ftsService.checkDirectoryExists(path, false))
+                    .filter(path -> {
+                        for(String path1: searchPathList) {
+                            if(!path.equals(path1) && path.startsWith(path1)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    })
                     .collect(Collectors.toList());
-            advancedSearchCondition.setSearchPathList(searchPathList);
+            advancedSearchCondition.setSearchPathList(newSearchPathList);
         }
         if(advancedSearchCondition.getSearchType() == SearchType.FILE_CONTENT_ONLY) {
             advancedSearchCondition.setDirectory(false);
