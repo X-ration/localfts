@@ -25,6 +25,10 @@ public class LuceneIndexThread extends Thread{
         return INSTANCE;
     }
 
+    public static boolean constructed() {
+        return INSTANCE != null;
+    }
+
     @Override
     public void run() {
         logger.info("Ready to index");

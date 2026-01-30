@@ -11,6 +11,7 @@ import com.adam.localfts.webserver.config.localfts.SearchProperties;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
@@ -25,7 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @DependsOn("ftsServerConfigService")
-public class FtsSearchService {
+public class FtsSearchService implements DisposableBean {
 
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
@@ -95,4 +96,10 @@ public class FtsSearchService {
         }
     }
 
+    @Override
+    public void destroy() throws Exception {
+        if(LuceneIndexThread.constructed()) {
+            LuceneIndexThread.getInstance().tryStop();
+        }
+    }
 }
