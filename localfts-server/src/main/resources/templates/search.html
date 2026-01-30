@@ -72,10 +72,10 @@
             搜索关键字匹配类型：
             <input type="radio" id="searchTypeRadio1" name="searchType" value="FILENAME_ONLY" checked="checked">
             <label for="searchTypeRadio1">只匹配文件/文件夹名</label>
-            <input type="radio" id="searchTypeRadio2" name="searchType" value="FILE_CONTENT_ONLY">
-            <label for="searchTypeRadio2">只匹配文件内容</label>
-            <input type="radio" id="searchTypeRadio3" name="searchType" value="BOTH">
-            <label for="searchTypeRadio3">同时匹配</label>
+            <input th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" type="radio" id="searchTypeRadio2" name="searchType" value="FILE_CONTENT_ONLY">
+            <label th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" for="searchTypeRadio2">只匹配文件内容</label>
+            <input th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" type="radio" id="searchTypeRadio3" name="searchType" value="BOTH">
+            <label th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" for="searchTypeRadio3">同时匹配</label>
             <span class="inline" style="color:red; display:none" id="searchTypeMsg"></span>
             <br>
             文件类型：
@@ -325,6 +325,8 @@
         var advancedSearchCondition = [[${advancedSearchCondition}]];
         var urlRelativePathRegex = new RegExp([[${urlRelativePathPattern}]]);
         var keyword = [[${keyword}]];
+        var searchMode = [[${searchMode}]];
+        var indexFileContent = [[${indexFileContent}]];
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
 
         //定义inputId集合和其他公共变量以便后续统一处理相关元素
@@ -400,19 +402,21 @@
         setButtonImgSrc(searchPathsAddButton, addIconSrc);
 
         //搜索关键字匹配类型Radio选中事件
-        bindEventListener(document.getElementById('searchTypeRadio2'),'click', function () {
-            document.getElementById('directoryRadio2').click();
-            document.getElementById('directoryRadio1').disabled = 'disabled';
-            document.getElementById('directoryRadio3').disabled = 'disabled';
-        });
-        bindEventListener(document.getElementById('searchTypeRadio1'),'click', function () {
-            document.getElementById('directoryRadio1').disabled = '';
-            document.getElementById('directoryRadio3').disabled = '';
-        });
-        bindEventListener(document.getElementById('searchTypeRadio3'),'click', function () {
-            document.getElementById('directoryRadio1').disabled = '';
-            document.getElementById('directoryRadio3').disabled = '';
-        });
+        if(searchMode === 'INDEXED' && indexFileContent) {
+            bindEventListener(document.getElementById('searchTypeRadio2'),'click', function () {
+                document.getElementById('directoryRadio2').click();
+                document.getElementById('directoryRadio1').disabled = 'disabled';
+                document.getElementById('directoryRadio3').disabled = 'disabled';
+            });
+            bindEventListener(document.getElementById('searchTypeRadio1'),'click', function () {
+                document.getElementById('directoryRadio1').disabled = '';
+                document.getElementById('directoryRadio3').disabled = '';
+            });
+            bindEventListener(document.getElementById('searchTypeRadio3'),'click', function () {
+                document.getElementById('directoryRadio1').disabled = '';
+                document.getElementById('directoryRadio3').disabled = '';
+            });
+        }
 
         //文件类型Radio选中事件
         bindEventListener(document.getElementById('directoryRadio1'),'click', function () {
@@ -641,7 +645,9 @@
                 }
                 var searchType = getCheckedValue('searchType');
                 var searchTypeValue = null;
-                if(searchType !== 'FILENAME_ONLY' && searchType !== 'FILE_CONTENT_ONLY' && searchType !== 'BOTH') {
+                var validSearchTypeValues = (searchMode === 'INDEXED' && indexFileContent) ?
+                    ['FILENAME_ONLY','FILE_CONTENT_ONLY','BOTH'] : ['FILENAME_ONLY'];
+                if(!searchType || validSearchTypeValues.indexOf(searchType) === -1) {
                     hasError = true;
                     var msg = '搜索关键字匹配类型字段' + (!searchType ? '没有选中值' : '选中了非法的值');
                     updateMsg('searchTypeMsg', msg, 'red');
@@ -812,7 +818,7 @@
                             }
                         }
                     }
-                    if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY') {
+                    if(searchMode === 'INDEXED' && indexFileContent && searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY') {
                         for(var i=0;i<directoryGroupInputIds.length;i++) {
                             var inputId = directoryGroupInputIds[i];
                             document.getElementById(inputId).disabled = 'disabled';
@@ -1039,6 +1045,21 @@
                 if(!matchResult) {
                     updateMsg(msgId, '搜索路径格式不符合规则', 'red');
                     return;
+                }
+                var searchPathsDiv = document.getElementById('searchPathsDiv');
+                var searchPathInputs = searchPathsDiv.getElementsByTagName('input');
+                if(searchPathInputs) {
+                    for(var i=0;i<searchPathInputs.length;i++) {
+                        var searchPathInputValue = searchPathInputs[i].value;
+                        if(dialogInputValue === searchPathInputValue) {
+                            updateMsg(msgId, '搜索路径和已选搜索路径\'' + searchPathInputValue + '\'相同', 'red');
+                            return;
+                        }
+                        else if(dialogInputValue.startsWith(searchPathInputValue)) {
+                            updateMsg(msgId, '搜索路径是已选搜索路径\'' + searchPathInputValue + '\'的子路径', 'red');
+                            return;
+                        }
+                    }
                 }
             }
             updateMsg(msgId, CHECK_PASSED, 'green');

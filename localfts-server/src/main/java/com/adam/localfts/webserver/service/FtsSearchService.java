@@ -94,6 +94,12 @@ public class FtsSearchService implements DisposableBean {
                     .collect(Collectors.toList());
             advancedSearchCondition.setSearchPathList(newSearchPathList);
         }
+        if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() == SearchMode.PLAIN) {
+            advancedSearchCondition.setSearchType(SearchType.FILENAME_ONLY);
+        } else if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() == SearchMode.INDEXED &&
+                !ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent()) {
+            advancedSearchCondition.setSearchType(SearchType.FILENAME_ONLY);
+        }
         if(advancedSearchCondition.getSearchType() == SearchType.FILE_CONTENT_ONLY) {
             advancedSearchCondition.setDirectory(false);
         }
