@@ -2,12 +2,15 @@ package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.PageObject;
 import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
+import com.adam.localfts.webserver.common.search.SearchDTO;
 import com.adam.localfts.webserver.common.search.SearchType;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.WebServerStartListener;
 import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.config.localfts.SearchProperties;
+import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
+import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +36,10 @@ public class FtsSearchService implements DisposableBean {
     @Autowired
     private FtsService ftsService;
     @Autowired
+    private PlainSearchServiceImpl plainSearchService;
+    @Autowired
+    private LuceneSearchServiceImpl luceneSearchService;
+    @Autowired
     private WebServerStartListener webServerStartListener;
     private final Logger logger = LoggerFactory.getLogger(FtsSearchService.class);
 
@@ -45,8 +52,8 @@ public class FtsSearchService implements DisposableBean {
      * @param sortOrder
      * @return
      */
-    public PageObject<Void> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
-                                   int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) {
+    public PageObject<SearchDTO> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
+                                        int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) {
         Assert.isTrue(!StringUtils.isEmpty(keyword), "搜索关键词为空");
         Assert.isTrue(pageNo > 0, "非法的页数：" + pageNo);
         Assert.isTrue(pageSize > 0, "非法的每页数量：" + pageSize);
@@ -55,7 +62,16 @@ public class FtsSearchService implements DisposableBean {
             preHandleAdvancedSearchCondition(advancedSearchCondition);
         }
         logger.debug("Actual advanced condition={}", advancedSearchCondition);
-        return new PageObject<>(pageNo, pageSize, null);
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
+        switch (searchMode) {
+            case PLAIN:
+                return plainSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+            case INDEXED:
+                return luceneSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+            default:
+                logger.warn("Unknown search mode:{}", searchMode);
+                return new PageObject<>(pageNo, pageSize, null);
+        }
     }
 
     private void preHandleAdvancedSearchCondition(AdvancedSearchCondition advancedSearchCondition) {

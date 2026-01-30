@@ -6,6 +6,7 @@ import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
+import com.adam.localfts.webserver.common.search.SearchDTO;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
@@ -344,7 +345,7 @@ public class WebController {
         model.addAttribute("searchMode", searchMode);
         Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
         model.addAttribute("indexFileContent", indexFileContent);
-        PageObject<Void> pageObject = ftsSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+        PageObject<SearchDTO> pageObject = ftsSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
         model.addAttribute("pageObject", pageObject);
         return "search";
     }
