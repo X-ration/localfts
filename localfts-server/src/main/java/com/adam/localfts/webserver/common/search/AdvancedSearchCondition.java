@@ -149,12 +149,36 @@ public class AdvancedSearchCondition {
         return safeConvertToStringNoEX(lastModifiedLower, simpleDateFormat::format);
     }
 
+    public Date lastModifiedLower() {
+        return lastModifiedLower;
+    }
+
     public void setLastModifiedUpper(String lastModifiedUpper) throws Exception{
         this.lastModifiedUpper = safeConvertFromStringEX(lastModifiedUpper, simpleDateFormat::parse);
     }
 
     public String getLastModifiedUpper() {
         return safeConvertToStringNoEX(lastModifiedUpper, simpleDateFormat::format);
+    }
+
+    public Date lastModifiedUpper() {
+        return lastModifiedUpper;
+    }
+
+    public Long fileSizeLower() {
+        return fileSizeLower;
+    }
+
+    public Long fileSizeUpper() {
+        return fileSizeUpper;
+    }
+
+    public Long compressedFileSizeLower() {
+        return compressedFileSizeLower;
+    }
+
+    public Long compressedFileSizeUpper() {
+        return compressedFileSizeUpper;
     }
 
     public void setCompressedFileLastModifiedLower(String compressedFileLastModifiedLower) throws Exception{
@@ -169,6 +193,10 @@ public class AdvancedSearchCondition {
         return safeConvertToStringNoEX(compressedFileLastModifiedLower, simpleDateFormat::format);
     }
 
+    public Date compressedFileLastModifiedLower() {
+        return compressedFileLastModifiedLower;
+    }
+
     public void setCompressedFileLastModifiedUpper(String compressedFileLastModifiedUpper) throws Exception {
         this.compressedFileLastModifiedUpper = safeConvertFromStringEX(compressedFileLastModifiedUpper, simpleDateFormat::parse);
     }
@@ -179,6 +207,10 @@ public class AdvancedSearchCondition {
 
     public String getCompressedFileLastModifiedUpper() {
         return safeConvertToStringNoEX(compressedFileLastModifiedUpper, simpleDateFormat::format);
+    }
+
+    public Date compressedFileLastModifiedUpper() {
+        return compressedFileLastModifiedUpper;
     }
 
     private <T> String safeConvertToStringNoEX(T value, Function<T, String> function) {

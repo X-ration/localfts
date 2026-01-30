@@ -1078,12 +1078,12 @@ public class FtsService {
                 Comparator.comparing(FolderCompressDTO::getCompressCostTime));
     }
 
-    private int compareCompressedFileSize(CompressedColumns cc1, CompressedColumns cc2) {
+    public int compareCompressedFileSize(CompressedColumns cc1, CompressedColumns cc2) {
         return compareCompressedColumns(cc1, cc2,
                 (acc1, acc2) -> Long.compare(acc1.getCompressedFileSize(), acc2.getCompressedFileSize()));
     }
 
-    private int compareCompressedFileLastModified(CompressedColumns cc1, CompressedColumns cc2) {
+    public int compareCompressedFileLastModified(CompressedColumns cc1, CompressedColumns cc2) {
         return compareCompressedColumns(cc1, cc2,
                 (acc1, acc2) -> Long.compare(acc1.getCompressedFileLastModified(), acc2.getCompressedFileLastModified()));
     }
@@ -1102,7 +1102,7 @@ public class FtsService {
         }
     }
 
-    private int compareCompressStatus(CompressedColumns cc1, CompressedColumns cc2) {
+    public int compareCompressStatus(CompressedColumns cc1, CompressedColumns cc2) {
         if(cc1.getCompressStatus() == null && cc2.getCompressStatus() == null) {
             return 0;
         } else if(cc1.getCompressStatus() == null) {

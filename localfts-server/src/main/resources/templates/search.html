@@ -198,8 +198,11 @@
         <table class="left-head-table" style="text-align:left;border-style:solid">
             <thead>
             <tr th:if="${zipEnabled}">
-                <th style="width:40%">文件名
+                <th style="width:20%">文件名
                     <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="fontSizeImg"/></a>
+                </th>
+                <th style="width:20%">所在路径
+                    <a name="sort-link" th:attr="sort-column='PARENT_PATH'"><img class="fontSizeImg"/></a>
                 </th>
                 <th th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" style="width:10%">文件内容
                     <a name="sort-link" th:attr="sort-column='FILE_CONTENT'"><img class="fontSizeImg"/></a>
@@ -225,8 +228,11 @@
                 <th style="width:10%">操作</th>
             </tr>
             <tr th:if="${!zipEnabled}">
-                <th style="width:50%">文件名
+                <th style="width:25%">文件名
                     <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="fontSizeImg"/></a>
+                </th>
+                <th style="width:25%">所在路径
+                    <a name="sort-link" th:attr="sort-column='PARENT_PATH'"><img class="fontSizeImg"/></a>
                 </th>
                 <th th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" style="width:10%">文件内容
                     <a name="sort-link" th:attr="sort-column='FILE_CONTENT'"><img class="fontSizeImg"/></a>
@@ -245,8 +251,10 @@
             </thead>
             <tbody>
             <tr th:each="item:${pageObject.data}">
-                <td th:if="${item.directory}"><a name="directory-path" th:text="${item.fileName}">directory name</a></td>
-                <td th:if="${!item.directory}" th:text="${item.fileName}">fileName</td>
+                <td th:if="${item.directory}"><a name="directory-path" th:text="${item.filename}" th:attr="relative-path=${item.parentRelativePath} + '/' + ${item.filename}">directory name</a></td>
+                <td th:if="${!item.directory}" th:text="${item.filename}">fileName</td>
+
+                <td th:text="${item.parentRelativePath}">parent relative path</td>
 
                 <td th:if="${searchMode.name() == 'INDEXED' and indexFileContent and item.directory}">-</td>
                 <td th:if="${searchMode.name() == 'INDEXED' and indexFileContent and !item.directory}" th:utext="${item.fileContent}">file content</td>
@@ -269,11 +277,11 @@
                 <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
 
                 <td th:if="${item.directory}">
-                    <a name="upload-file" th:text="${item.fileName}">上传文件</a>
-                    <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.fileName}">压缩管理</a>
+                    <a name="upload-file" th:text="${item.parentRelativePath} + '/' + ${item.filename}">上传文件</a>
+                    <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.parentRelativePath} + '/' + ${item.filename}">压缩管理</a>
                     <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}">下载文件夹(zip)</a>
                 </td>
-                <td th:if="${!item.directory}"><a name="download-file" th:text="${item.fileName}">下载文件</a></td>
+                <td th:if="${!item.directory}"><a name="download-file" th:text="${item.parentRelativePath} + '/' + ${item.filename}">下载文件</a></td>
             </tr>
             </tbody>
         </table>
@@ -1084,6 +1092,9 @@
                 if(searchPathInputs) {
                     for(var i=0;i<searchPathInputs.length;i++) {
                         var searchPathInputValue = searchPathInputs[i].value;
+                        if(!searchPathInputValue || searchPathInputValue === '') {
+                            continue;
+                        }
                         if(dialogInputValue === searchPathInputValue) {
                             updateMsg(msgId, '搜索路径和已选搜索路径\'' + searchPathInputValue + '\'相同', 'red');
                             return;
@@ -1476,7 +1487,8 @@
                 directoryPaths = getElementsByName("a", "directory-path");
             }
             for(var i=0;i<directoryPaths.length;i++) {
-                directoryPaths[i].setAttribute("href", concatUrlList(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + directoryPaths[i].innerText, 1, ftsPageSize));
+                directoryPaths[i].setAttribute("href", concatUrlList(directoryPaths[i].getAttribute('relative-path'), 1, ftsPageSize));
+                directoryPaths[i].removeAttribute('relative-path');
             }
 
             //deal with download-file
@@ -1485,7 +1497,7 @@
                 downloadFiles = getElementsByName("a", "download-file");
             }
             for(var i=0;i<downloadFiles.length;i++) {
-                downloadFiles[i].setAttribute("href", concatUrlDownload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + downloadFiles[i].innerText));
+                downloadFiles[i].setAttribute("href", concatUrlDownload(downloadFiles[i].innerText));
                 downloadFiles[i].innerText = "下载文件";
             }
 
@@ -1495,7 +1507,7 @@
                 uploadFiles = getElementsByName("a", "upload-file");
             }
             for(var i=0;i<uploadFiles.length;i++) {
-                uploadFiles[i].setAttribute("href", concatUrlUpload(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + uploadFiles[i].innerText));
+                uploadFiles[i].setAttribute("href", concatUrlUpload(uploadFiles[i].innerText));
                 uploadFiles[i].innerText = "上传文件";
             }
 
@@ -1653,7 +1665,7 @@
             compressFolders = getElementsByName("a", "compress-folder");
         }
         for(var i=0;i<compressFolders.length;i++) {
-            compressFolders[i].setAttribute("href", concatUrlCompressFolder(ftsPagePath + ((ftsPagePath == "/") ? "" : "/") + compressFolders[i].innerText));
+            compressFolders[i].setAttribute("href", concatUrlCompressFolder(compressFolders[i].innerText));
             compressFolders[i].innerText = "压缩管理";
         }
 
