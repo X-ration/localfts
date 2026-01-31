@@ -31,7 +31,7 @@
     </div>
     <br>
     <form id="search-form" th:action="@{/search}" method="post" enctype="application/x-www-form-urlencoded" style="text-align: center">
-        <label for="keyword" style="font-size: 30px">文件搜索</label><br><br>
+        <span style="font-size: 30px">文件搜索</span><br><br>
         <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="width:80%; text-align:center">
         <span class="inline" style="color:red; display:none" id="keywordMsg"></span>
         <br><br>
@@ -202,6 +202,7 @@
     </form>
     <div id="result-div" th:if="${pageObject != null}" style="text-align:center">
         <hr>
+        <span style="font-size: 30px">搜索结果</span><br><br>
         <form id="sortForm" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
             排序列：
             <select id="sortFormColumnSelect" name="sortColumn">
@@ -270,11 +271,6 @@
             总<span id="total-page" th:text="${pageObject.totalPage}">total page</span>页 <span id="total-size" th:text="${pageObject.totalSize}">total size</span>条
         </p>
 
-        <a id="first-page">首页</a>
-        <a id="previous-page">上一页</a>
-        <a id="next-page">下一页</a>
-        <a id="last-page">尾页</a>
-
         <form id="pageForm" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
             <input type="hidden" name="keyword" th:value="${keyword}">
             <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${pageObject.pageSize}">
@@ -292,6 +288,10 @@
             <input type="hidden" name="compressedFileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeUpperStr != null}" th:value="${advancedSearchCondition.compressedFileSizeUpperStr}">
             <input type="hidden" name="compressedFileLastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedLower != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedLower}">
             <input type="hidden" name="compressedFileLastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedUpper != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedUpper}">
+            <button id="first-page">首页</button>
+            <button id="previous-page">上一页</button>
+            <button id="next-page">下一页</button>
+            <button id="last-page">尾页</button><br>
             <label for="page-no">页数:</label>
             <input type="text" size="2" id="page-no" name="pageNo" th:value="${pageObject.currentPage}">
             <label for="page-size-select">每页数量:</label>
@@ -448,6 +448,18 @@
                         }
                     }
                 }
+            }
+        }
+
+        var pageForm = document.getElementById('pageForm');
+        if(advancedSearchCondition && advancedSearchCondition.searchPaths && advancedSearchCondition.searchPaths.length > 0) {
+            for(var i=0;i<advancedSearchCondition.searchPaths.length;i++) {
+                var searchPath = advancedSearchCondition.searchPaths[i];
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'searchPaths';
+                input.value = searchPath;
+                pageForm.appendChild(input);
             }
         }
 
@@ -1632,19 +1644,28 @@
                 uploadFiles[i].innerText = "上传文件";
             }
 
-            //deal with first-page,previous-page,next-page,last-page
+            //deal with first-page,previous-page,next-page,last-page buttons
+            var pageNoInput = document.getElementById('page-no');
             var firstPageNo = 1;
             var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
             var previousPageNo = (ftsPageCurrentPage > 1) ? (ftsPageCurrentPage - 1) : 1;
             var nextPageNo = (ftsPageCurrentPage < lastPageNo) ? (ftsPageCurrentPage + 1) : lastPageNo;
-            var firstPageUrl = concatUrlSearch(keyword, firstPageNo, ftsPageSize, sortColumn, sortOrder);
-            var lastPageUrl = concatUrlSearch(keyword, lastPageNo, ftsPageSize, sortColumn, sortOrder);
-            var previousPageUrl = concatUrlSearch(keyword, previousPageNo, ftsPageSize, sortColumn, sortOrder);
-            var nextPageUrl = concatUrlSearch(keyword, nextPageNo, ftsPageSize, sortColumn, sortOrder);
-            document.getElementById("first-page").setAttribute("href", firstPageUrl);
-            document.getElementById("last-page").setAttribute("href", lastPageUrl);
-            document.getElementById("previous-page").setAttribute("href", previousPageUrl);
-            document.getElementById("next-page").setAttribute("href", nextPageUrl);
+            document.getElementById("first-page").onclick = function() {
+                pageNoInput.value = firstPageNo;
+                pageForm.submit();
+            };
+            document.getElementById("last-page").onclick = function() {
+                pageNoInput.value = lastPageNo;
+                pageForm.submit();
+            };
+            document.getElementById("previous-page").onclick = function() {
+                pageNoInput.value = previousPageNo;
+                pageForm.submit();
+            };
+            document.getElementById("next-page").onclick = function() {
+                pageNoInput.value = nextPageNo;
+                pageForm.submit();
+            };
 
             //deal with page-size-select
             var tagSelectOptions = document.getElementById("page-size-select").children;

@@ -69,7 +69,8 @@ public class FtsSearchService implements DisposableBean {
             }
             preHandleAdvancedSearchCondition(advancedSearchConditionCopy);
         }
-        logger.debug("Actual advanced condition={}", advancedSearchConditionCopy);
+        logger.debug("Actual search parameters: keyword={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
+                keyword, pageNo, pageSize, sortColumn, sortOrder, advancedSearchConditionCopy);
         SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         switch (searchMode) {
             case PLAIN:
