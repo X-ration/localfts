@@ -8,6 +8,7 @@ import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
 import com.adam.localfts.webserver.common.search.SearchDTO;
 import com.adam.localfts.webserver.common.search.SearchMode;
+import com.adam.localfts.webserver.common.search.SearchType;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
@@ -339,8 +340,11 @@ public class WebController {
         if(pageSize <= 0) {
             pageSize = 20;
         }
-        if(!zipEnabled && SearchColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
-            sortColumn = null;
+        if(sortColumn != null) {
+            boolean checkSortColumn = checkSearchSortColumn(sortColumn, advancedSearchCondition, zipEnabled, searchMode, indexFileContent);
+            if(!checkSortColumn) {
+                sortColumn = null;
+            }
         }
         if(sortColumn != null && sortOrder == null) {
             sortOrder = SortOrder.ASC;
@@ -350,5 +354,67 @@ public class WebController {
         PageObject<SearchDTO> pageObject = ftsSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
         model.addAttribute("pageObject", pageObject);
         return "search";
+    }
+
+    private boolean checkSearchSortColumn(SearchColumn sortColumn, AdvancedSearchCondition advancedSearchCondition,
+                                          boolean zipEnabled, SearchMode searchMode, boolean indexFileContent) {
+        if(!zipEnabled && SearchColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
+            return false;
+        }
+        if(advancedSearchCondition == null || advancedSearchCondition.isEmpty()) {
+            return true;
+        }
+        boolean requireFile = requireFile(advancedSearchCondition);
+        boolean requireDirectory = requireDirectory(advancedSearchCondition);
+        boolean requireFileOrDirectory = requireFileOrDirectory(advancedSearchCondition);
+        if(sortColumn == SearchColumn.TYPE) {
+            if(!requireFileOrDirectory) {
+                return false;
+            }
+        }
+        if(sortColumn == SearchColumn.SIZE) {
+            if(requireDirectory) {
+                return false;
+            }
+        }
+        if(sortColumn == SearchColumn.FILE_CONTENT) {
+            boolean check = searchMode == SearchMode.INDEXED && indexFileContent;
+            if(!check) {
+                return false;
+            }
+            if(requireDirectory) {
+                return false;
+            }
+        }
+        if(SearchColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
+            if(requireFile) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean requireFileOrDirectory(AdvancedSearchCondition advancedSearchCondition) {
+        if(advancedSearchCondition.getSearchType() != null) {
+            boolean check = advancedSearchCondition.getSearchType() != SearchType.FILE_CONTENT_ONLY;
+            if(!check) {
+                return false;
+            }
+        }
+        return advancedSearchCondition.getDirectory() == null;
+    }
+
+    private boolean requireFile(AdvancedSearchCondition advancedSearchCondition) {
+        return advancedSearchCondition.getDirectory() != null && !advancedSearchCondition.getDirectory();
+    }
+
+    private boolean requireDirectory(AdvancedSearchCondition advancedSearchCondition) {
+        if(advancedSearchCondition.getSearchType() != null) {
+            boolean check = advancedSearchCondition.getSearchType() != SearchType.FILE_CONTENT_ONLY;
+            if(!check) {
+                return false;
+            }
+        }
+        return advancedSearchCondition.getDirectory() != null && advancedSearchCondition.getDirectory();
     }
 }

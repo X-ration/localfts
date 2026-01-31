@@ -200,101 +200,72 @@
             </div>
         </div>
     </form>
-    <div id="result-div" th:if="${pageObject != null}">
+    <div id="result-div" th:if="${pageObject != null}" style="text-align:center">
         <hr>
-        <table class="left-head-table" style="text-align:left;border-style:solid">
-            <thead>
-            <tr th:if="${zipEnabled}">
-                <th style="width:20%">文件名
-                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:20%">所在路径
-                    <a name="sort-link" th:attr="sort-column='PARENT_PATH'"><img class="fontSizeImg"/></a>
-                </th>
-                <th th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" style="width:10%">文件内容
-                    <a name="sort-link" th:attr="sort-column='FILE_CONTENT'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:5%">类型
-                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:7%">大小
-                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:7%">修改时间
-                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:7%">文件夹压缩状态
-                    <a name="sort-link" th:attr="sort-column='COMPRESS_STATUS'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:7%">压缩文件大小
-                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_SIZE'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:7%">压缩文件修改时间
-                    <a name="sort-link" th:attr="sort-column='COMPRESS_FILE_LAST_MODIFIED'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:10%">操作</th>
-            </tr>
-            <tr th:if="${!zipEnabled}">
-                <th style="width:25%">文件名
-                    <a name="sort-link" th:attr="sort-column='FILENAME'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:25%">所在路径
-                    <a name="sort-link" th:attr="sort-column='PARENT_PATH'"><img class="fontSizeImg"/></a>
-                </th>
-                <th th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" style="width:10%">文件内容
-                    <a name="sort-link" th:attr="sort-column='FILE_CONTENT'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:10%">类型
-                    <a name="sort-link" th:attr="sort-column='TYPE'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:10%">大小
-                    <a name="sort-link" th:attr="sort-column='SIZE'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:10%">修改时间
-                    <a name="sort-link" th:attr="sort-column='LAST_MODIFIED'"><img class="fontSizeImg"/></a>
-                </th>
-                <th style="width:10%">操作</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="item:${pageObject.data}">
-                <td th:if="${item.directory}"><a name="directory-path" th:text="${item.filename}" th:attr="relative-path=${item.parentRelativePath} + '/' + ${item.filename}">directory name</a></td>
-                <td th:if="${!item.directory}" th:text="${item.filename}">fileName</td>
-
-                <td th:text="${item.parentRelativePath}">parent relative path</td>
-
-                <td th:if="${searchMode.name() == 'INDEXED' and indexFileContent and item.directory}">-</td>
-                <td th:if="${searchMode.name() == 'INDEXED' and indexFileContent and !item.directory}" th:utext="${item.fileContent}">file content</td>
-
-                <td th:if="${item.directory}">文件夹</td>
-                <td th:if="${!item.directory}">文件</td>
-
-                <td th:if="${item.directory}">-</td>
-                <td th:if="${!item.directory}" th:text="${item.fileSizeStr}">0</td>
-
-                <td th:text="${item.lastModifiedStr}">last modified</td>
-
-                <td th:if="${zipEnabled and item.directory}" th:text="${item.compressStatus.desc}"></td>
-                <td th:if="${zipEnabled and !item.directory}">-</td>
-
-                <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileSizeStr}"></td>
-                <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
-
-                <td th:if="${zipEnabled and item.directory and item.compressStatus.name() == 'COMPRESSED'}" th:text="${item.compressedFileLastModifiedStr}"></td>
-                <td th:if="${zipEnabled and (!item.directory or item.compressStatus.name() != 'COMPRESSED')}">-</td>
-
-                <td th:if="${item.directory}">
-                    <a name="upload-file" th:text="${item.parentRelativePath} + '/' + ${item.filename}">上传文件</a>
-                    <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.parentRelativePath} + '/' + ${item.filename}">压缩管理</a>
-                    <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedPath}">下载文件夹(zip)</a>
-                </td>
-                <td th:if="${!item.directory}"><a name="download-file" th:text="${item.parentRelativePath} + '/' + ${item.filename}">下载文件</a></td>
-            </tr>
-            </tbody>
-        </table>
+        <form id="sortForm" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
+            排序列：
+            <select id="sortFormColumnSelect" name="sortColumn">
+                <option value="FILENAME">文件/文件夹名称</option>
+                <option value="PARENT_PATH">所在路径</option>
+                <option value="LAST_MODIFIED">修改时间</option>
+            </select>
+            排序方式：
+            <select id="sortFormOrderSelect" name="sortOrder">
+                <option value="ASC">升序</option>
+                <option value="DESC">降序</option>
+            </select>
+            <input type="hidden" name="keyword" th:value="${keyword}">
+            <input type="hidden" name="searchType" th:if="${advancedSearchCondition != null && advancedSearchCondition.searchType != null}" th:value="${advancedSearchCondition.searchType}">
+            <input type="hidden" name="caseSensitive" th:if="${advancedSearchCondition != null && advancedSearchCondition.caseSensitive != null}" th:value="${advancedSearchCondition.caseSensitive}">
+            <input type="hidden" name="directory" th:if="${advancedSearchCondition != null && advancedSearchCondition.directory != null}" th:value="${advancedSearchCondition.directory}">
+            <input type="hidden" name="fileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeLowerStr != null}" th:value="${advancedSearchCondition.fileSizeLowerStr}">
+            <input type="hidden" name="fileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeUpperStr != null}" th:value="${advancedSearchCondition.fileSizeUpperStr}">
+            <input type="hidden" name="lastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedLower != null}" th:value="${advancedSearchCondition.lastModifiedLower}">
+            <input type="hidden" name="lastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedUpper != null}" th:value="${advancedSearchCondition.lastModifiedUpper}">
+            <input type="hidden" name="folderCompressStatus" th:if="${advancedSearchCondition != null && advancedSearchCondition.folderCompressStatus != null}" th:value="${advancedSearchCondition.folderCompressStatus.name()}">
+            <input type="hidden" name="compressedFileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeLowerStr != null}" th:value="${advancedSearchCondition.compressedFileSizeLowerStr}">
+            <input type="hidden" name="compressedFileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeUpperStr != null}" th:value="${advancedSearchCondition.compressedFileSizeUpperStr}">
+            <input type="hidden" name="compressedFileLastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedLower != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedLower}">
+            <input type="hidden" name="compressedFileLastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedUpper != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedUpper}">
+            <button type="submit">排序</button>
+        </form>
         <br>
-
-        <p>
+        <div th:if="${pageObject.data != null}" th:each="item:${pageObject.data}">
+            <div>
+                <span th:if=${item.directory} th:text="'文件夹名称：' + ${item.filename}">filename</span>
+                <span th:if=${!item.directory} th:text="'文件名称：' + ${item.filename}">filename</span>
+            </div>
+            <div th:text="'所在路径：' + ${item.parentRelativePath}">
+                parent relative path
+            </div>
+            <div th:if="${searchMode.name() == 'INDEXED' and indexFileContent and !item.directory}" th:utext="'文件内容：' + ${item.fileContent}">
+                file content
+            </div>
+            <div>
+                <span th:if="${item.directory}">类型：文件夹</span>
+                <span th:if="${!item.directory}">类型：文件</span>
+                <span th:if="${!item.directory}" th:text="'文件大小：' + ${item.fileSizeStr}">file size</span>
+                <span th:text="'修改时间：' + ${item.lastModifiedStr}">last modified</span>
+            </div>
+            <div th:if="${zipEnabled and item.directory}">
+                <span th:text="'文件夹压缩状态：' + ${item.compressStatus.desc}">compress status</span>
+                <span th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="'压缩文件大小：' + ${item.compressedFileSizeStr}">compress file size</span>
+                <span th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="'压缩文件修改时间：' + ${item.compressedFileLastModifiedStr}">compress file last modified</span>
+            </div>
+            <div th:if="${item.directory}">
+                相关链接：
+                <a name="directory-path" th:attr="relative-path=${item.parentRelativePath} + '/' + ${item.filename}">访问目录</a>
+                <a name="upload-file" th:text="${item.parentRelativePath} + '/' + ${item.filename}">上传文件</a>
+                <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.parentRelativePath} + '/' + ${item.filename}">压缩管理</a>
+                <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedFilePath}">下载文件夹(zip)</a>
+            </div>
+            <div th:if="${!item.directory}">
+                相关链接：
+                <a name="download-file" th:text="${item.parentRelativePath} + '/' + ${item.filename}">下载文件</a>
+            </div>
+            <br>
+        </div>
+        <p class="margin-0">
             第<span id="current-page" th:text="${pageObject.currentPage}">page no</span>页 <span id="current-size" th:text="${pageObject.currentSize}">page size</span>条
             总<span id="total-page" th:text="${pageObject.totalPage}">total page</span>页 <span id="total-size" th:text="${pageObject.totalSize}">total size</span>条
         </p>
@@ -347,6 +318,9 @@
         var indexFileContent = [[${indexFileContent}]];
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
         var fileInvalidCharacters = [[${fileInvalidCharacters}]];
+        var zipEnabled = [[${zipEnabled}]];
+        var sortColumn = [[${sortColumn}]];
+        var sortOrder = [[${sortOrder}]];
 
         //定义inputId集合和其他公共变量以便后续统一处理相关元素
         var dateTimeInputIds = ['lastModifiedLower', 'lastModifiedUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
@@ -394,6 +368,87 @@
             var inputId = dateTimeInputIds[i];
             var buttonId = inputId + 'Button';
             keyboardButtonIds[keyboardButtonIds.length] = buttonId;
+        }
+
+        var sortForm = document.getElementById('sortForm');
+        if(sortForm) {
+            var requireFileValue = requireFile(advancedSearchCondition);
+            var requireDirectoryValue = requireDirectory(advancedSearchCondition);
+            var requireFileOrDirectoryValue = requireFileOrDirectory(advancedSearchCondition);
+            if(advancedSearchCondition && advancedSearchCondition.searchPaths && advancedSearchCondition.searchPaths.length > 0) {
+                for(var i=0;i<advancedSearchCondition.searchPaths.length;i++) {
+                    var searchPath = advancedSearchCondition.searchPaths[i];
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'searchPaths';
+                    input.value = searchPath;
+                    sortForm.appendChild(input);
+                }
+            }
+            var sortFormColumnSelect = document.getElementById('sortFormColumnSelect');
+            var sortColumnDescObject = {
+                TYPE: '类型',
+                FILE_CONTENT: '文件内容',
+                SIZE: '文件大小',
+                COMPRESS_STATUS: '文件夹压缩状态',
+                COMPRESS_FILE_SIZE: '压缩文件大小',
+                COMPRESS_FILE_LAST_MODIFIED: '压缩文件修改时间'
+            };
+            var needTypeOption = requireFileOrDirectoryValue;
+            if(needTypeOption) {
+                var option = document.createElement('option');
+                option.innerText = sortColumnDescObject['TYPE'];
+                option.value = 'TYPE';
+                sortFormColumnSelect.appendChild(option);
+            }
+            var needFileContentOption = searchMode === 'INDEXED' && indexFileContent;
+            if(needFileContentOption) {
+                needFileContentOption = !requireDirectoryValue;
+            }
+            if(needFileContentOption) {
+                var option = document.createElement('option');
+                option.innerText = sortColumnDescObject['FILE_CONTENT'];
+                option.value = 'FILE_CONTENT';
+                sortFormColumnSelect.appendChild(option);
+            }
+            var needSizeOption = !requireDirectoryValue;
+            if(needSizeOption) {
+                var option = document.createElement('option');
+                option.innerText = sortColumnDescObject['SIZE'];
+                option.value = 'SIZE';
+                sortFormColumnSelect.appendChild(option);
+            }
+            if(zipEnabled) {
+                var needCompressColumnOptions = !requireFileValue;
+                if(needCompressColumnOptions) {
+                    var compressColumns = ['COMPRESS_STATUS', 'COMPRESS_FILE_SIZE', 'COMPRESS_FILE_LAST_MODIFIED'];
+                    for(var i=0;i<compressColumns.length;i++) {
+                        var column = compressColumns[i];
+                        var option = document.createElement('option');
+                        option.innerText = sortColumnDescObject[column];
+                        option.value = column;
+                        sortFormColumnSelect.appendChild(option);
+                    }
+                }
+            }
+            if(sortColumn !== null) {
+                var sortColumnOptions = document.getElementById("sortFormColumnSelect").children;
+                for(var i=0;i<sortColumnOptions.length;i++) {
+                    if(sortColumnOptions[i].value == sortColumn) {
+                        setOptionSelected(sortColumnOptions[i]);
+                        break;
+                    }
+                }
+                if(sortOrder !== null) {
+                    var sortOrderOptions = document.getElementById("sortFormOrderSelect").children;
+                    for(var i=0;i<sortOrderOptions.length;i++) {
+                        if(sortOrderOptions[i].value == sortOrder) {
+                            setOptionSelected(sortOrderOptions[i]);
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
         if(dateAndTimeInputSupported) {
@@ -1485,11 +1540,47 @@
             }
             form.submit();
         }
+        function requireFileOrDirectory(asc) {
+            if(!asc) {
+                return true;
+            }
+            if(asc.searchType) {
+                var check = asc.searchType !== 'FILE_CONTENT_ONLY';
+                if(!check) {
+                    return false;
+                }
+            }
+            return asc.directory === null;
+        }
+        function requireFile(asc) {
+            if(!asc) {
+                return false;
+            }
+            return asc.directory !== null && !asc.directory;
+        }
+        function requireDirectory(asc) {
+            if(!asc) {
+                return false;
+            }
+            if(asc.searchType) {
+                var check = asc.searchType !== 'FILE_CONTENT_ONLY';
+                if(!check) {
+                    return false;
+                }
+            }
+            return asc.directory !== null && asc.directory;
+        }
+
+        function setOptionSelected(option) {
+            if (window.navigator.userAgent.indexOf("MSIE 6.0") > -1) {
+                option.setAttribute("selected", "selected");
+            } else {
+                option.selected = true;
+            }
+        }
     </script>
     <script type="text/javascript" th:inline="javascript" th:if="${pageObject != null}">
         var ftsPageSize = Number(document.getElementById("page-size").value);
-        var sortColumn = [[${sortColumn}]];
-        var sortOrder = [[${sortOrder}]];
         var keyword = [[${keyword}]];
         var URL_LIST = concatUrlForConstant(contextPath, '/list');
         var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
@@ -1541,51 +1632,6 @@
                 uploadFiles[i].innerText = "上传文件";
             }
 
-            //deal with sort-link
-            var sortLinks = document.getElementsByName("sort-link");
-            if(!sortLinks) {
-                sortLinks = getElementsByName("a", "sort-link");
-            }
-            for(var i=0;i<sortLinks.length;i++) {
-                var eSortColumn = sortLinks[i].getAttribute('sort-column');
-                var eSortOrder = null, imgSrc = null;
-                if(sortColumn === null || sortColumn !== eSortColumn) {
-                    eSortOrder = 'ASC';
-                    imgSrc = contextPath + '/static/icon/sort_32px_black';
-                } else if(sortColumn !== null && sortOrder === 'ASC') {
-                    eSortOrder = 'DESC';
-                    imgSrc = contextPath + '/static/icon/sort_asc_32px_black';
-                } else if(sortColumn !== null && sortOrder === 'DESC') {
-                    eSortColumn = undefined;
-                    eSortOrder = undefined;
-                    imgSrc = contextPath + '/static/icon/sort_desc_32px_black';
-                } else {
-                    if(window.console) {
-                        console.error('非法状态，sortColumn=' + sortColumn + ',sortOrder=' + sortOrder);
-                    }
-                    eSortColumn = undefined;
-                    eSortOrder = undefined;
-                }
-                if(imgSrc) {
-                    if(IE_VERSION && IE_VERSION < 8) {
-                        imgSrc = imgSrc + '_png8';
-                    }
-                    imgSrc = imgSrc + '.png';
-                    //sortLinks[i].children[0].setAttribute('src', imgSrc);
-                    var sortLinkChildren = sortLinks[i].children;
-                    if(sortLinkChildren) {
-                        for(var j=0;j<sortLinkChildren.length;j++) {
-                            var sortLinkChild = sortLinkChildren[j];
-                            if(sortLinkChild.tagName.toLowerCase() === 'img') {
-                                sortLinkChild.setAttribute('src', imgSrc);
-                            }
-                        }
-                    }
-                }
-                var url = concatUrlSearch(keyword, undefined, ftsPageSize, eSortColumn, eSortOrder);
-                sortLinks[i].setAttribute('href', url);
-            }
-
             //deal with first-page,previous-page,next-page,last-page
             var firstPageNo = 1;
             var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
@@ -1619,14 +1665,6 @@
                 setOptionSelected(tagSelectOptions[0]);
             }
             
-        }
-
-        function setOptionSelected(option) {
-            if (window.navigator.userAgent.indexOf("MSIE 6.0") > -1) {
-                option.setAttribute("selected", "selected");
-            } else {
-                option.selected = true;
-            }
         }
 
         function concatUrlForConstant(contextPath, path) {
