@@ -1,6 +1,8 @@
 package com.adam.localfts.webserver.util;
 
+import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.HttpRangeObject;
+import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import org.springframework.util.Assert;
 
 import java.nio.charset.StandardCharsets;
@@ -10,11 +12,23 @@ import java.util.Locale;
 import java.util.Stack;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.adam.localfts.webserver.common.Constants.*;
 
-
 public class Util {
+
+    public static boolean isValidFileSuffix(String suffix) {
+        Pattern pattern;
+        if(Util.isSystemWindows()) {
+            pattern = Constants.PATTERN_FILE_SUFFIX_WINDOWS;
+        } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
+            pattern = Constants.PATTERN_FILE_SUFFIX_LINUX_MACOS;
+        } else {
+            throw new LocalFtsRuntimeException("Unknown system");
+        }
+        return pattern.matcher(suffix).matches();
+    }
 
     public static SimpleDateFormat getSimpleDateFormat() {
         return new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);

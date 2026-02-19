@@ -16,10 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.util.unit.DataSize;
 
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -34,6 +31,9 @@ public class AdvancedSearchCondition implements Cloneable{
      */
     @Getter(AccessLevel.NONE)
     private List<String> searchPathList;
+    @Getter(AccessLevel.NONE)
+    private List<String> fileTypeList;
+    private Boolean filterFileType;
     private SearchType searchType;
     private Boolean caseSensitive;
     private Boolean directory;
@@ -65,9 +65,12 @@ public class AdvancedSearchCondition implements Cloneable{
     private final SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
     @Getter(AccessLevel.NONE)
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    @Getter(AccessLevel.NONE)
+    private boolean emptyResult;
 
     public boolean isEmpty() {
-        return searchType == null && caseSensitive == null
+        return caseSensitive == null && searchType == null
+                && (filterFileType == null || CollectionUtils.isEmpty(fileTypeList))
                 && CollectionUtils.isEmpty(searchPathList) && directory == null && fileSizeLower == null && fileSizeUpper == null
                 && lastModifiedLower == null && lastModifiedUpper == null && folderCompressStatus == null
                 && compressedFileSizeLower == null && compressedFileSizeUpper == null
@@ -99,9 +102,13 @@ public class AdvancedSearchCondition implements Cloneable{
         }
     }
 
+    public boolean emptyResult() {
+        return this.emptyResult;
+    }
+
     public void setSearchPaths(String[] searchPaths) {
         if(searchPaths != null) {
-            this.searchPathList = Arrays.asList(searchPaths).stream()
+            this.searchPathList = Arrays.stream(searchPaths)
                     .filter(str -> !StringUtils.isEmpty(str))
                     .filter(str -> {
                         Matcher matcher;
@@ -122,8 +129,23 @@ public class AdvancedSearchCondition implements Cloneable{
         }
     }
 
+    public void setFileTypes(String[] fileTypes) {
+        if(fileTypes != null && fileTypes.length > 0) {
+            this.fileTypeList = Arrays.stream(fileTypes)
+                    .filter(Objects::nonNull)
+                    .filter(Util::isValidFileSuffix)
+//                    .filter(FileType::containsEnum)
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+    }
+
     public List<String> getSearchPaths() {
         return searchPathList;
+    }
+
+    public List<String> getFileTypes() {
+        return fileTypeList;
     }
 
     public void setFileSizeLower(String fileSizeLower) {
@@ -237,8 +259,17 @@ public class AdvancedSearchCondition implements Cloneable{
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
+        if(emptyResult) {
+            stringBuilder.append(", emptyResult=true");
+        }
         if(!CollectionUtils.isEmpty(searchPathList)) {
             stringBuilder.append(", searchPathList=").append(searchPathList);
+        }
+        if(!CollectionUtils.isEmpty(fileTypeList)) {
+            stringBuilder.append(", fileTypeList=").append(fileTypeList);
+        }
+        if(filterFileType != null) {
+            stringBuilder.append(", filterFileType=").append(filterFileType);
         }
         if(searchType != null) {
             stringBuilder.append(", searchType=").append(searchType);

@@ -80,6 +80,31 @@
             <label th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" for="searchTypeRadio3">同时匹配</label>
             <span class="inline" style="color:red; display:none" id="searchTypeMsg"></span>
             <br>
+            过滤文件后缀名：
+            <input type="radio" id="filterFileTypeRadio1" name="filterFileType" value="false" checked="checked">
+            <label for="filterFileTypeRadio1">不过滤</label>
+            <input type="radio" id="filterFileTypeRadio2" value="true" name="filterFileType">
+            <label for="filterFileTypeRadio2">过滤</label>
+            <input type="checkbox" id="filterFileTypeCheckbox">
+            <label for="filterFileTypeCheckbox">显示说明</label>
+            <span class="inline" style="color:red; display:none" id="filterFileTypeMsg"></span>
+            <br>
+            <div id="fileTypesDiv" style="display: none">
+                <div th:each="fileTypeGroup:${fileTypeGroups}">
+                    <span th:text="${fileTypeGroup.desc} + ':'"></span>
+                    <div class="inline" th:each="fileType:${fileTypeGroup.fileTypeList}">
+                        <input type="checkbox" name="fileTypes" th:attr="file-type-suffix=${fileType.suffix},file-type-desc=${fileType.desc}"
+                               th:value="${fileType.suffix}">
+                        <label th:text="${fileType.suffix}"></label>
+                        <span class="inline" style="color:red; display:none"></span>
+                    </div>
+                </div>
+                <div id="customFileTypesDiv">
+                    <span>自定义:</span>
+                    <button class="imgButton" type="button" id="fileTypesAddButton" onclick="addFileTypeInput()"><img class="buttonImg" alt="添加自定义文件后缀"></button>
+                </div>
+                <br>
+            </div>
             是否区分大小写：
             <input type="radio" id="caseSensitiveRadio1" name="caseSensitive" value="true" checked="checked">
             <label for="caseSensitiveRadio1">区分大小写</label>
@@ -313,6 +338,7 @@
         var CHECK_PASSED = '校验通过' + (IE_VERSION && IE_VERSION < 9 ? '√' : '✔');
         var advancedSearchCondition = [[${advancedSearchCondition}]];
         var urlRelativePathRegex = new RegExp([[${urlRelativePathPattern}]]);
+        var fileSuffixRegex = new RegExp([[${fileSuffixPattern}]]);
         var keyword = [[${keyword}]];
         var searchMode = [[${searchMode}]];
         var indexFileContent = [[${indexFileContent}]];
@@ -341,6 +367,7 @@
         var foldWhiteIconSrc = contextPath + '/static/icon/down_up_32px_white';
         var searchPathsKeyboardButtonIdRegex = /^searchPathsKeyboardButton(\d+)$/;
         var searchPathsInputIdRegex = /^searchPaths(\d+)$/;
+        var fileTypesInputIdRegex = /^fileType(\d+)$/;
         var selectedSearchPathLis = [];
         if(IE_VERSION && IE_VERSION < 8) {
             keyboardIconSrc = keyboardIconSrc + '_png8';
@@ -462,6 +489,32 @@
                 pageForm.appendChild(input);
             }
         }
+        
+        var fileTypesDiv = document.getElementById('fileTypesDiv');
+        if(fileTypesDiv.children) {
+            var fileTypeCounter = 0;
+            for(var i=0;i<fileTypesDiv.children.length;i++) {
+                var fileTypeGroupDiv = fileTypesDiv.children[i];
+                if('customFileTypesDiv' === fileTypeGroupDiv.id) {
+                    continue;
+                }
+                if(fileTypeGroupDiv.children) {
+                    for(var j=1;j<fileTypeGroupDiv.children.length;j++) {
+                        var fileTypeDiv = fileTypeGroupDiv.children[j];
+                        if(fileTypeDiv.children && fileTypeDiv.children.length > 0) {
+                            var input = fileTypeDiv.children[0];
+                            var label = fileTypeDiv.children[1];
+                            var span = fileTypeDiv.children[2];
+                            input.id = 'fileType' + (++fileTypeCounter);
+                            label.setAttribute('for', 'fileType' + fileTypeCounter);
+                            span.id = 'fileTypeMsg' + fileTypeCounter;
+                        }
+                    }
+                }
+            }
+        }
+        var fileTypesAddButton = document.getElementById('fileTypesAddButton');
+        setButtonImgSrc(fileTypesAddButton, addIconSrc);
 
         if(dateAndTimeInputSupported) {
             //日期时间input支持的情况下移除相关按钮
@@ -504,6 +557,53 @@
             });
         }
 
+        //文件后缀Radio选中事件
+        var filterFileType = false;
+        bindEventListener(document.getElementById('filterFileTypeRadio1'),'click', function () {
+            document.getElementById('fileTypesDiv').style.display = 'none';
+            document.getElementById('directoryRadio1').disabled = '';
+            document.getElementById('directoryRadio3').disabled = '';
+            filterFileType = false;
+        });
+        bindEventListener(document.getElementById('filterFileTypeRadio2'),'click', function () {
+            document.getElementById('fileTypesDiv').style.display = '';
+            document.getElementById('directoryRadio2').click();
+            document.getElementById('directoryRadio1').disabled = 'disabled';
+            document.getElementById('directoryRadio3').disabled = 'disabled';
+            filterFileType = true;
+        });
+        bindEventListener(document.getElementById('filterFileTypeCheckbox'),'click', function () {
+            var checked = getElementChecked(this);
+            var fileTypesDiv = document.getElementById('fileTypesDiv');
+            var fileTypeGroupDivs = fileTypesDiv.children;
+            if(fileTypeGroupDivs) {
+                for(var i=0;i<fileTypeGroupDivs.length;i++) {
+                    var fileTypeGroupDiv = fileTypeGroupDivs[i];
+                    if('customFileTypesDiv' === fileTypeGroupDiv.id) {
+                        continue;
+                    }
+                    if(fileTypeGroupDiv.children) {
+                        for(var j=1;j<fileTypeGroupDiv.children.length;j++) {
+                            var fileTypeDiv = fileTypeGroupDiv.children[j];
+                            if(fileTypeDiv.children && fileTypeDiv.children.length > 0) {
+                                var input = fileTypeDiv.children[0];
+                                var label = fileTypeDiv.children[1];
+                                var fileTypeSuffix = input.getAttribute('file-type-suffix');
+                                var fileTypeDesc = input.getAttribute('file-type-desc');
+                                var updatedText = '';
+                                if(checked) {
+                                    updatedText = fileTypeSuffix + '(' + fileTypeDesc + ')';
+                                } else {
+                                    updatedText = fileTypeSuffix;
+                                }
+                                label.innerText = updatedText;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         //文件类型Radio选中事件
         bindEventListener(document.getElementById('directoryRadio1'),'click', function () {
             showOrHideGroupInputs(fileGroupInputIds);
@@ -536,6 +636,44 @@
                     if(advancedSearchCondition.searchType + '' === radios[i].value) {
                         radios[i].click();
                     }
+                }
+            }
+            if(advancedSearchCondition.filterFileType !== null) {
+                if(advancedSearchCondition.filterFileType) {
+                    document.getElementById('filterFileTypeRadio2').click();
+                } else {
+                    document.getElementById('filterFileTypeRadio1').click();
+                }
+            }
+            if(advancedSearchCondition.fileTypes !== null && advancedSearchCondition.fileTypes.length > 0) {
+                var fileTypesDiv = document.getElementById('fileTypesDiv');
+                var inputs = fileTypesDiv.getElementsByTagName('input');
+                var customFileTypes = [];
+                if(inputs) {
+                    for(var i=0;i<advancedSearchCondition.fileTypes.length;i++) {
+                        var fileType = advancedSearchCondition.fileTypes[i];
+                        var found = false;
+                        for(var j=0;j<inputs.length;j++) {
+                            var input = inputs[j];
+                            if(input.value === fileType) {
+                                input.checked = true;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if(!found) {
+                            customFileTypes[customFileTypes.length] = fileType;
+                        }
+                    }
+                }
+                if(customFileTypes.length > 0) {
+                    for(var i=0;i<customFileTypes.length;i++) {
+                        var numberId = addFileTypeInput();
+                        var inputId = 'fileType' + numberId;
+                        document.getElementById(inputId).value = customFileTypes[i];
+                    }
+                } else {
+                    addFileTypeInput();
                 }
             }
             if(advancedSearchCondition.caseSensitive !== null) {
@@ -778,6 +916,48 @@
                         updateMsg('searchTypeMsg', CHECK_PASSED, 'green');
                         searchTypeValue = searchType;
                     }
+                    var filterFileTypeValue = getCheckedValue('filterFileType');
+                    var validFilterFileTypeValues = ['true','false'];
+                    if(!filterFileTypeValue || validFilterFileTypeValues.indexOf(filterFileTypeValue) === -1) {
+                        hasError = true;
+                        var msg = '过滤文件后缀名选项' + (!filterFileTypeValue ? '没有选中值' : '选中了非法的值');
+                        updateMsg('filterFileTypeMsg', msg, 'red');
+                    } else {
+                        updateMsg('filterFileTypeMsg', CHECK_PASSED, 'green');
+                    }
+                    var fileTypesDiv = document.getElementById('fileTypesDiv');
+                    var fileTypeInputs = fileTypesDiv.getElementsByTagName('input');
+                    if(fileTypeInputs) {
+                        var fileTypeArr = [];
+                        for(var i=0;i<fileTypeInputs.length;i++) {
+                            var input = fileTypeInputs[i];
+                            var inputValue = input.value;
+                            var isCustomInput = input.getAttribute('custom-flag') === 'true';
+                            var matchResult = input.id.match(fileTypesInputIdRegex);
+                            if(matchResult) {
+                                var numberId = Number(matchResult[1]);
+                                var msgId = 'fileTypeMsg' + numberId;
+                                if(inputValue && inputValue !== '') {
+                                    var matchResult = inputValue.match(fileSuffixRegex);
+                                    if(!matchResult) {
+                                        hasError = true;
+                                        updateMsg(msgId, '非法的文件后缀', 'red');
+                                    } else if(fileTypeArr.indexOf(inputValue) === -1) {
+                                        document.getElementById(msgId).style.display = 'none';
+                                        document.getElementById(msgId).innerText = '';
+                                        fileTypeArr[fileTypeArr.length] = inputValue;
+                                        if(isCustomInput) {
+                                            updateMsg(msgId, CHECK_PASSED, 'green');
+                                        }
+                                    } else {
+                                        //允许重复后缀
+                                        /*hasError = true;
+                                        updateMsg(msgId, '重复的文件后缀', 'red');*/
+                                    }
+                                }
+                            }
+                        }
+                    }
                     var caseSensitive = getCheckedValue('caseSensitive');
                     var caseSensitiveValue = null;
                     if(caseSensitive !== 'true' && caseSensitive !== 'false') {
@@ -926,23 +1106,22 @@
             }
             if(!hasError) {
                 if(!advancedSearchSwitch) {
-                    var ascChildren = document.getElementById('advanced-condition-div').children;
-                    for(var i=0;i<ascChildren.length;i++) {
-                        //ascChildren[i].disabled = 'disabled';
-                        var ascChild = ascChildren[i];
-                        if(ascChild.tagName.toLowerCase() === 'input' || ascChild.tagName.toLowerCase() === 'select') {
-                            ascChild.disabled = 'disabled';
-                        } else if(ascChild.tagName.toLowerCase() === 'div') {
-                            var ascGrandChildren = ascChild.children;
-                            for(var j=0;j<ascGrandChildren.length;j++) {
-                                var ascGrandChild = ascGrandChildren[j];
-                                if(ascGrandChild.tagName.toLowerCase() === 'input' || ascGrandChild.tagName.toLowerCase() === 'select') {
-                                    ascGrandChild.disabled = 'disabled';
-                                }
-                            }
+                    var ascDiv = document.getElementById('advanced-condition-div');
+                    var ascInputs = ascDiv.getElementsByTagName('input');
+                    if(ascInputs) {
+                        for(var i=0;i<ascInputs.length;i++) {
+                            ascInputs[i].disabled = 'disabled';
                         }
                     }
                 } else {
+                    if(!filterFileType) {
+                        var fileTypeInputs = getElementsByName('input', 'fileTypes');
+                        if(fileTypeInputs) {
+                            for(var i=0;i<fileTypeInputs.length;i++) {
+                                fileTypeInputs[i].disabled = 'disabled';
+                            }
+                        }
+                    }
                     if(directoryValue !== null) {
                         if(directoryValue) {
                             for(var i=0;i<fileGroupInputIds.length;i++) {
@@ -1014,12 +1193,12 @@
         }
         function addSearchPathElement() {
             var div = document.getElementById('searchPathsDiv');
-            var divButtons = div.getElementsByTagName('input');
+            var divInputs = div.getElementsByTagName('input');
             var maxNumberId = -1;
-            if(divButtons) {
-                for(var i=0;i<divButtons.length;i++) {
-                    var divButton = divButtons[i];
-                    var matchResult = divButton.id.match(searchPathsInputIdRegex);
+            if(divInputs) {
+                for(var i=0;i<divInputs.length;i++) {
+                    var divInput = divInputs[i];
+                    var matchResult = divInput.id.match(searchPathsInputIdRegex);
                     if(matchResult) {
                         var numberId = Number(matchResult[1]);
                         if(numberId > maxNumberId) {
@@ -1581,6 +1760,57 @@
                 }
             }
             return asc.directory !== null && asc.directory;
+        }
+        function addFileTypeInput() {
+            var div = document.getElementById('customFileTypesDiv');
+            var parentDiv = document.getElementById('fileTypesDiv');
+            var divInputs = parentDiv.getElementsByTagName('input');
+            var maxNumberId = -1;
+            if(divInputs) {
+                for(var i=0;i<divInputs.length;i++) {
+                    var divInput = divInputs[i];
+                    var matchResult = divInput.id.match(fileTypesInputIdRegex);
+                    if(matchResult) {
+                        var numberId = Number(matchResult[1]);
+                        if(numberId > maxNumberId) {
+                            maxNumberId = numberId;
+                        }
+                    }
+                }
+            }
+            var newNumberId = 1;
+            if(maxNumberId !== -1) {
+                newNumberId = maxNumberId + 1;
+            }
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'fileType' + newNumberId;
+            input.name = 'fileTypes';
+            input.style.textAlign = 'center';
+            input.setAttribute('custom-flag', 'true');
+            div.appendChild(input);
+            var deleteButton = createImgButton(deleteIconSrc, '删除', 'fileTypesDeleteButton' + newNumberId, function() {
+                deleteFileTypeInput(newNumberId);
+            });
+            div.appendChild(deleteButton);
+            var span = document.createElement('span');
+            setClass(span, 'inline');
+            span.style.color = 'red';
+            span.style.display = 'none';
+            span.id = 'fileTypeMsg' + newNumberId;
+            div.appendChild(span);
+            return newNumberId;
+        }
+        function deleteFileTypeInput(numberId) {
+            if(numberId === undefined) {
+                return;
+            }
+            var inputId = 'fileType' + numberId,
+                deleteButtonId = 'fileTypesDeleteButton' + numberId,
+                msgId = 'fileTypeMsg' + numberId;
+            removeElementById(inputId, 'customFileTypesDiv');
+            removeElementById(deleteButtonId, 'customFileTypesDiv');
+            removeElementById(msgId, 'customFileTypesDiv');
         }
 
         function setOptionSelected(option) {

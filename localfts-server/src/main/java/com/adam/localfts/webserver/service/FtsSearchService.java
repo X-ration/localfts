@@ -13,6 +13,7 @@ import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
+import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -25,6 +26,7 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -71,6 +73,9 @@ public class FtsSearchService implements DisposableBean {
         }
         logger.debug("Actual search parameters: keyword={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
                 keyword, pageNo, pageSize, sortColumn, sortOrder, advancedSearchConditionCopy);
+        if(advancedSearchConditionCopy != null && advancedSearchConditionCopy.emptyResult()) {
+            return new PageObject<>(pageNo, pageSize, null);
+        }
         SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         switch (searchMode) {
             case PLAIN:
@@ -114,6 +119,26 @@ public class FtsSearchService implements DisposableBean {
         }
         if(advancedSearchCondition.getSearchType() == SearchType.FILE_CONTENT_ONLY) {
             advancedSearchCondition.setDirectory(false);
+        }
+        if(advancedSearchCondition.getFilterFileType() == null || !advancedSearchCondition.getFilterFileType()) {
+            advancedSearchCondition.setFileTypes(null);
+        } else if(advancedSearchCondition.getFilterFileType()) {
+            if(CollectionUtils.isEmpty(advancedSearchCondition.getFileTypes())) {
+                advancedSearchCondition.setEmptyResult(true);
+            } else {
+                advancedSearchCondition.setDirectory(false);
+                List<String> newFileTypeList = advancedSearchCondition.getFileTypes()
+                        .stream()
+                        .distinct()
+                        .filter(Objects::nonNull)
+                        .filter(str -> !StringUtils.isEmpty(str))
+                        .filter(Util::isValidFileSuffix)
+                        .collect(Collectors.toList());
+                advancedSearchCondition.setFileTypeList(newFileTypeList);
+                if(CollectionUtils.isEmpty(newFileTypeList)) {
+                    advancedSearchCondition.setEmptyResult(true);
+                }
+            }
         }
         advancedSearchCondition.clean();
     }

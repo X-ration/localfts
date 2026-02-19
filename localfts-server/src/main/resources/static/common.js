@@ -149,6 +149,10 @@ function getElementsByName(tagName, name) {
     return result;
 }
 
+function getElementChecked(element) {
+    return element.checked;
+}
+
 function getCheckedValue(name) {
     var elements = getElementsByName('input', name);
     for(var i=0;i<elements.length;i++) {

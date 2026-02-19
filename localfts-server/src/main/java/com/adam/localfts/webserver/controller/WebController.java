@@ -5,10 +5,7 @@ import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
 import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
-import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
-import com.adam.localfts.webserver.common.search.SearchDTO;
-import com.adam.localfts.webserver.common.search.SearchMode;
-import com.adam.localfts.webserver.common.search.SearchType;
+import com.adam.localfts.webserver.common.search.*;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
@@ -319,12 +316,16 @@ public class WebController {
         model.addAttribute("serverTime", serverTime);
         String urlRelativePathPattern = ftsServerConfigService.getStandardRelativePathPattern().pattern();
         model.addAttribute("urlRelativePathPattern", urlRelativePathPattern);
+        String fileSuffixPattern = ftsServerConfigService.getFileSuffixPattern().pattern();
+        model.addAttribute("fileSuffixPattern", fileSuffixPattern);
         String [] fileInvalidCharacters = ftsServerConfigService.getFileInvalidCharacters();
         model.addAttribute("fileInvalidCharacters", fileInvalidCharacters);
         SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         model.addAttribute("searchMode", searchMode);
         Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
         model.addAttribute("indexFileContent", indexFileContent);
+        FileTypeGroup[] fileTypeGroups = FileTypeGroup.values();
+        model.addAttribute("fileTypeGroups", fileTypeGroups);
         if(StringUtils.isEmpty(keyword)) {
             return "search";
         }

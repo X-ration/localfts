@@ -97,6 +97,16 @@ public class FtsServerConfigService implements DisposableBean {
         }
     }
 
+    public Pattern getFileSuffixPattern() {
+        if(Util.isSystemWindows()) {
+            return Constants.PATTERN_FILE_SUFFIX_WINDOWS;
+        } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
+            return Constants.PATTERN_FILE_SUFFIX_LINUX_MACOS;
+        } else {
+            throw new LocalFtsRuntimeException("Unknown system");
+        }
+    }
+
     /**
      * 根据服务器系统获取标准相对路径的正则表达式
      * @return
@@ -104,8 +114,10 @@ public class FtsServerConfigService implements DisposableBean {
     public Pattern getStandardRelativePathPattern() {
         if(Util.isSystemWindows()) {
             return Constants.PATTERN_PATH_WINDOWS_STANDARD_RELATIVE;
-        } else {
+        } else if(Util.isSystemLinux() || Util.isSystemMacOS()){
             return Constants.PATTERN_PATH_LINUX_MACOS_STANDARD_RELATIVE;
+        } else {
+            throw new LocalFtsRuntimeException("Unknown system");
         }
     }
 

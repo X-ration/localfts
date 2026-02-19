@@ -166,13 +166,14 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
         File[] files = searchPathFile.listFiles();
         if(files != null) {
             for(File file: files) {
-                String absolutePath = file.getAbsolutePath();
-                String relativePath = absolutePath.substring(rootPath.length());
-                if(Util.isSystemWindows()) {
-                    relativePath = relativePath.replaceAll("\\\\", "/");
-                }
-                boolean keywordMatches = advancedSearchCondition.getCaseSensitive() ? relativePath.contains(keyword) :
-                        relativePath.toLowerCase().contains(keyword.toLowerCase());
+//                String absolutePath = file.getAbsolutePath();
+//                String relativePath = absolutePath.substring(rootPath.length());
+//                if(Util.isSystemWindows()) {
+//                    relativePath = relativePath.replaceAll("\\\\", "/");
+//                }
+                String filename = file.getName();
+                boolean keywordMatches = advancedSearchCondition.getCaseSensitive() ? filename.contains(keyword) :
+                        filename.toLowerCase().contains(keyword.toLowerCase());
                 if(keywordMatches) {
                     boolean checkSearchCondition = checkSearchCondition(file, advancedSearchCondition);
                     if(checkSearchCondition) {
@@ -186,11 +187,26 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
         }
     }
     private boolean checkSearchCondition(File file, AdvancedSearchCondition advancedSearchCondition) {
+        String absolutePath = file.getAbsolutePath();
         if(advancedSearchCondition != null) {
             if(advancedSearchCondition.getDirectory() != null) {
                 if(advancedSearchCondition.getDirectory() && !file.isDirectory()) {
                     return false;
                 } else if(!advancedSearchCondition.getDirectory() && !file.isFile()) {
+                    return false;
+                }
+            }
+            if(advancedSearchCondition.getFilterFileType() != null && advancedSearchCondition.getFilterFileType()) {
+                boolean matchSuffix = false;
+                if(!CollectionUtils.isEmpty(advancedSearchCondition.getFileTypes())) {
+                    for (String suffix : advancedSearchCondition.getFileTypes()) {
+                        if (absolutePath.endsWith(suffix)) {
+                            matchSuffix = true;
+                            break;
+                        }
+                    }
+                }
+                if(!matchSuffix) {
                     return false;
                 }
             }
