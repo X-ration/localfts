@@ -91,6 +91,33 @@ public class FtsSearchService implements DisposableBean {
     private void preHandleAdvancedSearchCondition(AdvancedSearchCondition advancedSearchCondition) {
         final List<String> searchPathList = advancedSearchCondition.getSearchPaths();
         Pattern standardPathPattern = ftsServerConfigService.getStandardRelativePathPattern();
+        if(
+                (advancedSearchCondition.lastModifiedLower() != null && advancedSearchCondition.lastModifiedUpper() != null
+                        && advancedSearchCondition.lastModifiedLower().after(advancedSearchCondition.lastModifiedUpper()))
+                        || (advancedSearchCondition.fileSizeLower() != null && advancedSearchCondition.fileSizeUpper() != null
+                        && advancedSearchCondition.fileSizeLower() > advancedSearchCondition.fileSizeUpper())
+                        || (advancedSearchCondition.compressedFileSizeLower() != null && advancedSearchCondition.compressedFileSizeUpper() != null
+                        && advancedSearchCondition.compressedFileSizeLower() > advancedSearchCondition.compressedFileSizeUpper())
+                        || (advancedSearchCondition.compressedFileLastModifiedLower()  != null && advancedSearchCondition.compressedFileLastModifiedUpper() != null
+                        && advancedSearchCondition.compressedFileLastModifiedLower().after(advancedSearchCondition.compressedFileLastModifiedUpper()))
+        ) {
+            advancedSearchCondition.setEmptyResult(true);
+        }
+        if((
+                (advancedSearchCondition.getFilterFileType() != null && advancedSearchCondition.getFilterFileType())
+                        || advancedSearchCondition.getSearchType() == SearchType.FILE_CONTENT_ONLY
+                        || advancedSearchCondition.fileSizeLower() != null || advancedSearchCondition.fileSizeUpper() != null)
+                && (advancedSearchCondition.getDirectory() != null && advancedSearchCondition.getDirectory()
+                || advancedSearchCondition.getFolderCompressStatus() != null
+                || advancedSearchCondition.compressedFileSizeLower() != null || advancedSearchCondition.compressedFileSizeUpper() != null
+                || advancedSearchCondition.compressedFileLastModifiedLower() != null || advancedSearchCondition.compressedFileLastModifiedUpper() != null
+        )) {
+            advancedSearchCondition.setEmptyResult(true);
+        }
+        if(advancedSearchCondition.emptyResult()) {
+            return;
+        }
+
         if(!CollectionUtils.isEmpty(searchPathList)) {
             List<String> newSearchPathList = searchPathList.stream()
                     .distinct()

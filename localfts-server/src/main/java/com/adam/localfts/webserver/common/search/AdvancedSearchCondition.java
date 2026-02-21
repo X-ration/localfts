@@ -85,6 +85,8 @@ public class AdvancedSearchCondition implements Cloneable{
         if(this.directory != null) {
             if(this.directory) {
                 //限制文件夹
+                setFilterFileType(null);
+                setFileTypeList(null);
                 setFileSizeLower(null);
                 setFileSizeLowerStr(null);
                 setFileSizeUpper(null);
@@ -260,7 +262,8 @@ public class AdvancedSearchCondition implements Cloneable{
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();
         if(emptyResult) {
-            stringBuilder.append(", emptyResult=true");
+//            stringBuilder.append(", emptyResult=true");
+            return "AdvancedSearchCondition{emptyResult=true}";
         }
         if(!CollectionUtils.isEmpty(searchPathList)) {
             stringBuilder.append(", searchPathList=").append(searchPathList);
