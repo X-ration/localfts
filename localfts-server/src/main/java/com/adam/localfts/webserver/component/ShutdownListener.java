@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Component
 public class ShutdownListener implements ApplicationListener<ContextClosedEvent> {
@@ -22,9 +23,22 @@ public class ShutdownListener implements ApplicationListener<ContextClosedEvent>
     private FtsService ftsService;
     @Autowired
     private WebServerStartListener webServerStartListener;
+    @Autowired
+    private ThreadPoolExecutor searchThreadPool;
+
+    private boolean shuttingDown;
+
+    public boolean isShuttingDown() {
+        return shuttingDown;
+    }
 
     @Override
     public void onApplicationEvent(ContextClosedEvent event) {
+        this.shuttingDown = true;
+
+        logger.debug("Preparing force shutdown executorService={}", searchThreadPool);
+        searchThreadPool.shutdownNow();
+
         if(webServerStartListener.isWebServerStarted()) {
             logger.debug("Preparing shutdown");
             TomcatWebServer tomcatWebServer = (TomcatWebServer) webServerStartListener.getWebServer();

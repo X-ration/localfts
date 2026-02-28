@@ -1,7 +1,8 @@
-package com.adam.localfts.webserver.config.web;
+package com.adam.localfts.webserver.config;
 
 import com.adam.localfts.webserver.component.CheckCriticalConfigFilter;
 import com.adam.localfts.webserver.component.NoCacheInterceptor;
+import com.adam.localfts.webserver.component.ShutdownInterceptor;
 import com.adam.localfts.webserver.component.ZipRequestPathFilter;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private NoCacheInterceptor noCacheInterceptor;
+    @Autowired
+    private ShutdownInterceptor shutdownInterceptor;
     @Value("${server.servlet.context-path}")
     private String contextPath;
     @Autowired
@@ -25,6 +28,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(noCacheInterceptor).addPathPatterns("/**").excludePathPatterns("/static/**");
+        registry.addInterceptor(shutdownInterceptor).addPathPatterns("/**");
     }
 
     @Bean

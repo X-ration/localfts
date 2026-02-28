@@ -10,6 +10,7 @@ import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
+import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.service.FtsSearchService;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
@@ -47,6 +48,8 @@ public class WebController {
     private FtsServerConfigService ftsServerConfigService;
     @Autowired
     private FtsSearchService ftsSearchService;
+    @Autowired
+    private ShutdownListener shutdownListener;
 
     private final static Logger LOGGER = LoggerFactory.getLogger(WebController.class);
 
@@ -352,8 +355,8 @@ public class WebController {
         }
         model.addAttribute("sortColumn", sortColumn);
         model.addAttribute("sortOrder", sortOrder);
-        PageObject<SearchDTO> pageObject = ftsSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
-        model.addAttribute("pageObject", pageObject);
+        ReturnObject<PageObject<SearchDTO>> returnObject = ftsSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+        model.addAttribute("rtObj", returnObject);
         return "search";
     }
 

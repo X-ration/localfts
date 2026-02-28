@@ -225,10 +225,12 @@
             </div>
         </div>
     </form>
-    <div id="result-div" th:if="${pageObject != null}" style="text-align:center">
+    <div id="result-div" th:if="${rtObj != null}" style="text-align:center">
         <hr>
         <span style="font-size: 30px">搜索结果</span><br><br>
-        <form id="sortForm" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
+        <span th:if="${!rtObj.success}" th:text="${rtObj.message}" style="color:red">error msg</span>
+        <br th:if="${!rtObj.success}"><br th:if="${!rtObj.success}">
+        <form id="sortForm" th:if="${rtObj.success}" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
             排序列：
             <select id="sortFormColumnSelect" name="sortColumn">
                 <option value="FILENAME">文件/文件夹名称</option>
@@ -256,7 +258,8 @@
             <button type="submit">排序</button>
         </form>
         <br>
-        <div th:if="${pageObject.data != null}" th:each="item:${pageObject.data}">
+        <div th:if="${rtObj.success and rtObj.data != null and rtObj.data.data != null}">
+        <div th:each="item:${rtObj.data.data}">
             <div>
                 <span th:if=${item.directory} th:text="'文件夹名称：' + ${item.filename}">filename</span>
                 <span th:if=${!item.directory} th:text="'文件名称：' + ${item.filename}">filename</span>
@@ -291,14 +294,15 @@
             </div>
             <br>
         </div>
-        <p class="margin-0">
-            第<span id="current-page" th:text="${pageObject.currentPage}">page no</span>页 <span id="current-size" th:text="${pageObject.currentSize}">page size</span>条
-            总<span id="total-page" th:text="${pageObject.totalPage}">total page</span>页 <span id="total-size" th:text="${pageObject.totalSize}">total size</span>条
+        </div>
+        <p th:if="${rtObj.success and rtObj.data != null}" class="margin-0">
+            第<span id="current-page" th:text="${rtObj.data.currentPage}">page no</span>页 <span id="current-size" th:text="${rtObj.data.currentSize}">page size</span>条
+            总<span id="total-page" th:text="${rtObj.data.totalPage}">total page</span>页 <span id="total-size" th:text="${rtObj.data.totalSize}">total size</span>条
         </p>
 
-        <form id="pageForm" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
+        <form id="pageForm" th:if="${rtObj.success and rtObj.data != null}" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
             <input type="hidden" name="keyword" th:value="${keyword}">
-            <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${pageObject.pageSize}">
+            <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${rtObj.data.pageSize}">
             <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
             <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
             <input type="hidden" name="searchType" th:if="${advancedSearchCondition != null && advancedSearchCondition.searchType != null}" th:value="${advancedSearchCondition.searchType}">
@@ -318,7 +322,7 @@
             <button id="next-page">下一页</button>
             <button id="last-page">尾页</button><br>
             <label for="page-no">页数:</label>
-            <input type="text" size="2" id="page-no" name="pageNo" th:value="${pageObject.currentPage}">
+            <input type="text" size="2" id="page-no" name="pageNo" th:value="${rtObj.data.currentPage}">
             <label for="page-size-select">每页数量:</label>
             <select name="pageSize" id="page-size-select">
                 <option value="10">10</option>
@@ -812,7 +816,7 @@
                     errorMsg = errorMsg + icsStr;
                     updateMsg('keywordMsg', errorMsg, 'red');
                 } else {
-                    updateMsg('keywordMsg', CHECK_PASSED, 'green');
+                    //updateMsg('keywordMsg', CHECK_PASSED, 'green');
                 }
             }
             if(advancedSearchSwitch) {
@@ -1111,6 +1115,12 @@
                     if(ascInputs) {
                         for(var i=0;i<ascInputs.length;i++) {
                             ascInputs[i].disabled = 'disabled';
+                        }
+                    }
+                    var ascSelects = ascDiv.getElementsByTagName('select');
+                    if(ascSelects) {
+                        for(var i=0;i<ascSelects.length;i++) {
+                            ascSelects[i].disabled = 'disabled';
                         }
                     }
                 } else {
@@ -1821,7 +1831,7 @@
             }
         }
     </script>
-    <script type="text/javascript" th:inline="javascript" th:if="${pageObject != null}">
+    <script type="text/javascript" th:inline="javascript" th:if="${rtObj != null and rtObj.success and rtObj.data != null}">
         var ftsPageSize = Number(document.getElementById("page-size").value);
         var keyword = [[${keyword}]];
         var URL_LIST = concatUrlForConstant(contextPath, '/list');
@@ -1975,7 +1985,7 @@
             return result;
         }
     </script>
-    <script type="text/javascript" th:if="${pageObject != null and zipEnabled}">
+    <script type="text/javascript" th:if="${rtObj != null and rtObj.success and rtObj.data != null and zipEnabled}">
         var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
 
         //deal with compress-folder

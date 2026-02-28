@@ -1,14 +1,16 @@
 package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.PageObject;
+import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
 import com.adam.localfts.webserver.common.search.SearchDTO;
 import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.common.search.SearchType;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
+import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.component.WebServerStartListener;
-import com.adam.localfts.webserver.config.localfts.SearchProperties;
+import com.adam.localfts.webserver.config.properties.SearchProperties;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
@@ -27,6 +29,7 @@ import org.springframework.util.StringUtils;
 import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -44,6 +47,11 @@ public class FtsSearchService implements DisposableBean {
     private LuceneSearchServiceImpl luceneSearchService;
     @Autowired
     private WebServerStartListener webServerStartListener;
+    @Autowired
+    private ShutdownListener shutdownListener;
+    @Autowired
+    private ThreadPoolExecutor searchThreadPool;
+
     private final Logger logger = LoggerFactory.getLogger(FtsSearchService.class);
 
     /**
@@ -55,8 +63,8 @@ public class FtsSearchService implements DisposableBean {
      * @param sortOrder
      * @return
      */
-    public PageObject<SearchDTO> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
-                                        int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) {
+    public ReturnObject<PageObject<SearchDTO>> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
+                                                     int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) {
         Assert.isTrue(!StringUtils.isEmpty(keyword), "搜索关键词为空");
         Assert.isTrue(pageNo > 0, "非法的页数：" + pageNo);
         Assert.isTrue(pageSize > 0, "非法的每页数量：" + pageSize);
@@ -74,17 +82,62 @@ public class FtsSearchService implements DisposableBean {
         logger.debug("Actual search parameters: keyword={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
                 keyword, pageNo, pageSize, sortColumn, sortOrder, advancedSearchConditionCopy);
         if(advancedSearchConditionCopy != null && advancedSearchConditionCopy.emptyResult()) {
-            return new PageObject<>(pageNo, pageSize, null);
+            return ReturnObject.success(new PageObject<>(pageNo, pageSize, null));
         }
         SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
+        if(shutdownListener.isShuttingDown()) {
+            return ReturnObject.fail("应用正在关闭");
+        }
+        final AdvancedSearchCondition finalAdvancedSearchCondition = advancedSearchConditionCopy;
+        /*int activeTaskThreshold = -1;
+        if(ftsServerConfigService.getLocalFtsProperties().getSearch().getActiveTaskThreshold() != null) {
+            activeTaskThreshold = ftsServerConfigService.getLocalFtsProperties().getSearch().getActiveTaskThreshold();
+        }
+        int activeTaskCount = searchThreadPool.getActiveCount();
+        if(activeTaskThreshold != -1 && activeTaskCount >= activeTaskThreshold) {
+            logger.warn("搜索任务数{}已达上限", activeTaskCount);
+            return ReturnObject.fail("搜索任务数已达上限");
+//            return ReturnObject.fail("搜索服务不可用");
+        } else {
+            logger.debug("当前活跃搜索任务数：{}", activeTaskCount);
+        }*/
+        Callable<PageObject<SearchDTO>> callable;
         switch (searchMode) {
             case PLAIN:
-                return plainSearchService.search(keyword, advancedSearchConditionCopy, pageNo, pageSize, sortColumn, sortOrder);
+                callable = () -> plainSearchService.search(keyword, finalAdvancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+                break;
             case INDEXED:
-                return luceneSearchService.search(keyword, advancedSearchConditionCopy, pageNo, pageSize, sortColumn, sortOrder);
+                callable = () -> luceneSearchService.search(keyword, finalAdvancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+                break;
             default:
                 logger.warn("Unknown search mode:{}", searchMode);
-                return new PageObject<>(pageNo, pageSize, null);
+                return ReturnObject.fail("搜索服务不可用");
+        }
+        Future<PageObject<SearchDTO>> future = null;
+        try {
+            future = searchThreadPool.submit(callable);
+            PageObject<SearchDTO> pageObject;
+            if(ftsServerConfigService.getLocalFtsProperties().getSearch().getTimeout() != null) {
+                int timeoutSeconds = ftsServerConfigService.getLocalFtsProperties().getSearch().getTimeout();
+                pageObject = future.get(timeoutSeconds, TimeUnit.SECONDS);
+            } else {
+                pageObject = future.get();
+            }
+            return ReturnObject.success(pageObject);
+        } catch (RejectedExecutionException e) {
+            logger.warn("搜索线程池已满");
+            return ReturnObject.fail("搜索线程池已满");
+            //return ReturnObject.fail("搜索服务不可用");
+        } catch (TimeoutException e) {
+            logger.warn("搜索任务超时");
+            future.cancel(true);
+            return ReturnObject.fail("搜索超时");
+        } catch (ExecutionException e) {
+            logger.error("搜索执行异常", e);
+            return ReturnObject.fail("搜索失败");
+        } catch (InterruptedException e) {
+            logger.warn("搜索任务被中断");
+            return ReturnObject.fail("搜索任务被中断");
         }
     }
 

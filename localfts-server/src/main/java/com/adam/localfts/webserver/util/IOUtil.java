@@ -169,7 +169,7 @@ public class IOUtil {
      * @throws IOException
      */
     private static void zipDirectory(File zipFile, File currentFile, String parentEntryName, boolean isOuterCall, ZipOutputStream zipOutputStream, BufferedOutputStream bufferedOutputStream) throws IOException, InterruptedException {
-        checkAndThrowInterruptedException();
+        Util.clearAndThrowInterruptedException();
         if(!currentFile.exists()) {
             LOGGER.warn("zipDirectory ignoring non-exist file:{}", currentFile.getAbsolutePath());
             return;
@@ -204,7 +204,7 @@ public class IOUtil {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 int bytesRead;
                 while((bytesRead = bufferedInputStream.read(buffer)) != -1) {
-                    checkAndThrowInterruptedException();
+                    Util.clearAndThrowInterruptedException();
                     bufferedOutputStream.write(buffer, 0, bytesRead);
                 }
                 bufferedOutputStream.flush();
@@ -433,12 +433,6 @@ public class IOUtil {
                 }
             }
             return !hasFailure;
-        }
-    }
-
-    public static void checkAndThrowInterruptedException() throws InterruptedException{
-        if(Thread.interrupted()) {
-            throw new InterruptedException();
         }
     }
 

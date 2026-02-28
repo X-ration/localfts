@@ -3,8 +3,12 @@ package com.adam.localfts.webserver.util;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -17,6 +21,8 @@ import java.util.regex.Pattern;
 import static com.adam.localfts.webserver.common.Constants.*;
 
 public class Util {
+
+    public static final Logger LOGGER = LoggerFactory.getLogger(Util.class);
 
     public static boolean isValidFileSuffix(String suffix) {
         Pattern pattern;
@@ -139,6 +145,104 @@ public class Util {
         return httpRangeObject;
     }
 
+    public static int getAvailableProcessors() {
+        return Runtime.getRuntime().availableProcessors();
+    }
+
+    public static int getPhysicalProcessors() {
+        Process process = null;
+        BufferedReader reader = null;
+        int result = -1;
+        StringBuilder outputStringBuilder = new StringBuilder();
+        try {
+            if (isSystemLinux()) {
+                ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", "LANG=C lscpu");
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                Pattern pattern = Pattern.compile("^CPU(\\(s\\))?:\\s+(\\d+)$"); // 物理cpu核心数
+                Pattern socketPattern = Pattern.compile("^Socket(\\(s\\))?:\\s+(\\d+)$"); // cpu插槽数
+                Pattern corePerSocketPattern = Pattern.compile("^Core(\\(s\\))? per socket:\\s+(\\d+)$"); // 每插槽核心数
+
+                int physicalCores = -1;
+                int sockets = -1;
+                int coresPerSocket = -1;
+                while ((line = reader.readLine()) != null) {
+                    outputStringBuilder.append(line).append(System.lineSeparator());
+
+                    Matcher m = pattern.matcher(line);
+                    if (m.find()) {
+                        physicalCores = Integer.parseInt(m.group(2));
+                    }
+                    m = socketPattern.matcher(line);
+                    if (m.find()) {
+                        sockets = Integer.parseInt(m.group(2));
+                    }
+                    m = corePerSocketPattern.matcher(line);
+                    if (m.find()) {
+                        coresPerSocket = Integer.parseInt(m.group(2));
+                    }
+                }
+
+                if (sockets != -1 && coresPerSocket != -1) {
+                    result = sockets * coresPerSocket;
+                }
+                else if (physicalCores != -1) {
+                    result = physicalCores;
+                }
+            } else if (isSystemWindows()) {
+                ProcessBuilder processBuilder = new ProcessBuilder("cmd", "/C", "wmic", "cpu", "get", "NumberOfCores");
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "GBK"));
+                String line;
+                int lineNum = 0;
+                process.getOutputStream().close();
+                while ((line = reader.readLine()) != null) {
+                    outputStringBuilder.append(line);
+                    line = line.trim();
+                    /*if (lineNum == 1 && !line.isEmpty()) {
+                        result = Integer.parseInt(line);
+                        break;
+                    }
+                    lineNum++;*/
+                    if(line.isEmpty()) {
+                        continue;
+                    }
+                    try {
+                        result = Integer.parseInt(line);
+                        break;
+                    } catch (NumberFormatException e) {
+                    }
+                }
+            } else if (isSystemMacOS()) {
+                ProcessBuilder processBuilder = new ProcessBuilder("sysctl", "-n", "hw.physicalcpu");
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    outputStringBuilder.append(line).append(System.lineSeparator());
+                    if (!line.isEmpty()) {
+                        result = Integer.parseInt(line.trim());
+                        break;
+                    }
+                }
+
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Cannot get physical processors, error msg:{}", e.getMessage());
+            return 0;
+        }
+        if (result == -1) {
+            LOGGER.warn("Cannot get physical processors, output:{}", outputStringBuilder);
+            return 0;
+        }
+        //LOGGER.info("Physical processors={}", result);
+        return result;
+    }
+
     public static String getOsName() {
         return System.getProperty("os.name");
     }
@@ -156,6 +260,12 @@ public class Util {
     public static boolean isSystemMacOS() {
         String osName = getOsName().toLowerCase();
         return osName.startsWith("mac");
+    }
+
+    public static void clearAndThrowInterruptedException() throws InterruptedException{
+        if(Thread.interrupted()) {
+            throw new InterruptedException();
+        }
     }
 
     /**
@@ -249,9 +359,14 @@ public class Util {
     }
 
     public static void main(String[] args) {
-        testFileLengthToStringOld();
-        testFileLengthToStringNew();
+//        testFileLengthToStringOld();
+//        testFileLengthToStringNew();
+        System.out.println("Physical processors=" + getPhysicalProcessors());
+        System.out.println("Logical processors=" + getAvailableProcessors());
     }
+
+
+
     private static void testFileLengthToStringOld() {
         System.out.println("****Test fileLengthToStringOld start****");
         System.out.println(fileLengthToStringOld(83));

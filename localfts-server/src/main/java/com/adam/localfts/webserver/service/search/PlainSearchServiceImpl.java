@@ -36,11 +36,11 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
 
     @Override
     public PageObject<SearchDTO> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
-                                        int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) {
+                                        int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) throws InterruptedException {
         List<File> searchPathFileList;
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         File rootDirectory = IOUtil.getFile(rootPath);
-        if(advancedSearchCondition != null && !CollectionUtils.isEmpty(advancedSearchCondition.getSearchPaths())) {
+        if (advancedSearchCondition != null && !CollectionUtils.isEmpty(advancedSearchCondition.getSearchPaths())) {
             searchPathFileList = advancedSearchCondition.getSearchPaths().stream()
                     .map(path -> new File(rootDirectory, path))
                     .collect(Collectors.toList());
@@ -57,6 +57,7 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
         long endMills = System.currentTimeMillis();
         logger.debug("搜索耗时{}ms", endMills - startMills);
 
+        Util.clearAndThrowInterruptedException();
         if(sortColumn != null) {
             Comparator<SearchDTO> comparator = searchComparatorMap.get(sortColumn);
             if(comparator == null) {
@@ -104,6 +105,9 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
 
     private SearchDTO mapToDTO(File file, SimpleDateFormat simpleDateFormat, String rootPath) {
         SearchDTO searchDTO = new SearchDTO();
+        if(Thread.currentThread().isInterrupted()) {
+            return searchDTO;
+        }
         searchDTO.setFilename(file.getName());
         String parentRelativePath = "/";
         if(!file.getAbsolutePath().equals(rootPath)) {
@@ -149,9 +153,15 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
     private List<File> searchAllUnderPath(File searchPathFile, String keyword, AdvancedSearchCondition advancedSearchCondition, String rootPath) {
         List<File> resultList = new LinkedList<>();
         searchAllUnderPath(searchPathFile, keyword, advancedSearchCondition, resultList, rootPath);
+        if(Thread.currentThread().isInterrupted()) {
+            return new ArrayList<>();
+        }
         return resultList;
     }
     private void searchAllUnderPath(File searchPathFile, String keyword, AdvancedSearchCondition advancedSearchCondition, List<File> resultList, String rootPath) {
+        if(Thread.currentThread().isInterrupted()) {
+            return;
+        }
         if(!searchPathFile.exists()) {
             logger.warn("Search ignoring non-existing path:{}", searchPathFile.getAbsolutePath());
             return;

@@ -1,5 +1,6 @@
-package com.adam.localfts.webserver.config.localfts;
+package com.adam.localfts.webserver.config.properties;
 
+import com.adam.localfts.webserver.config.common.TestLanguageText;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

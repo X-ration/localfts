@@ -3,7 +3,10 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.FtsServerIpInfoModel;
 import com.adam.localfts.webserver.common.search.SearchMode;
-import com.adam.localfts.webserver.config.localfts.*;
+import com.adam.localfts.webserver.config.common.LogLevel;
+import com.adam.localfts.webserver.config.common.RootPathInfo;
+import com.adam.localfts.webserver.config.common.TestLanguageText;
+import com.adam.localfts.webserver.config.properties.*;
 import com.adam.localfts.webserver.exception.LocalFtsCriticalException;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
@@ -293,6 +296,12 @@ public class FtsServerConfigService implements DisposableBean {
         stringBuilder.append("[Search enabled]").append(localFtsProperties.getSearch().getEnabled()).append(System.lineSeparator());
         if(localFtsProperties.getSearch().getEnabled()) {
             stringBuilder.append("[Search mode]").append(localFtsProperties.getSearch().getMode()).append(System.lineSeparator());
+            if(localFtsProperties.getSearch().getTimeout() != null) {
+                stringBuilder.append("[Timeout]").append(localFtsProperties.getSearch().getTimeout()).append("s").append(System.lineSeparator());
+            }
+            if(localFtsProperties.getSearch().getActiveTaskThreshold() != null) {
+                stringBuilder.append("[Active task threshold]").append(localFtsProperties.getSearch().getActiveTaskThreshold()).append(System.lineSeparator());
+            }
             if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
                 stringBuilder.append("[Search index path]").append(localFtsProperties.getSearch().getIndexPath()).append(System.lineSeparator())
                         .append("[Search index before start]").append(localFtsProperties.getSearch().getIndexBeforeStart()).append(System.lineSeparator())
@@ -509,6 +518,54 @@ public class FtsServerConfigService implements DisposableBean {
                     } else {
                         return false;
                     }
+                }
+            }
+
+            if(searchProperties.getTimeout() != null) {
+                if(searchProperties.getTimeout() <= 0) {
+                    if(exClass != null) {
+                        throwException(exClass, "Timeout is not positive!");
+                    } else {
+                        return false;
+                    }
+                }
+            }
+
+            if(searchProperties.activeTaskThresholdStr() != null) {
+                String activeTaskThresholdStr = searchProperties.activeTaskThresholdStr();
+                Pattern pattern = Constants.PATTERN_ACTIVE_TASK_THRESHOLD;
+                boolean isMatch = pattern.matcher(activeTaskThresholdStr).matches();
+                if(!isMatch) {
+                    if(exClass != null) {
+                        throwException(exClass, "Active task threshold does not match!");
+                    } else {
+                        return false;
+                    }
+                }
+                int activeTaskThreshold = 0;
+                double aDouble;
+                if(activeTaskThresholdStr.endsWith("p")) {
+                    aDouble = Double.parseDouble(activeTaskThresholdStr.substring(0, activeTaskThresholdStr.length() - 1));
+                    aDouble *= Constants.PHYSICAL_AVAILABLE_PROCESSORS;
+                } else {
+                    aDouble = Double.parseDouble(activeTaskThresholdStr);
+                }
+                LOGGER.debug("PHYSICAL_AVAILABLE_PROCESSORS={}", Constants.PHYSICAL_AVAILABLE_PROCESSORS);
+                activeTaskThreshold = (int) aDouble;
+                if(activeTaskThreshold <= 0){
+                    if(exClass != null) {
+                        throwException(exClass, "Active task threshold is not positive!");
+                    } else {
+                        return false;
+                    }
+                } else if(activeTaskThreshold > Constants.PHYSICAL_AVAILABLE_PROCESSORS) {
+                    if(exClass != null) {
+                        throwException(exClass, "Active task threshold exceeds physical available processors!");
+                    } else {
+                        return false;
+                    }
+                } else {
+                    searchProperties.setActiveTaskThreshold(activeTaskThreshold);
                 }
             }
         }

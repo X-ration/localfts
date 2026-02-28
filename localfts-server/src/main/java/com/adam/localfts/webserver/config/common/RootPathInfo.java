@@ -1,4 +1,4 @@
-package com.adam.localfts.webserver.config.localfts;
+package com.adam.localfts.webserver.config.common;
 
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;

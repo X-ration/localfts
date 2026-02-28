@@ -1,5 +1,7 @@
 package com.adam.localfts.webserver.common;
 
+import com.adam.localfts.webserver.util.Util;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -18,6 +20,9 @@ public class Constants {
     public static final Pattern PATTERN_FILE_SUFFIX_LINUX_MACOS = Pattern.compile("(\\.[^/]+)+");
     public static final String ROOT_PATH_DEFAULT_WINDOWS = "C:";
     public static final String ROOT_PATH_DEFAULT_LINUX_MACOS = "/home";
+    public static final int RUNTIME_AVAILABLE_PROCESSORS = Util.getAvailableProcessors();
+    public static final int PHYSICAL_AVAILABLE_PROCESSORS = Util.getPhysicalProcessors();
+    public static final Pattern PATTERN_ACTIVE_TASK_THRESHOLD = Pattern.compile("(0|[1-9][0-9]*)(\\.[0-9]*[1-9]+p)?");
 
     public static final String CRLF = "\r\n";
     public static final String CR = "\r";
