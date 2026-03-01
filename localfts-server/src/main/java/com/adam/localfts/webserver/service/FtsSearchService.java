@@ -28,6 +28,7 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
@@ -52,6 +53,7 @@ public class FtsSearchService implements DisposableBean {
     @Autowired
     private ThreadPoolExecutor searchThreadPool;
 
+    private final Map<String, Future<PageObject<SearchDTO>>> searchFutureMap = new ConcurrentHashMap<>();
     private final Logger logger = LoggerFactory.getLogger(FtsSearchService.class);
 
     /**
@@ -63,7 +65,7 @@ public class FtsSearchService implements DisposableBean {
      * @param sortOrder
      * @return
      */
-    public ReturnObject<PageObject<SearchDTO>> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
+    public ReturnObject<PageObject<SearchDTO>> search(String keyword, String searchId, AdvancedSearchCondition advancedSearchCondition,
                                                      int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) {
         Assert.isTrue(!StringUtils.isEmpty(keyword), "搜索关键词为空");
         Assert.isTrue(pageNo > 0, "非法的页数：" + pageNo);
@@ -116,6 +118,8 @@ public class FtsSearchService implements DisposableBean {
         Future<PageObject<SearchDTO>> future = null;
         try {
             future = searchThreadPool.submit(callable);
+            searchFutureMap.put(searchId, future);
+//            logger.debug("Put future {} with search id {}", future, searchId);
             PageObject<SearchDTO> pageObject;
             if(ftsServerConfigService.getLocalFtsProperties().getSearch().getTimeout() != null) {
                 int timeoutSeconds = ftsServerConfigService.getLocalFtsProperties().getSearch().getTimeout();
@@ -123,6 +127,7 @@ public class FtsSearchService implements DisposableBean {
             } else {
                 pageObject = future.get();
             }
+            searchFutureMap.remove(searchId, future);
             return ReturnObject.success(pageObject);
         } catch (RejectedExecutionException e) {
             logger.warn("搜索线程池已满");
@@ -131,13 +136,36 @@ public class FtsSearchService implements DisposableBean {
         } catch (TimeoutException e) {
             logger.warn("搜索任务超时");
             future.cancel(true);
+            searchFutureMap.remove(searchId, future);
             return ReturnObject.fail("搜索超时");
         } catch (ExecutionException e) {
             logger.error("搜索执行异常", e);
+            searchFutureMap.remove(searchId, future);
             return ReturnObject.fail("搜索失败");
+        } catch (CancellationException e) {
+            logger.warn("搜索任务被取消");;
+            searchFutureMap.remove(searchId, future);
+            return ReturnObject.fail("搜索任务被取消");
         } catch (InterruptedException e) {
             logger.warn("搜索任务被中断");
+            searchFutureMap.remove(searchId, future);
             return ReturnObject.fail("搜索任务被中断");
+        }
+    }
+
+    public void cancelSearch(String searchId) {
+        Assert.isTrue(!StringUtils.isEmpty(searchId), "searchId is empty!");
+        Future<PageObject<SearchDTO>> future = searchFutureMap.get(searchId);
+        if(future != null) {
+            if(!future.isDone()) {
+                future.cancel(true);
+                logger.debug("Canceled search id={},future={},cancelled={}", searchId, future, future.isCancelled());
+            } else {
+                logger.warn("Unable to cancel search id {}: search task is done", searchId);
+            }
+            searchFutureMap.remove(searchId, future);
+        } else {
+            logger.debug("Future is null, search id={}", searchId);
         }
     }
 

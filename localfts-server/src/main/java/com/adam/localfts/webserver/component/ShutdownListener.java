@@ -40,7 +40,6 @@ public class ShutdownListener implements ApplicationListener<ContextClosedEvent>
         searchThreadPool.shutdownNow();
 
         if(webServerStartListener.isWebServerStarted()) {
-            logger.debug("Preparing shutdown");
             TomcatWebServer tomcatWebServer = (TomcatWebServer) webServerStartListener.getWebServer();
             for (Connector connector : tomcatWebServer.getTomcat().getService().findConnectors()) {
                 Executor executor = connector.getProtocolHandler().getExecutor();

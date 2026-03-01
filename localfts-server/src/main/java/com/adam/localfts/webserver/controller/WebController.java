@@ -303,8 +303,17 @@ public class WebController {
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
     }
 
+    @PostMapping("/cancelSearch")
+    @ResponseBody
+    public ReturnObject<Void> cancelSearch(@RequestParam String searchId) {
+        Assert.isTrue(!StringUtils.isEmpty(searchId), "searchId is empty!");
+        ftsSearchService.cancelSearch(searchId);
+        return ReturnObject.success();
+    }
+
     @RequestMapping(value = "/search", method = {RequestMethod.GET, RequestMethod.POST})
     public String search(Model model, @RequestParam(defaultValue = "") String keyword,
+                         @RequestParam(required = false) String searchId,
                          @RequestParam(defaultValue = "1") int pageNo,
                          @RequestParam(defaultValue = "20") int pageSize,
                          @RequestParam(required = false) SearchColumn sortColumn,
@@ -329,6 +338,12 @@ public class WebController {
         model.addAttribute("indexFileContent", indexFileContent);
         FileTypeGroup[] fileTypeGroups = FileTypeGroup.values();
         model.addAttribute("fileTypeGroups", fileTypeGroups);
+        if(!StringUtils.isEmpty(searchId)) {
+            ftsSearchService.cancelSearch(searchId);
+        } else {
+            searchId = Util.getRandomUUIDString();
+        }
+        model.addAttribute("searchId", searchId);
         if(StringUtils.isEmpty(keyword)) {
             return "search";
         }
@@ -355,7 +370,7 @@ public class WebController {
         }
         model.addAttribute("sortColumn", sortColumn);
         model.addAttribute("sortOrder", sortOrder);
-        ReturnObject<PageObject<SearchDTO>> returnObject = ftsSearchService.search(keyword, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+        ReturnObject<PageObject<SearchDTO>> returnObject = ftsSearchService.search(keyword, searchId, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
         model.addAttribute("rtObj", returnObject);
         return "search";
     }

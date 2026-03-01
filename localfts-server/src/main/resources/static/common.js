@@ -59,6 +59,61 @@ if (!Array.prototype.indexOf) {
     };
 }
 
+var callUnloadCount = 0;
+function bindUnloadFunctionUrlEncoded(path,paramObject,condFunc) {
+    if(!path) {
+        return;
+    }
+    var paramStr = convertToUrlEncodedDataStr(paramObject);
+    var func = function(e) {
+        //确保只调用一次
+        if(callUnloadCount++ > 0) {
+            return;
+        }
+        if(condFunc && !condFunc()) {
+            return;
+        }
+        if (navigator.sendBeacon) {
+            if(paramStr) {
+                var blob = new Blob([paramStr], {type: 'application/x-www-form-urlencoded'});
+                navigator.sendBeacon(path, blob);
+            } else {
+                navigator.sendBeacon(path);
+            }
+        } else {
+            var data = paramStr ? paramStr : null;
+            sendPostFormRequest(path, data, false, function (xhr) {});
+        }
+        var start = new Date().getTime();
+        while (new Date().getTime() - start < 100) {
+            // 循环 100 毫秒，确保请求完成
+        }
+    };
+    // 监听页面关闭事件
+    if (typeof window.addEventListener !== "undefined") {
+        window.addEventListener('beforeunload', func);
+    } else {
+        window.attachEvent('onbeforeunload', func);
+    }
+}
+
+function convertToUrlEncodedDataStr(paramObject) {
+    if(!paramObject) {
+        return null;
+    }
+    var result = '';
+    for(var key in paramObject) {
+        if(paramObject.hasOwnProperty(key)) {
+            result = result + '&' + key + '=' + paramObject[key];
+        }
+    }
+    if(result === '') {
+        return null;
+    } else {
+        return result.substring(1);
+    }
+}
+
 function bindEventListener(element,eventName,func) {
     if(element === undefined || eventName == undefined || func === undefined) {
         return false;

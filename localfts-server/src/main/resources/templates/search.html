@@ -224,6 +224,7 @@
                 <span class="inline" style="color:red; display:none" id="compressedFileLastModifiedUpperMsg"></span>
             </div>
         </div>
+        <input type="hidden" name="searchId" th:value="${searchId}">
     </form>
     <div id="result-div" th:if="${rtObj != null}" style="text-align:center">
         <hr>
@@ -255,6 +256,7 @@
             <input type="hidden" name="compressedFileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeUpperStr != null}" th:value="${advancedSearchCondition.compressedFileSizeUpperStr}">
             <input type="hidden" name="compressedFileLastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedLower != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedLower}">
             <input type="hidden" name="compressedFileLastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedUpper != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedUpper}">
+            <input type="hidden" name="searchId" th:value="${searchId}">
             <button type="submit">排序</button>
         </form>
         <br>
@@ -330,6 +332,7 @@
                 <option value="20">20</option>
                 <option value="50">50</option>
             </select>
+            <input type="hidden" name="searchId" th:value="${searchId}">
             <button type="button" onclick="pageJump()">跳转</button>
         </form>
     </div>
@@ -351,6 +354,9 @@
         var zipEnabled = [[${zipEnabled}]];
         var sortColumn = [[${sortColumn}]];
         var sortOrder = [[${sortOrder}]];
+        var searchId = [[${searchId}]];
+        //TODO 将搜索请求改为异步请求JSON接口
+        //bindUnloadFunctionUrlEncoded(contextPath + "/cancelSearch", {'searchId': searchId});
 
         //定义inputId集合和其他公共变量以便后续统一处理相关元素
         var dateTimeInputIds = ['lastModifiedLower', 'lastModifiedUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];

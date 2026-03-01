@@ -11,10 +11,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.Stack;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -262,10 +259,18 @@ public class Util {
         return osName.startsWith("mac");
     }
 
-    public static void clearAndThrowInterruptedException() throws InterruptedException{
+    public static boolean checkInterrupted() {
+        return Thread.currentThread().isInterrupted();
+    }
+
+    public static void clearInterruptedAndThrowException() throws InterruptedException{
         if(Thread.interrupted()) {
             throw new InterruptedException();
         }
+    }
+
+    public static String getRandomUUIDString() {
+        return UUID.randomUUID().toString();
     }
 
     /**

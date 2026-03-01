@@ -55,9 +55,9 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 .map(file -> mapToDTO(file, simpleDateFormat, rootPath))
                 .collect(Collectors.toList());
         long endMills = System.currentTimeMillis();
-        logger.debug("搜索耗时{}ms", endMills - startMills);
+        logger.debug("搜索{}耗时{}ms", Util.checkInterrupted() ? "[被中断]" : "", endMills - startMills);
 
-        Util.clearAndThrowInterruptedException();
+        Util.clearInterruptedAndThrowException();
         if(sortColumn != null) {
             Comparator<SearchDTO> comparator = searchComparatorMap.get(sortColumn);
             if(comparator == null) {
