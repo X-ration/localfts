@@ -1,7 +1,6 @@
 package com.adam.localfts.webserver.config;
 
 import com.adam.localfts.webserver.common.Constants;
-import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -10,12 +9,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
 
-import java.util.concurrent.*;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Configuration
-@DependsOn("ftsServerConfigService")
 public class ThreadConfig {
 
     @Autowired
@@ -29,9 +29,7 @@ public class ThreadConfig {
         logger.debug("Creating search thread pool");
         int physicalAvailableProcessors = Constants.PHYSICAL_AVAILABLE_PROCESSORS;
         int coreThreads;
-        if(physicalAvailableProcessors < 1) {
-            throw new LocalFtsStartupException("Unacceptable physical available processors:" + physicalAvailableProcessors);
-        } else if(physicalAvailableProcessors == 1) {
+        if(physicalAvailableProcessors == 1) {
             logger.warn("[Performance warning]Search thread pool takes 1 only available cpu core! Requests may wait long.");
             coreThreads = 1;
         } else {

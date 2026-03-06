@@ -59,6 +59,14 @@ if (!Array.prototype.indexOf) {
     };
 }
 
+//让所有按钮鼠标指针划过时变成小手
+var allButtons = document.getElementsByTagName('button');
+if(allButtons) {
+    for(var i=0;i<allButtons.length;i++) {
+        allButtons[i].style.cursor = 'pointer';
+    }
+}
+
 var callUnloadCount = 0;
 function bindUnloadFunctionUrlEncoded(path,paramObject,condFunc) {
     if(!path) {
@@ -132,6 +140,17 @@ function bindEventListener(element,eventName,func) {
     }
 }
 
+function isOptionSelected(option) {
+    if(!option) {
+        return;
+    }
+    if(IE_VERSION && IE_VERSION < 7) {
+        return option.getAttribute("selected");
+    } else {
+        return option.selected;
+    }
+}
+
 function selectOption(select,value,isValue) {
     if(select === undefined || value === undefined) {
         return;
@@ -188,6 +207,9 @@ function clearChildren(element) {
 }
 
 function getElementsByName(tagName, name) {
+    if(!tagName || !name) {
+        return;
+    }
     if(document.getElementsByName) {
         return document.getElementsByName(name);
     }
@@ -196,7 +218,7 @@ function getElementsByName(tagName, name) {
     var result = [];
     if(collection) {
         for(var i=0;i<collection.length;i++) {
-            if(collection[i].getAttribute("name") == name) {
+            if(collection[i].name === name) {
                 result[result.length] = collection[i];
             }
         }
@@ -205,7 +227,21 @@ function getElementsByName(tagName, name) {
 }
 
 function getElementChecked(element) {
-    return element.checked;
+    //兼容IE6-8传入this的情况
+    if(element === window) {
+        if(window.event) {
+            element = window.event.srcElement;
+        }
+    }
+    if(!element) {
+        return false;
+    }
+    var checked = element.checked;
+    if(checked) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 function getCheckedValue(name) {
@@ -386,6 +422,36 @@ function updateTitle(id, text, color) {
             element.style.color = 'black';
         }
     }
+}
+
+function hideElementById(id) {
+    if(!id) {
+        return;
+    }
+    var element = document.getElementById(id);
+    hideElement(element);
+}
+
+function hideElement(element) {
+    if(!element) {
+        return;
+    }
+    element.style.display = 'none';
+}
+
+function showElementById(id) {
+    if(!id) {
+        return;
+    }
+    var element = document.getElementById(id);
+    showElement(element);
+}
+
+function showElement(element) {
+    if(!element) {
+        return;
+    }
+    element.style.display = '';
 }
 
 function updateMsg(id, text, color) {

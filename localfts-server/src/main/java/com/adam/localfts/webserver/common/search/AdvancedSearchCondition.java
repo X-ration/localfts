@@ -255,6 +255,9 @@ public class AdvancedSearchCondition implements Cloneable{
     }
 
     private Long parseDataSizeStrToBytes(String str) {
+        if(str.contains("i")) {
+            str = str.replace("i", "");
+        }
         return DataSize.parse(str).toBytes();
     }
 

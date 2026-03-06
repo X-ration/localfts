@@ -311,14 +311,50 @@ public class WebController {
         return ReturnObject.success();
     }
 
-    @RequestMapping(value = "/search", method = {RequestMethod.GET, RequestMethod.POST})
-    public String search(Model model, @RequestParam(defaultValue = "") String keyword,
-                         @RequestParam(required = false) String searchId,
-                         @RequestParam(defaultValue = "1") int pageNo,
-                         @RequestParam(defaultValue = "20") int pageSize,
-                         @RequestParam(required = false) SearchColumn sortColumn,
-                         @RequestParam(required = false) SortOrder sortOrder,
-                         AdvancedSearchCondition advancedSearchCondition) {
+    @PostMapping("/searchApi")
+    @ResponseBody
+    public ReturnObject<PageObject<SearchDTO>> searchApi(@RequestParam String keyword,
+            @RequestParam String searchId,
+            @RequestParam(defaultValue = "1") int pageNo,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) SearchColumn sortColumn,
+            @RequestParam(required = false) SortOrder sortOrder,
+            AdvancedSearchCondition advancedSearchCondition
+    ) {
+        if(!ftsServerConfigService.getLocalFtsProperties().getSearch().getEnabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if(!StringUtils.isEmpty(searchId)) {
+            ftsSearchService.cancelSearch(searchId);
+        }
+        if(StringUtils.isEmpty(keyword)) {
+            return ReturnObject.fail("搜索关键词为空");
+        }
+        LOGGER.debug("search keyword={},searchId={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
+                keyword, searchId, pageNo, pageSize, sortColumn, sortOrder, advancedSearchCondition);
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
+        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(pageNo <= 0) {
+            pageNo = 1;
+        }
+        if(pageSize <= 0) {
+            pageSize = 20;
+        }
+        if(sortColumn != null) {
+            boolean checkSortColumn = checkSearchSortColumn(sortColumn, advancedSearchCondition, zipEnabled, searchMode, indexFileContent);
+            if(!checkSortColumn) {
+                sortColumn = null;
+            }
+        }
+        if(sortColumn != null && sortColumn != SearchColumn.DEFAULT && sortOrder == null) {
+            sortOrder = SortOrder.ASC;
+        }
+        return ftsSearchService.search(keyword, searchId, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+    }
+
+    @GetMapping("/search")
+    public String search(Model model) {
         if(!ftsServerConfigService.getLocalFtsProperties().getSearch().getEnabled()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
@@ -336,42 +372,12 @@ public class WebController {
         model.addAttribute("searchMode", searchMode);
         Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
         model.addAttribute("indexFileContent", indexFileContent);
-        FileTypeGroup[] fileTypeGroups = FileTypeGroup.values();
-        model.addAttribute("fileTypeGroups", fileTypeGroups);
-        if(!StringUtils.isEmpty(searchId)) {
-            ftsSearchService.cancelSearch(searchId);
-        } else {
-            searchId = Util.getRandomUUIDString();
-        }
-        model.addAttribute("searchId", searchId);
-        if(StringUtils.isEmpty(keyword)) {
-            return "search";
-        }
-        LOGGER.debug("search keyword={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
-                keyword, pageNo, pageSize, sortColumn, sortOrder, advancedSearchCondition);
-        model.addAttribute("keyword", keyword);
-        model.addAttribute("advancedSearchCondition", advancedSearchCondition);
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         model.addAttribute("zipEnabled", zipEnabled);
-        if(pageNo <= 0) {
-            pageNo = 1;
-        }
-        if(pageSize <= 0) {
-            pageSize = 20;
-        }
-        if(sortColumn != null) {
-            boolean checkSortColumn = checkSearchSortColumn(sortColumn, advancedSearchCondition, zipEnabled, searchMode, indexFileContent);
-            if(!checkSortColumn) {
-                sortColumn = null;
-            }
-        }
-        if(sortColumn != null && sortOrder == null) {
-            sortOrder = SortOrder.ASC;
-        }
-        model.addAttribute("sortColumn", sortColumn);
-        model.addAttribute("sortOrder", sortOrder);
-        ReturnObject<PageObject<SearchDTO>> returnObject = ftsSearchService.search(keyword, searchId, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
-        model.addAttribute("rtObj", returnObject);
+        FileTypeGroup[] fileTypeGroups = FileTypeGroup.values();
+        model.addAttribute("fileTypeGroups", fileTypeGroups);
+        String searchId = Util.getRandomUUIDString();
+        model.addAttribute("searchId", searchId);
         return "search";
     }
 

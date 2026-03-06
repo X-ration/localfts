@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.service;
 
+import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.PageObject;
 import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
@@ -70,7 +71,7 @@ public class FtsSearchService implements DisposableBean {
         Assert.isTrue(!StringUtils.isEmpty(keyword), "搜索关键词为空");
         Assert.isTrue(pageNo > 0, "非法的页数：" + pageNo);
         Assert.isTrue(pageSize > 0, "非法的每页数量：" + pageSize);
-        Assert.isTrue(sortColumn == null || sortOrder != null, "排序顺序为null");
+        Assert.isTrue(sortColumn == null || sortColumn == SearchColumn.DEFAULT || sortOrder != null, "排序顺序为null");
         AdvancedSearchCondition advancedSearchConditionCopy = null;
         if(advancedSearchCondition != null) {
             try {
@@ -81,8 +82,8 @@ public class FtsSearchService implements DisposableBean {
             }
             preHandleAdvancedSearchCondition(advancedSearchConditionCopy);
         }
-        logger.debug("Actual search parameters: keyword={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
-                keyword, pageNo, pageSize, sortColumn, sortOrder, advancedSearchConditionCopy);
+        logger.debug("Actual search parameters: keyword={},searchId={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
+                keyword, searchId, pageNo, pageSize, sortColumn, sortOrder, advancedSearchConditionCopy);
         if(advancedSearchConditionCopy != null && advancedSearchConditionCopy.emptyResult()) {
             return ReturnObject.success(new PageObject<>(pageNo, pageSize, null));
         }
@@ -262,6 +263,10 @@ public class FtsSearchService implements DisposableBean {
     public void postConstruct() {
         SearchProperties searchProperties = ftsServerConfigService.getLocalFtsProperties().getSearch();
         if(searchProperties.getEnabled() && searchProperties.getMode() == SearchMode.INDEXED) {
+            int physicalAvailableProcessors = Constants.PHYSICAL_AVAILABLE_PROCESSORS;
+            if(physicalAvailableProcessors == 1) {
+                logger.warn("[Performance warning]LuceneIndexThread takes only 1 available physical processor! Requests may wait long.");
+            }
             LuceneIndexThread.getInstance().start();
             if(searchProperties.getIndexBeforeStart()) {
                 createIndex();

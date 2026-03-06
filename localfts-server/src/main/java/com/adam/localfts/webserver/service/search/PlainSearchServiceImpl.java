@@ -77,8 +77,11 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
 
     @PostConstruct
     public void postConstruct() {
+        searchComparatorMap.put(SearchColumn.DEFAULT, (sd1, sd2) -> 0);
         searchComparatorMap.put(SearchColumn.FILENAME, (sd1, sd2) ->
                 CHINESE_COLLATOR.compare(sd1.getFilename(), sd2.getFilename()));
+        searchComparatorMap.put(SearchColumn.PARENT_PATH, (sd1, sd2) ->
+                CHINESE_COLLATOR.compare(sd1.getParentRelativePath(), sd2.getParentRelativePath()));
         searchComparatorMap.put(SearchColumn.FILE_CONTENT, (sd1, sd2) ->
                 CHINESE_COLLATOR.compare(sd1.getFileContent(), sd2.getFileContent()));
         searchComparatorMap.put(SearchColumn.TYPE, (sd1, sd2) -> {

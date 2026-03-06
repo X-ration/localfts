@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public enum SearchColumn {
+    DEFAULT,
     FILENAME,PARENT_PATH,FILE_CONTENT,TYPE,SIZE,LAST_MODIFIED,
     COMPRESS_STATUS,COMPRESS_FILE_SIZE,COMPRESS_FILE_LAST_MODIFIED;
 

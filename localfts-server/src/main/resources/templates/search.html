@@ -30,7 +30,7 @@
         <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="hideDialog('serverIpInfo')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
     </div>
     <br>
-    <form id="search-form" th:action="@{/search}" method="post" enctype="application/x-www-form-urlencoded" style="text-align: center">
+    <div id="search-div"style="text-align: center">
         <span style="font-size: 30px">文件搜索</span><br><br>
         <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="width:80%; text-align:center">
         <span class="inline" style="color:red; display:none" id="keywordMsg"></span>
@@ -145,10 +145,10 @@
                 <input type="text" id="fileSizeLowerNumber" style="width: 80px">
                 <select id="fileSizeLowerSelect">
                     <option>B</option>
-                    <option>KB</option>
-                    <option>MB</option>
-                    <option>GB</option>
-                    <option>TB</option>
+                    <option>KiB</option>
+                    <option>MiB</option>
+                    <option>GiB</option>
+                    <option>TiB</option>
                 </select>
                 <span class="inline" style="color:red; display:none" id="fileSizeLowerMsg"></span>
                 <br>
@@ -159,10 +159,10 @@
                 <input type="text" id="fileSizeUpperNumber" style="width:80px">
                 <select id="fileSizeUpperSelect">
                     <option>B</option>
-                    <option>KB</option>
-                    <option>MB</option>
-                    <option>GB</option>
-                    <option>TB</option>
+                    <option>KiB</option>
+                    <option>MiB</option>
+                    <option>GiB</option>
+                    <option>TiB</option>
                 </select>
                 <span class="inline" style="color:red; display:none" id="fileSizeUpperMsg"></span>
                 <br>
@@ -184,10 +184,10 @@
                 <input type="text" id="compressedFileSizeLowerNumber" style="width:80px">
                 <select id="compressedFileSizeLowerSelect">
                     <option>B</option>
-                    <option>KB</option>
-                    <option>MB</option>
-                    <option>GB</option>
-                    <option>TB</option>
+                    <option>KiB</option>
+                    <option>MiB</option>
+                    <option>GiB</option>
+                    <option>TiB</option>
                 </select>
                 <span class="inline" style="color:red; display:none" id="compressedFileSizeLowerMsg"></span>
                 <br>
@@ -198,10 +198,10 @@
                 <input type="text" id="compressedFileSizeUpperNumber" style="width:80px">
                 <select id="compressedFileSizeUpperSelect">
                     <option>B</option>
-                    <option>KB</option>
-                    <option>MB</option>
-                    <option>GB</option>
-                    <option>TB</option>
+                    <option>KiB</option>
+                    <option>MiB</option>
+                    <option>GiB</option>
+                    <option>TiB</option>
                 </select>
                 <span class="inline" style="color:red; display:none" id="compressedFileSizeUpperMsg"></span>
                 <br>
@@ -225,106 +225,45 @@
             </div>
         </div>
         <input type="hidden" name="searchId" th:value="${searchId}">
-    </form>
-    <div id="result-div" th:if="${rtObj != null}" style="text-align:center">
+    </div>
+    <div id="result-container-div" style="display:none; text-align:center">
         <hr>
-        <span style="font-size: 30px">搜索结果</span><br><br>
-        <span th:if="${!rtObj.success}" th:text="${rtObj.message}" style="color:red">error msg</span>
-        <br th:if="${!rtObj.success}"><br th:if="${!rtObj.success}">
-        <form id="sortForm" th:if="${rtObj.success}" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
+        <span id="searchHint" style="font-size: 30px">搜索结果</span><br><br>
+        <span id="searchMessage" style="display:none; color:red">error msg</span>
+        <br id="searchMessageBr1" style="display: none">
+        <br id="searchMessageBr2" style="display: none">
+        <div id="sort-div" style="display:none">
             排序列：
-            <select id="sortFormColumnSelect" name="sortColumn">
+            <select id="sortColumnSelect" name="sortColumn">
                 <option value="FILENAME">文件/文件夹名称</option>
                 <option value="PARENT_PATH">所在路径</option>
                 <option value="LAST_MODIFIED">修改时间</option>
             </select>
+            <span id="sortColumnMsg" style="display:none;color:red"></span>
             排序方式：
-            <select id="sortFormOrderSelect" name="sortOrder">
+            <select id="sortOrderSelect" name="sortOrder">
                 <option value="ASC">升序</option>
                 <option value="DESC">降序</option>
             </select>
-            <input type="hidden" name="keyword" th:value="${keyword}">
-            <input type="hidden" name="searchType" th:if="${advancedSearchCondition != null && advancedSearchCondition.searchType != null}" th:value="${advancedSearchCondition.searchType}">
-            <input type="hidden" name="caseSensitive" th:if="${advancedSearchCondition != null && advancedSearchCondition.caseSensitive != null}" th:value="${advancedSearchCondition.caseSensitive}">
-            <input type="hidden" name="directory" th:if="${advancedSearchCondition != null && advancedSearchCondition.directory != null}" th:value="${advancedSearchCondition.directory}">
-            <input type="hidden" name="fileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeLowerStr != null}" th:value="${advancedSearchCondition.fileSizeLowerStr}">
-            <input type="hidden" name="fileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeUpperStr != null}" th:value="${advancedSearchCondition.fileSizeUpperStr}">
-            <input type="hidden" name="lastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedLower != null}" th:value="${advancedSearchCondition.lastModifiedLower}">
-            <input type="hidden" name="lastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedUpper != null}" th:value="${advancedSearchCondition.lastModifiedUpper}">
-            <input type="hidden" name="folderCompressStatus" th:if="${advancedSearchCondition != null && advancedSearchCondition.folderCompressStatus != null}" th:value="${advancedSearchCondition.folderCompressStatus.name()}">
-            <input type="hidden" name="compressedFileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeLowerStr != null}" th:value="${advancedSearchCondition.compressedFileSizeLowerStr}">
-            <input type="hidden" name="compressedFileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeUpperStr != null}" th:value="${advancedSearchCondition.compressedFileSizeUpperStr}">
-            <input type="hidden" name="compressedFileLastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedLower != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedLower}">
-            <input type="hidden" name="compressedFileLastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedUpper != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedUpper}">
-            <input type="hidden" name="searchId" th:value="${searchId}">
-            <button type="submit">排序</button>
-        </form>
+            <span id="sortOrderMsg" style="display:none;color:red"></span>
+            <button type="button" onclick="sortSearch()">排序</button>
+        </div>
         <br>
-        <div th:if="${rtObj.success and rtObj.data != null and rtObj.data.data != null}">
-        <div th:each="item:${rtObj.data.data}">
-            <div>
-                <span th:if=${item.directory} th:text="'文件夹名称：' + ${item.filename}">filename</span>
-                <span th:if=${!item.directory} th:text="'文件名称：' + ${item.filename}">filename</span>
-            </div>
-            <div th:text="'所在路径：' + ${item.parentRelativePath}">
-                parent relative path
-            </div>
-            <div th:if="${searchMode.name() == 'INDEXED' and indexFileContent and !item.directory}" th:utext="'文件内容：' + ${item.fileContent}">
-                file content
-            </div>
-            <div>
-                <span th:if="${item.directory}">类型：文件夹</span>
-                <span th:if="${!item.directory}">类型：文件</span>
-                <span th:if="${!item.directory}" th:text="'文件大小：' + ${item.fileSizeStr}">file size</span>
-                <span th:text="'修改时间：' + ${item.lastModifiedStr}">last modified</span>
-            </div>
-            <div th:if="${zipEnabled and item.directory}">
-                <span th:text="'文件夹压缩状态：' + ${item.compressStatus.desc}">compress status</span>
-                <span th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="'压缩文件大小：' + ${item.compressedFileSizeStr}">compress file size</span>
-                <span th:if="${item.compressStatus.name() == 'COMPRESSED'}" th:text="'压缩文件修改时间：' + ${item.compressedFileLastModifiedStr}">compress file last modified</span>
-            </div>
-            <div th:if="${item.directory}">
-                相关链接：
-                <a name="directory-path" th:attr="relative-path=${item.parentRelativePath} + '/' + ${item.filename}">访问目录</a>
-                <a name="upload-file" th:text="${item.parentRelativePath} + '/' + ${item.filename}">上传文件</a>
-                <a th:if="${zipEnabled}" name="compress-folder" th:text="${item.parentRelativePath} + '/' + ${item.filename}">压缩管理</a>
-                <a th:if="${zipEnabled and item.compressStatus.name() == 'COMPRESSED'}" name="download-folder" th:text="${item.compressedFilePath}">下载文件夹(zip)</a>
-            </div>
-            <div th:if="${!item.directory}">
-                相关链接：
-                <a name="download-file" th:text="${item.parentRelativePath} + '/' + ${item.filename}">下载文件</a>
-            </div>
-            <br>
+        <div id="result-div" style="display: none">
         </div>
-        </div>
-        <p th:if="${rtObj.success and rtObj.data != null}" class="margin-0">
-            第<span id="current-page" th:text="${rtObj.data.currentPage}">page no</span>页 <span id="current-size" th:text="${rtObj.data.currentSize}">page size</span>条
-            总<span id="total-page" th:text="${rtObj.data.totalPage}">total page</span>页 <span id="total-size" th:text="${rtObj.data.totalSize}">total size</span>条
+        <p id="pageInfo" style="display:none" class="margin-0">
+            第<span id="current-page">page no</span>页 <span id="current-size">page size</span>条
+            总<span id="total-page">total page</span>页 <span id="total-size">total size</span>条
         </p>
 
-        <form id="pageForm" th:if="${rtObj.success and rtObj.data != null}" th:action="@{'/search'}" method="post" enctype="application/x-www-form-urlencoded">
-            <input type="hidden" name="keyword" th:value="${keyword}">
-            <input type="hidden" id="page-size" name="page-size" disabled="disabled" th:value="${rtObj.data.pageSize}">
-            <input type="hidden" name="sortColumn" th:if="${sortColumn != null}" th:value="${sortColumn.name()}">
-            <input type="hidden" name="sortOrder" th:if="${sortOrder != null}" th:value="${sortOrder.name()}">
-            <input type="hidden" name="searchType" th:if="${advancedSearchCondition != null && advancedSearchCondition.searchType != null}" th:value="${advancedSearchCondition.searchType}">
-            <input type="hidden" name="caseSensitive" th:if="${advancedSearchCondition != null && advancedSearchCondition.caseSensitive != null}" th:value="${advancedSearchCondition.caseSensitive}">
-            <input type="hidden" name="directory" th:if="${advancedSearchCondition != null && advancedSearchCondition.directory != null}" th:value="${advancedSearchCondition.directory}">
-            <input type="hidden" name="fileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeLowerStr != null}" th:value="${advancedSearchCondition.fileSizeLowerStr}">
-            <input type="hidden" name="fileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.fileSizeUpperStr != null}" th:value="${advancedSearchCondition.fileSizeUpperStr}">
-            <input type="hidden" name="lastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedLower != null}" th:value="${advancedSearchCondition.lastModifiedLower}">
-            <input type="hidden" name="lastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.lastModifiedUpper != null}" th:value="${advancedSearchCondition.lastModifiedUpper}">
-            <input type="hidden" name="folderCompressStatus" th:if="${advancedSearchCondition != null && advancedSearchCondition.folderCompressStatus != null}" th:value="${advancedSearchCondition.folderCompressStatus.name()}">
-            <input type="hidden" name="compressedFileSizeLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeLowerStr != null}" th:value="${advancedSearchCondition.compressedFileSizeLowerStr}">
-            <input type="hidden" name="compressedFileSizeUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileSizeUpperStr != null}" th:value="${advancedSearchCondition.compressedFileSizeUpperStr}">
-            <input type="hidden" name="compressedFileLastModifiedLower" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedLower != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedLower}">
-            <input type="hidden" name="compressedFileLastModifiedUpper" th:if="${advancedSearchCondition != null && advancedSearchCondition.compressedFileLastModifiedUpper != null}" th:value="${advancedSearchCondition.compressedFileLastModifiedUpper}">
-            <button id="first-page">首页</button>
-            <button id="previous-page">上一页</button>
-            <button id="next-page">下一页</button>
-            <button id="last-page">尾页</button><br>
+        <div id="page-div" style="display:none">
+            <button id="first-page-button">首页</button>
+            <button id="previous-page-button">上一页</button>
+            <button id="next-page-button">下一页</button>
+            <button id="last-page-button">尾页</button><br>
             <label for="page-no">页数:</label>
-            <input type="text" size="2" id="page-no" name="pageNo" th:value="${rtObj.data.currentPage}">
+            <input type="text" size="2" id="page-no" name="pageNo">
+            <span style="display:none; color:red" id="pageNoMsg"></span>
             <label for="page-size-select">每页数量:</label>
             <select name="pageSize" id="page-size-select">
                 <option value="10">10</option>
@@ -332,9 +271,8 @@
                 <option value="20">20</option>
                 <option value="50">50</option>
             </select>
-            <input type="hidden" name="searchId" th:value="${searchId}">
             <button type="button" onclick="pageJump()">跳转</button>
-        </form>
+        </div>
     </div>
     <script th:src="${#request.contextPath} + '/static/common.js'"></script>
     <script th:src="${#request.contextPath} + '/static/dialog.js'"></script>
@@ -343,7 +281,6 @@
     <script type="text/javascript" th:inline="javascript">
         var contextPath = [[${#request.contextPath}]];
         var CHECK_PASSED = '校验通过' + (IE_VERSION && IE_VERSION < 9 ? '√' : '✔');
-        var advancedSearchCondition = [[${advancedSearchCondition}]];
         var urlRelativePathRegex = new RegExp([[${urlRelativePathPattern}]]);
         var fileSuffixRegex = new RegExp([[${fileSuffixPattern}]]);
         var keyword = [[${keyword}]];
@@ -352,11 +289,12 @@
         var dateAndTimeInputSupported = isDateAndTimeInputSupported();
         var fileInvalidCharacters = [[${fileInvalidCharacters}]];
         var zipEnabled = [[${zipEnabled}]];
-        var sortColumn = [[${sortColumn}]];
-        var sortOrder = [[${sortOrder}]];
+        //var sortColumn = [[${sortColumn}]];
+        //var sortOrder = [[${sortOrder}]];
         var searchId = [[${searchId}]];
-        //TODO 将搜索请求改为异步请求JSON接口
-        //bindUnloadFunctionUrlEncoded(contextPath + "/cancelSearch", {'searchId': searchId});
+        var prevKeyword = null, prevAscObject = null,
+            prevSortColumn = null, prevSortOrder = null;
+        bindUnloadFunctionUrlEncoded(contextPath + "/cancelSearch", {'searchId': searchId});
 
         //定义inputId集合和其他公共变量以便后续统一处理相关元素
         var dateTimeInputIds = ['lastModifiedLower', 'lastModifiedUpper', 'compressedFileLastModifiedLower', 'compressedFileLastModifiedUpper'];
@@ -407,99 +345,6 @@
             keyboardButtonIds[keyboardButtonIds.length] = buttonId;
         }
 
-        var sortForm = document.getElementById('sortForm');
-        if(sortForm) {
-            var requireFileValue = requireFile(advancedSearchCondition);
-            var requireDirectoryValue = requireDirectory(advancedSearchCondition);
-            var requireFileOrDirectoryValue = requireFileOrDirectory(advancedSearchCondition);
-            if(advancedSearchCondition && advancedSearchCondition.searchPaths && advancedSearchCondition.searchPaths.length > 0) {
-                for(var i=0;i<advancedSearchCondition.searchPaths.length;i++) {
-                    var searchPath = advancedSearchCondition.searchPaths[i];
-                    var input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'searchPaths';
-                    input.value = searchPath;
-                    sortForm.appendChild(input);
-                }
-            }
-            var sortFormColumnSelect = document.getElementById('sortFormColumnSelect');
-            var sortColumnDescObject = {
-                TYPE: '类型',
-                FILE_CONTENT: '文件内容',
-                SIZE: '文件大小',
-                COMPRESS_STATUS: '文件夹压缩状态',
-                COMPRESS_FILE_SIZE: '压缩文件大小',
-                COMPRESS_FILE_LAST_MODIFIED: '压缩文件修改时间'
-            };
-            var needTypeOption = requireFileOrDirectoryValue;
-            if(needTypeOption) {
-                var option = document.createElement('option');
-                option.innerText = sortColumnDescObject['TYPE'];
-                option.value = 'TYPE';
-                sortFormColumnSelect.appendChild(option);
-            }
-            var needFileContentOption = searchMode === 'INDEXED' && indexFileContent;
-            if(needFileContentOption) {
-                needFileContentOption = !requireDirectoryValue;
-            }
-            if(needFileContentOption) {
-                var option = document.createElement('option');
-                option.innerText = sortColumnDescObject['FILE_CONTENT'];
-                option.value = 'FILE_CONTENT';
-                sortFormColumnSelect.appendChild(option);
-            }
-            var needSizeOption = !requireDirectoryValue;
-            if(needSizeOption) {
-                var option = document.createElement('option');
-                option.innerText = sortColumnDescObject['SIZE'];
-                option.value = 'SIZE';
-                sortFormColumnSelect.appendChild(option);
-            }
-            if(zipEnabled) {
-                var needCompressColumnOptions = !requireFileValue;
-                if(needCompressColumnOptions) {
-                    var compressColumns = ['COMPRESS_STATUS', 'COMPRESS_FILE_SIZE', 'COMPRESS_FILE_LAST_MODIFIED'];
-                    for(var i=0;i<compressColumns.length;i++) {
-                        var column = compressColumns[i];
-                        var option = document.createElement('option');
-                        option.innerText = sortColumnDescObject[column];
-                        option.value = column;
-                        sortFormColumnSelect.appendChild(option);
-                    }
-                }
-            }
-            if(sortColumn !== null) {
-                var sortColumnOptions = document.getElementById("sortFormColumnSelect").children;
-                for(var i=0;i<sortColumnOptions.length;i++) {
-                    if(sortColumnOptions[i].value == sortColumn) {
-                        setOptionSelected(sortColumnOptions[i]);
-                        break;
-                    }
-                }
-                if(sortOrder !== null) {
-                    var sortOrderOptions = document.getElementById("sortFormOrderSelect").children;
-                    for(var i=0;i<sortOrderOptions.length;i++) {
-                        if(sortOrderOptions[i].value == sortOrder) {
-                            setOptionSelected(sortOrderOptions[i]);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        var pageForm = document.getElementById('pageForm');
-        if(advancedSearchCondition && advancedSearchCondition.searchPaths && advancedSearchCondition.searchPaths.length > 0) {
-            for(var i=0;i<advancedSearchCondition.searchPaths.length;i++) {
-                var searchPath = advancedSearchCondition.searchPaths[i];
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'searchPaths';
-                input.value = searchPath;
-                pageForm.appendChild(input);
-            }
-        }
-        
         var fileTypesDiv = document.getElementById('fileTypesDiv');
         if(fileTypesDiv.children) {
             var fileTypeCounter = 0;
@@ -628,135 +473,7 @@
             showOrHideGroupInputs(directoryGroupInputIds, true);
         });
 
-        var advancedSearchSwitch = advancedSearchCondition === null ? false : !advancedSearchCondition.empty;
-        if(keyword && keyword.trim() !== '' && advancedSearchSwitch) {
-            //初始化高级搜索条件的选中状态和值等
-            if(advancedSearchCondition.searchPaths !== null && advancedSearchCondition.searchPaths.length > 0) {
-                deleteSearchPathElement(1);
-                for(var i=0;i<advancedSearchCondition.searchPaths.length;i++) {
-                    var searchPath = advancedSearchCondition.searchPaths[i];
-                    var numberId = addSearchPathElement();
-                    var inputId = 'searchPaths' + numberId;
-                    document.getElementById(inputId).value = searchPath;
-                }
-            }
-            if(advancedSearchCondition.searchType !== null) {
-                var radios = getElementsByName('input', 'searchType');
-                for(var i=0;i<radios.length;i++) {
-                    if(advancedSearchCondition.searchType + '' === radios[i].value) {
-                        radios[i].click();
-                    }
-                }
-            }
-            if(advancedSearchCondition.filterFileType !== null) {
-                if(advancedSearchCondition.filterFileType) {
-                    document.getElementById('filterFileTypeRadio2').click();
-                } else {
-                    document.getElementById('filterFileTypeRadio1').click();
-                }
-            }
-            if(advancedSearchCondition.fileTypes !== null && advancedSearchCondition.fileTypes.length > 0) {
-                var fileTypesDiv = document.getElementById('fileTypesDiv');
-                var inputs = fileTypesDiv.getElementsByTagName('input');
-                var customFileTypes = [];
-                if(inputs) {
-                    for(var i=0;i<advancedSearchCondition.fileTypes.length;i++) {
-                        var fileType = advancedSearchCondition.fileTypes[i];
-                        var found = false;
-                        for(var j=0;j<inputs.length;j++) {
-                            var input = inputs[j];
-                            if(input.value === fileType) {
-                                input.checked = true;
-                                found = true;
-                                break;
-                            }
-                        }
-                        if(!found) {
-                            customFileTypes[customFileTypes.length] = fileType;
-                        }
-                    }
-                }
-                if(customFileTypes.length > 0) {
-                    for(var i=0;i<customFileTypes.length;i++) {
-                        var numberId = addFileTypeInput();
-                        var inputId = 'fileType' + numberId;
-                        document.getElementById(inputId).value = customFileTypes[i];
-                    }
-                } else {
-                    addFileTypeInput();
-                }
-            }
-            if(advancedSearchCondition.caseSensitive !== null) {
-                var radios = getElementsByName('input', 'caseSensitive');
-                for(var i=0;i<radios.length;i++) {
-                    if(advancedSearchCondition.caseSensitive + '' === radios[i].value) {
-                        radios[i].click();
-                    }
-                }
-            }
-            if(advancedSearchCondition.directory !== null) {
-                var directoryRadios = getElementsByName('input', 'directory');
-                for(var i=0;i<directoryRadios.length;i++) {
-                    if(advancedSearchCondition.directory + '' === directoryRadios[i].value) {
-                        directoryRadios[i].checked = true;
-                    } else {
-                        directoryRadios[i].checked = false;
-                    }
-                }
-                if(advancedSearchCondition.directory) {
-                    showOrHideGroupInputs(fileGroupInputIds);
-                } else {
-                    showOrHideGroupInputs(directoryGroupInputIds);
-                }
-            }
-            for(var i=0;i<dateTimeInputIds.length;i++) {
-                var inputId = dateTimeInputIds[i];
-                if(advancedSearchCondition[inputId] !== null) {
-                    var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time';
-                    var dateObject = new Date(advancedSearchCondition[inputId].replace(/-/g, '/'));
-                    var formattedDateStr = formatDateDateStr(dateObject);
-                    var formattedTimeStr = formatDateTimeStr(dateObject);
-                    if(dateAndTimeInputSupported) {
-                        document.getElementById(dateInputId).value = formattedDateStr;
-                        document.getElementById(timeInputId).value = formattedTimeStr;
-                    } else {
-                        document.getElementById(inputId).value = formattedDateStr + ' ' + formattedTimeStr;
-                    }
-                }
-            }
-            for(var i=0;i<fileSizeInputIds.length;i++) {
-                var inputId = fileSizeInputIds[i];
-                var attrName = inputId + 'Str';
-                var attrValue = advancedSearchCondition[attrName];
-                if(attrValue !== null) {
-                    var matchResult = attrValue.match(fileSizeRegex);
-                    if(!matchResult) {
-                        if(window.console) {
-                            console.log('高级搜索条件key=', attrName, ',value=', attrValue, '不满足规则！');
-                        }
-                        continue;
-                    } else {
-                        var number = Number(matchResult[1]);
-                        var unit = matchResult[2];
-                        var inputs = getElementsByName('input', inputId);
-                        for(var j=0;j<inputs.length;j++) {
-                            var input = inputs[j];
-                            input.value = attrValue;
-                        }
-                        var numberInputId = inputId + 'Number',
-                            selectId = inputId + 'Select';
-                        document.getElementById(numberInputId).value = number;
-                        selectOption(document.getElementById(selectId),unit,false);
-                    }
-                }
-            }
-            if(advancedSearchCondition.folderCompressStatus !== null) {
-                var select = document.getElementById('folderCompressStatusSelect');
-                selectOption(select,advancedSearchCondition.folderCompressStatus);
-            }
-            switchAdvancedSearch(document.getElementById('switchAdvancedSearchButton'), true);
-        }
-
+        var advancedSearchSwitch = false;
         var allSearchButtons = document.getElementById('searchPathsDiv').getElementsByTagName('button');
         for(var i=0;i<allSearchButtons.length;i++) {
             var matchResult = allSearchButtons[i].id.match(searchPathsKeyboardButtonIdRegex);
@@ -799,7 +516,10 @@
             var hasError = false;
             var keywordInput = document.getElementById('keyword');
             var keywordInputValue = keywordInput.value;
-            if(keywordInputValue && keywordInputValue !== '') {
+            if(!keywordInputValue && keywordInputValue.trim() === '') {
+                hasError = true;
+                updateMsg('keywordMsg', '搜索关键字为空', 'red');
+            } else {
                 var ics = [];
                 for(var i=0;i<keywordInputValue.length;i++) {
                     var char = keywordInputValue.charAt(i);
@@ -823,258 +543,210 @@
                     updateMsg('keywordMsg', errorMsg, 'red');
                 } else {
                     //updateMsg('keywordMsg', CHECK_PASSED, 'green');
+                    hideElementById('keywordMsg');
                 }
             }
+            if(hasError) {
+                return;
+            }
             if(advancedSearchSwitch) {
-                if(keywordInputValue && keywordInputValue !== '') {
-                    //检查高级搜索参数
-                    var searchPathsDiv = document.getElementById('searchPathsDiv');
-                    var searchPathsInputs = searchPathsDiv.getElementsByTagName('input');
-                    if(searchPathsInputs) {
-                        var validInputValues = [];
-                        var validInputNumberIds = [];
-                        for(var i=0;i<searchPathsInputs.length;i++) {
-                            var input = searchPathsInputs[i];
-                            var inputValue = input.value;
-                            var matchResult = input.id.match(searchPathsInputIdRegex);
-                            var numberId = Number(matchResult[1]);
-                            var msgId = 'searchPathsMsg' + numberId;
-                            if(inputValue && inputValue !== '') {
-                                var matchResult = inputValue.match(urlRelativePathRegex);
-                                if(!matchResult) {
-                                    hasError = true;
-                                    updateMsg(msgId, '搜索路径格式不符合规则', 'red');
-                                } else if(validInputValues.indexOf(inputValue) !== -1) {
-                                    hasError = true;
-                                    updateMsg(msgId, '搜索路径重复', 'red');
-                                } else {
-                                    validInputValues[validInputValues.length] = inputValue;
-                                    validInputNumberIds[validInputNumberIds.length] = numberId;
-                                    //updateMsg(msgId, CHECK_PASSED, 'green');
-                                }
+                //检查高级搜索参数
+                var requireNotFile = false, requireNotDirectory = false;
+                var searchPathsDiv = document.getElementById('searchPathsDiv');
+                var searchPathsInputs = searchPathsDiv.getElementsByTagName('input');
+                if(searchPathsInputs) {
+                    var validInputValues = [];
+                    var validInputNumberIds = [];
+                    for(var i=0;i<searchPathsInputs.length;i++) {
+                        var input = searchPathsInputs[i];
+                        var inputValue = input.value;
+                        var matchResult = input.id.match(searchPathsInputIdRegex);
+                        var numberId = Number(matchResult[1]);
+                        var msgId = 'searchPathsMsg' + numberId;
+                        if(inputValue && inputValue !== '') {
+                            var matchResult = inputValue.match(urlRelativePathRegex);
+                            if(!matchResult) {
+                                hasError = true;
+                                updateMsg(msgId, '搜索路径格式不符合规则', 'red');
+                            } else if(validInputValues.indexOf(inputValue) !== -1) {
+                                hasError = true;
+                                updateMsg(msgId, '搜索路径重复', 'red');
+                            } else {
+                                validInputValues[validInputValues.length] = inputValue;
+                                validInputNumberIds[validInputNumberIds.length] = numberId;
+                                //updateMsg(msgId, CHECK_PASSED, 'green');
+                                hideElementById(msgId);
                             }
                         }
-                        if(validInputValues.length > 0) {
-                            var xhrKey = 'checkPathExists';
-                            abortXhr(xhrKey);
-                            sendPostFormRequest(
-                                contextPath + '/checkPathExists',
-                                'paths=' + encodeURIComponent(validInputValues),
-                                false,
-                                xhrKey,
-                                function (xhr) {
-                                    var success = false;
-                                    var failMsg = null;
-                                    if (xhr.status === 200) {
-                                        var returnObject = JSON.parse(xhr.responseText);
-                                        if(returnObject.success) {
-                                            var existsMap = returnObject.data;
-                                            if(existsMap) {
-                                                success = true;
-                                                for(var i=0;i<validInputValues.length;i++) {
-                                                    var path = validInputValues[i];
-                                                    var numberId = validInputNumberIds[i];
-                                                    var msgId = 'searchPathsMsg' + numberId;
-                                                    if(existsMap[path]) {
-                                                        updateMsg(msgId, CHECK_PASSED, 'green');
-                                                    } else {
-                                                        hasError = true;
-                                                        updateMsg(msgId, '该路径不存在！', 'red');
-                                                    }
+                    }
+                    if(validInputValues.length > 0) {
+                        var xhrKey = 'checkPathExists';
+                        abortXhr(xhrKey);
+                        sendPostFormRequest(
+                            contextPath + '/checkPathExists',
+                            'paths=' + encodeURIComponent(validInputValues),
+                            false,
+                            xhrKey,
+                            function (xhr) {
+                                var success = false;
+                                var failMsg = null;
+                                if (xhr.status === 200) {
+                                    var returnObject = JSON.parse(xhr.responseText);
+                                    if(returnObject.success) {
+                                        var existsMap = returnObject.data;
+                                        if(existsMap) {
+                                            success = true;
+                                            for(var i=0;i<validInputValues.length;i++) {
+                                                var path = validInputValues[i];
+                                                var numberId = validInputNumberIds[i];
+                                                var msgId = 'searchPathsMsg' + numberId;
+                                                if(existsMap[path]) {
+                                                    //updateMsg(msgId, CHECK_PASSED, 'green');
+                                                    hideElementById(msgId);
+                                                } else {
+                                                    hasError = true;
+                                                    updateMsg(msgId, '该路径不存在！', 'red');
                                                 }
                                             }
-                                        } else {
-                                            failMsg = returnObject.message;
                                         }
                                     } else {
-                                        failMsg = '状态码=' + xhr.status;
+                                        failMsg = returnObject.message;
                                     }
-                                    if(!success) {
-                                        hasError = true;
-                                        for(var i=0;i<validInputNumberIds.length;i++) {
-                                            var msgId = 'searchPathsMsg' + validInputNumberIds[i];
-                                            updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
-                                        }
-                                    }
-                                }, function(e) {
+                                } else {
+                                    failMsg = '状态码=' + xhr.status;
+                                }
+                                if(!success) {
                                     hasError = true;
-                                    var errorMsg = '检查路径是否存在失败:连接服务器失败';
-                                    if(e) {
-                                        if(e.name) {
-                                            errorMsg = errorMsg + '(' + e.name + ')';
-                                        } else if(e.message) {
-                                            errorMsg = errorMsg + '(' + e.message + ')';
-                                        }
-                                    }
                                     for(var i=0;i<validInputNumberIds.length;i++) {
                                         var msgId = 'searchPathsMsg' + validInputNumberIds[i];
-                                        updateMsg(msgId, errorMsg, 'red');
+                                        updateMsg(msgId, '检查路径是否存在失败' + (failMsg ? ':' + failMsg : ''), 'red');
                                     }
                                 }
-                            );
-                        }
-                    }
-                    var searchType = getCheckedValue('searchType');
-                    var searchTypeValue = null;
-                    var validSearchTypeValues = (searchMode === 'INDEXED' && indexFileContent) ?
-                        ['FILENAME_ONLY','FILE_CONTENT_ONLY','BOTH'] : ['FILENAME_ONLY'];
-                    if(!searchType || validSearchTypeValues.indexOf(searchType) === -1) {
-                        hasError = true;
-                        var msg = '搜索关键字匹配类型字段' + (!searchType ? '没有选中值' : '选中了非法的值');
-                        updateMsg('searchTypeMsg', msg, 'red');
-                    } else {
-                        updateMsg('searchTypeMsg', CHECK_PASSED, 'green');
-                        searchTypeValue = searchType;
-                    }
-                    var filterFileTypeValue = getCheckedValue('filterFileType');
-                    var validFilterFileTypeValues = ['true','false'];
-                    if(!filterFileTypeValue || validFilterFileTypeValues.indexOf(filterFileTypeValue) === -1) {
-                        hasError = true;
-                        var msg = '过滤文件后缀名选项' + (!filterFileTypeValue ? '没有选中值' : '选中了非法的值');
-                        updateMsg('filterFileTypeMsg', msg, 'red');
-                    } else {
-                        updateMsg('filterFileTypeMsg', CHECK_PASSED, 'green');
-                    }
-                    var fileTypesDiv = document.getElementById('fileTypesDiv');
-                    var fileTypeInputs = fileTypesDiv.getElementsByTagName('input');
-                    if(fileTypeInputs) {
-                        var fileTypeArr = [];
-                        for(var i=0;i<fileTypeInputs.length;i++) {
-                            var input = fileTypeInputs[i];
-                            var inputValue = input.value;
-                            var isCustomInput = input.getAttribute('custom-flag') === 'true';
-                            var matchResult = input.id.match(fileTypesInputIdRegex);
-                            if(matchResult) {
-                                var numberId = Number(matchResult[1]);
-                                var msgId = 'fileTypeMsg' + numberId;
-                                if(inputValue && inputValue !== '') {
-                                    var matchResult = inputValue.match(fileSuffixRegex);
-                                    if(!matchResult) {
-                                        hasError = true;
-                                        updateMsg(msgId, '非法的文件后缀', 'red');
-                                    } else if(fileTypeArr.indexOf(inputValue) === -1) {
-                                        document.getElementById(msgId).style.display = 'none';
-                                        document.getElementById(msgId).innerText = '';
-                                        fileTypeArr[fileTypeArr.length] = inputValue;
-                                        if(isCustomInput) {
-                                            updateMsg(msgId, CHECK_PASSED, 'green');
-                                        }
-                                    } else {
-                                        //允许重复后缀
-                                        /*hasError = true;
-                                        updateMsg(msgId, '重复的文件后缀', 'red');*/
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    var caseSensitive = getCheckedValue('caseSensitive');
-                    var caseSensitiveValue = null;
-                    if(caseSensitive !== 'true' && caseSensitive !== 'false') {
-                        hasError = true;
-                        var msg = '类型字段' + (!caseSensitive ? '没有选中值' : '选中了非法的值');
-                        updateMsg('caseSensitiveMsg', msg, 'red');
-                    } else {
-                        updateMsg('caseSensitiveMsg', CHECK_PASSED, 'green');
-                        if(caseSensitive === 'true') {
-                            caseSensitiveValue = true;
-                        } else if(caseSensitive === 'false') {
-                            caseSensitiveValue = false;
-                        }
-                    }
-                    var directory = getCheckedValue('directory');
-                    var directoryValue = null;
-                    if(directory !== 'true' && directory !== 'false' && directory !== '') {
-                        hasError = true;
-                        var msg = '类型字段' + (!directory ? '没有选中值' : '选中了非法的值');
-                        updateMsg('directory-msg', msg, 'red');
-                    } else {
-                        updateMsg('directory-msg', CHECK_PASSED, 'green');
-                        if(directory === 'true') {
-                            directoryValue = true;
-                        } else if(directory === 'false') {
-                            directoryValue = false;
-                        }
-                    }
-                    if(dateAndTimeInputSupported) {
-                        //由浏览器直接渲染日期时间组件的情况
-                        for(var i=0;i<dateTimeInputIds.length;i++) {
-                            var inputId = dateTimeInputIds[i];
-                            if(directoryValue !== null) {
-                                if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
-                                    continue;
-                                } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
-                                    continue;
-                                }
-                            }
-                            if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
-                                continue;
-                            }
-                            var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
-                                msgId = inputId + 'Msg';
-                            var dateInputValue = document.getElementById(dateInputId).value === null ? '' :
-                                document.getElementById(dateInputId).value.replace(/[.\/]/g,'-');
-                            var timeInputValue = formatTimeInputTimeStr(document.getElementById(timeInputId));
-                            if(dateInputValue !== '' || timeInputValue !== '') {
-                                if(dateInputValue === '') {
-                                    hasError = true;
-                                    updateMsg(msgId, '请输入日期', 'red');
-                                } else if(timeInputValue === '') {
-                                    hasError = true;
-                                    updateMsg(msgId, '请输入时间', 'red');
-                                } else {
-                                    document.getElementById(inputId).value = dateInputValue + ' ' + timeInputValue;
-                                    updateMsg(msgId, CHECK_PASSED, 'green');
-                                }
-                            }
-                        }
-                    } else {
-                        //通过对话框手动输入日期时间的情况
-                        for(var i=0;i<dateTimeInputIds.length;i++) {
-                            var inputId = dateTimeInputIds[i];
-                            if(directoryValue !== null) {
-                                if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
-                                    continue;
-                                } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
-                                    continue;
-                                }
-                            }
-                            if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
-                                continue;
-                            }
-                            var msgId = inputId + 'Msg';
-                            var input = document.getElementById(inputId);
-                            var inputValue = input.value;
-                            if(inputValue === '') {
-                                input.disabled = 'disabled';
-                            } else {
-                                var isValid = isValidDateTime(inputValue);
-                                if(isValid) {
-                                    updateMsg(msgId, CHECK_PASSED, 'green');
-                                } else {
-                                    hasError = true;
-                                    updateMsg(msgId, '日期时间格式错误', 'red');
-                                }
-                            }
-                        }
-                    }
-                    if(searchTypeValue && searchTypeValue !== 'FILE_CONTENT_ONLY' && (directoryValue === null || directoryValue)) {
-                        var validFolderCompressStatuses = ['NOT_COMPRESSED', 'COMPRESSING', 'COMPRESSED'];
-                        var folderCompressStatusSelect = document.getElementById('folderCompressStatusSelect');
-                        var folderCompressStatus = getSelectedOptionValue(folderCompressStatusSelect);
-                        var folderCompressStatusMsgId = 'folderCompressStatusSelectMsg';
-                        if(folderCompressStatus && folderCompressStatus !== '') {
-                            if(validFolderCompressStatuses.indexOf(folderCompressStatus) !== -1) {
-                                updateMsg(folderCompressStatusMsgId, CHECK_PASSED, 'green');
-                            } else {
+                            }, function(e) {
                                 hasError = true;
-                                updateMsg(folderCompressStatusMsgId, '非法的压缩状态', 'red');
+                                var errorMsg = '检查路径是否存在失败:连接服务器失败';
+                                if(e) {
+                                    if(e.name) {
+                                        errorMsg = errorMsg + '(' + e.name + ')';
+                                    } else if(e.message) {
+                                        errorMsg = errorMsg + '(' + e.message + ')';
+                                    }
+                                }
+                                for(var i=0;i<validInputNumberIds.length;i++) {
+                                    var msgId = 'searchPathsMsg' + validInputNumberIds[i];
+                                    updateMsg(msgId, errorMsg, 'red');
+                                }
+                            }
+                        );
+                    }
+                }
+                var searchType = getCheckedValue('searchType');
+                var searchTypeValue = null;
+                var validSearchTypeValues = (searchMode === 'INDEXED' && indexFileContent) ?
+                    ['FILENAME_ONLY','FILE_CONTENT_ONLY','BOTH'] : ['FILENAME_ONLY'];
+                if(!searchType || validSearchTypeValues.indexOf(searchType) === -1) {
+                    hasError = true;
+                    var msg = '搜索关键字匹配类型字段' + (!searchType ? '没有选中值' : '选中了非法的值');
+                    updateMsg('searchTypeMsg', msg, 'red');
+                } else {
+                    //updateMsg('searchTypeMsg', CHECK_PASSED, 'green');
+                    hideElementById('searchTypeMsg');
+                    searchTypeValue = searchType;
+                    if(searchMode === 'INDEXED' && indexFileContent && searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY') {
+                        requireNotDirectory = true;
+                    }
+                }
+                var filterFileTypeValue = getCheckedValue('filterFileType');
+                var validFilterFileTypeValues = ['true','false'];
+                if(!filterFileTypeValue || validFilterFileTypeValues.indexOf(filterFileTypeValue) === -1) {
+                    hasError = true;
+                    var msg = '过滤文件后缀名选项' + (!filterFileTypeValue ? '没有选中值' : '选中了非法的值');
+                    updateMsg('filterFileTypeMsg', msg, 'red');
+                } else {
+                    //updateMsg('filterFileTypeMsg', CHECK_PASSED, 'green');
+                    hideElementById('filterFileTypeMsg');
+                    if(filterFileTypeValue === 'true') {
+                        filterFileTypeValue = true;
+                        requireNotDirectory = true;
+                    } else {
+                        filterFileTypeValue = false;
+                    }
+                }
+                var fileTypesDiv = document.getElementById('fileTypesDiv');
+                var fileTypeInputs = fileTypesDiv.getElementsByTagName('input');
+                if(fileTypeInputs) {
+                    var fileTypeArr = [];
+                    for(var i=0;i<fileTypeInputs.length;i++) {
+                        var input = fileTypeInputs[i];
+                        var inputValue = input.value;
+                        var isCustomInput = input.getAttribute('custom-flag') === 'true';
+                        var matchResult = input.id.match(fileTypesInputIdRegex);
+                        if(matchResult) {
+                            var numberId = Number(matchResult[1]);
+                            var msgId = 'fileTypeMsg' + numberId;
+                            if(inputValue && inputValue !== '') {
+                                var matchResult = inputValue.match(fileSuffixRegex);
+                                if(!matchResult) {
+                                    hasError = true;
+                                    updateMsg(msgId, '非法的文件后缀', 'red');
+                                } else if(fileTypeArr.indexOf(inputValue) === -1) {
+                                    document.getElementById(msgId).style.display = 'none';
+                                    document.getElementById(msgId).innerText = '';
+                                    fileTypeArr[fileTypeArr.length] = inputValue;
+                                    //updateMsg(msgId, CHECK_PASSED, 'green');
+                                    hideElementById(msgId);
+                                } else {
+                                    //允许重复后缀
+                                    /*hasError = true;
+                                    updateMsg(msgId, '重复的文件后缀', 'red');*/
+                                    //updateMsg(msgId, CHECK_PASSED, 'green');
+                                    hideElementById(msgId);
+                                }
                             }
                         }
                     }
-                    var fileSizeValidUnits = ['B','KB','MB','GB','TB'];
-                    for(var i=0;i<fileSizeInputIds.length;i++) {
-                        var inputId = fileSizeInputIds[i];
+                }
+                var caseSensitive = getCheckedValue('caseSensitive');
+                var caseSensitiveValue = null;
+                if(caseSensitive !== 'true' && caseSensitive !== 'false') {
+                    hasError = true;
+                    var msg = '类型字段' + (!caseSensitive ? '没有选中值' : '选中了非法的值');
+                    updateMsg('caseSensitiveMsg', msg, 'red');
+                } else {
+                    //updateMsg('caseSensitiveMsg', CHECK_PASSED, 'green');
+                    hideElementById('caseSensitiveMsg');
+                    if(caseSensitive === 'true') {
+                        caseSensitiveValue = true;
+                    } else if(caseSensitive === 'false') {
+                        caseSensitiveValue = false;
+                    }
+                }
+                var directory = getCheckedValue('directory');
+                var directoryValue = null;
+                if(directory !== 'true' && directory !== 'false' && directory !== '') {
+                    hasError = true;
+                    var msg = '类型字段' + (!directory ? '没有选中值' : '选中了非法的值');
+                    updateMsg('directory-msg', msg, 'red');
+                } else {
+                    if(directory === 'true') {
+                        directoryValue = true;
+                        requireNotFile = true;
+                    } else if(directory === 'false') {
+                        directoryValue = false;
+                        requireNotDirectory = true;
+                    }
+                    if(requireNotFile && requireNotDirectory) {
+                        hasError = true;
+                        updateMsg('directory-msg', '选中值与其他条件冲突', 'red');
+                    } else {
+                        //updateMsg('directory-msg', CHECK_PASSED, 'green');
+                        hideElementById('directory-msg');
+                    }
+                }
+                if(dateAndTimeInputSupported) {
+                    //由浏览器直接渲染日期时间组件的情况
+                    for(var i=0;i<dateTimeInputIds.length;i++) {
+                        var inputId = dateTimeInputIds[i];
                         if(directoryValue !== null) {
                             if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
                                 continue;
@@ -1085,80 +757,584 @@
                         if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
                             continue;
                         }
-                        var numberInputId = inputId + 'Number',
-                            selectId = inputId + 'Select',
+                        var dateInputId = inputId + 'Date', timeInputId = inputId + 'Time',
                             msgId = inputId + 'Msg';
-                        var input = document.getElementById(inputId),
-                            numberInput = document.getElementById(numberInputId),
-                            select = document.getElementById(selectId);
-                        if(numberInput.value === '') {
-                            input.disabled = 'disabled';
-                        } else {
-                            var number = Number(numberInput.value);
-                            var unit = getSelectedOptionValue(select,false);
-                            var numberMatchResult = numberInput.value.match(fileSizeNumberRegex);
-                            if(!numberMatchResult) {
+                        var dateInputValue = document.getElementById(dateInputId).value === null ? '' :
+                            document.getElementById(dateInputId).value.replace(/[.\/]/g,'-');
+                        var timeInputValue = formatTimeInputTimeStr(document.getElementById(timeInputId));
+                        if(dateInputValue !== '' || timeInputValue !== '') {
+                            if(dateInputValue === '') {
                                 hasError = true;
-                                updateMsg(msgId, '文件大小数值格式错误', 'red');
-                            } else if(unit === null) {
+                                updateMsg(msgId, '请输入日期', 'red');
+                            } else if(timeInputValue === '') {
                                 hasError = true;
-                                updateMsg(msgId, '文件大小单位未选择', 'red');
-                            } else if(fileSizeValidUnits.indexOf(unit) === -1) {
-                                hasError = true;
-                                updateMsg(msgId, '非法的文件大小单位', 'red');
+                                updateMsg(msgId, '请输入时间', 'red');
                             } else {
-                                input.value = number + unit;
+                                document.getElementById(inputId).value = dateInputValue + ' ' + timeInputValue;
                                 updateMsg(msgId, CHECK_PASSED, 'green');
                             }
+                        }
+                    }
+                } else {
+                    //通过对话框手动输入日期时间的情况
+                    for(var i=0;i<dateTimeInputIds.length;i++) {
+                        var inputId = dateTimeInputIds[i];
+                        if(directoryValue !== null) {
+                            if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
+                                continue;
+                            } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
+                                continue;
+                            }
+                        }
+                        if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
+                            continue;
+                        }
+                        var msgId = inputId + 'Msg';
+                        var input = document.getElementById(inputId);
+                        var inputValue = input.value;
+                        if(!inputValue || inputValue.trim() === '') {
+                            input.value = '';
+                        } else {
+                            var isValid = isValidDateTime(inputValue);
+                            if(isValid) {
+                                updateMsg(msgId, CHECK_PASSED, 'green');
+                            } else {
+                                hasError = true;
+                                updateMsg(msgId, '日期时间格式错误', 'red');
+                            }
+                        }
+                    }
+                }
+                if(searchTypeValue && searchTypeValue !== 'FILE_CONTENT_ONLY' && (directoryValue === null || directoryValue)) {
+                    var validFolderCompressStatuses = ['NOT_COMPRESSED', 'COMPRESSING', 'COMPRESSED'];
+                    var folderCompressStatusSelect = document.getElementById('folderCompressStatusSelect');
+                    var folderCompressStatus = getSelectedOptionValue(folderCompressStatusSelect);
+                    var folderCompressStatusMsgId = 'folderCompressStatusSelectMsg';
+                    if(folderCompressStatus && folderCompressStatus !== '') {
+                        if(validFolderCompressStatuses.indexOf(folderCompressStatus) !== -1) {
+                            updateMsg(folderCompressStatusMsgId, CHECK_PASSED, 'green');
+                        } else {
+                            hasError = true;
+                            updateMsg(folderCompressStatusMsgId, '非法的压缩状态', 'red');
+                        }
+                    }
+                }
+                var fileSizeValidUnits = ['B','KiB','MiB','GiB','TiB'];
+                for(var i=0;i<fileSizeInputIds.length;i++) {
+                    var inputId = fileSizeInputIds[i];
+                    if(directoryValue !== null) {
+                        if(directoryValue && fileGroupInputIds.indexOf(inputId) !== -1) {
+                            continue;
+                        } else if(!directoryValue && directoryGroupInputIds.indexOf(inputId) !== -1){
+                            continue;
+                        }
+                    }
+                    if(searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY' && directoryGroupInputIds.indexOf(inputId) !== -1) {
+                        continue;
+                    }
+                    var numberInputId = inputId + 'Number',
+                        selectId = inputId + 'Select',
+                        msgId = inputId + 'Msg';
+                    var input = document.getElementById(inputId),
+                        numberInput = document.getElementById(numberInputId),
+                        select = document.getElementById(selectId);
+                    if(!numberInput.value || numberInput.value.trim() === '') {
+                        input.value = '';
+                    } else {
+                        var number = Number(numberInput.value);
+                        var unit = getSelectedOptionValue(select,false);
+                        var numberMatchResult = numberInput.value.match(fileSizeNumberRegex);
+                        if(!numberMatchResult) {
+                            hasError = true;
+                            updateMsg(msgId, '文件大小数值格式错误', 'red');
+                        } else if(unit === null) {
+                            hasError = true;
+                            updateMsg(msgId, '文件大小单位未选择', 'red');
+                        } else if(fileSizeValidUnits.indexOf(unit) === -1) {
+                            hasError = true;
+                            updateMsg(msgId, '非法的文件大小单位', 'red');
+                        } else {
+                            input.value = number + unit;
+                            updateMsg(msgId, CHECK_PASSED, 'green');
                         }
                     }
                 }
             }
             if(!hasError) {
-                if(!advancedSearchSwitch) {
-                    var ascDiv = document.getElementById('advanced-condition-div');
-                    var ascInputs = ascDiv.getElementsByTagName('input');
-                    if(ascInputs) {
-                        for(var i=0;i<ascInputs.length;i++) {
-                            ascInputs[i].disabled = 'disabled';
-                        }
-                    }
-                    var ascSelects = ascDiv.getElementsByTagName('select');
-                    if(ascSelects) {
-                        for(var i=0;i<ascSelects.length;i++) {
-                            ascSelects[i].disabled = 'disabled';
-                        }
-                    }
-                } else {
-                    if(!filterFileType) {
-                        var fileTypeInputs = getElementsByName('input', 'fileTypes');
+                var ascObject = null;
+                if(advancedSearchSwitch) {
+                    ascObject = {};
+                    if(filterFileTypeValue) {
+                        ascObject['filterFileType'] = filterFileTypeValue;
+                        var fileTypesDiv = document.getElementById('fileTypesDiv');
+                        var fileTypeInputs = fileTypesDiv.getElementsByTagName('input');
                         if(fileTypeInputs) {
+                            var fileTypesStr = '';
                             for(var i=0;i<fileTypeInputs.length;i++) {
-                                fileTypeInputs[i].disabled = 'disabled';
+                                var fileTypeInput = fileTypeInputs[i];
+                                if(((fileTypeInput.type === 'checkbox' && fileTypeInput.checked)
+                                        || (fileTypeInput.type === 'text' && fileTypeInput.getAttribute('custom-flag') === 'true'))
+                                    && fileTypeInput.value && fileTypeInput.value.trim() !== '') {
+                                    fileTypesStr = fileTypesStr + ',' + fileTypeInputs[i].value.trim();
+                                }
+                            }
+                            if(fileTypesStr !== '') {
+                                ascObject['fileTypes'] = fileTypesStr.substring(1);
                             }
                         }
+                    }
+                    var searchPathInputs = getElementsByName('input', 'searchPaths');
+                    if(searchPathInputs) {
+                        var searchPathsStr = '';
+                        for(var i=0;i<searchPathInputs.length;i++) {
+                            if(searchPathInputs[i].value && searchPathInputs[i].value.trim() !== '') {
+                                searchPathsStr = searchPathsStr + ',' + searchPathInputs[i].value.trim();
+                            }
+                        }
+                        if(searchPathsStr !== '') {
+                            ascObject['searchPaths'] = searchPathsStr.substring(1);
+                        }
+                    }
+                    var searchType = getCheckedValue('searchType');
+                    if(searchType) {
+                        ascObject['searchType'] = searchType;
+                    }
+                    var caseSensitive = getCheckedValue('caseSensitive');
+                    if(caseSensitive) {
+                        ascObject['caseSensitive'] = caseSensitive;
                     }
                     if(directoryValue !== null) {
-                        if(directoryValue) {
-                            for(var i=0;i<fileGroupInputIds.length;i++) {
-                                var inputId = fileGroupInputIds[i];
-                                document.getElementById(inputId).disabled = 'disabled';
-                            }
-                        } else {
-                            for(var i=0;i<directoryGroupInputIds.length;i++) {
-                                var inputId = directoryGroupInputIds[i];
-                                document.getElementById(inputId).disabled = 'disabled';
+                        ascObject['directory'] = directoryValue;
+                    }
+                    var lastModifiedLower = document.getElementById('lastModifiedLower').value;
+                    if(lastModifiedLower && lastModifiedLower.trim() !== '') {
+                        ascObject['lastModifiedLower'] = lastModifiedLower;
+                    }
+                    var lastModifiedUpper = document.getElementById('lastModifiedUpper').value;
+                    if(lastModifiedUpper && lastModifiedUpper.trim() !== '') {
+                        ascObject['lastModifiedUpper'] = lastModifiedUpper;
+                    }
+                    if(!requireNotFile) {
+                        for(var i=0;i<fileGroupInputIds.length;i++) {
+                            var inputId = fileGroupInputIds[i];
+                            var input = document.getElementById(inputId);
+                            if(input.value && input.value.trim() !== '') {
+                                ascObject[input.name] = input.value;
                             }
                         }
                     }
-                    if(searchMode === 'INDEXED' && indexFileContent && searchTypeValue && searchTypeValue === 'FILE_CONTENT_ONLY') {
+                    if(!requireNotDirectory) {
                         for(var i=0;i<directoryGroupInputIds.length;i++) {
                             var inputId = directoryGroupInputIds[i];
-                            document.getElementById(inputId).disabled = 'disabled';
+                            var input = document.getElementById(inputId);
+                            if(input.tagName.toLowerCase() === 'input' && input.value && input.value.trim() !== '') {
+                                ascObject[input.name] = input.value;
+                            } else if(input.tagName.toLowerCase() === 'select') {
+                                var selectedValue = getSelectedOptionValue(input);
+                                if(selectedValue && selectedValue.trim() !== '') {
+                                    ascObject[input.name] = input.value;
+                                }
+                            }
                         }
                     }
+
                 }
-                document.getElementById('search-form').submit();
+                //document.getElementById('search-form').submit();
+                submitSearch(keywordInputValue,ascObject);
+            }
+        }
+        function submitSearch(keyword,ascObject,pageNo,pageSize,sortColumn,sortOrder) {
+            if(!keyword) {
+                if(window.console) {
+                    console.error('keyword not specified!');
+                    return;
+                }
+            }
+            var paramObject = {};
+            if(!searchId) {
+                if(window.console) {
+                    console.error('searchId not specified!');
+                    return;
+                }
+            }
+            paramObject['searchId'] = searchId;
+            paramObject['keyword'] = keyword;
+            if(ascObject) {
+                for(var key in ascObject) {
+                    if(ascObject.hasOwnProperty(key)) {
+                        paramObject[key] = ascObject[key];
+                    }
+                }
+            }
+            if(pageNo) {
+                paramObject['pageNo'] = pageNo;
+            }
+            if(pageSize) {
+                paramObject['pageSize'] = pageSize;
+            } else {
+                var selectedPageSize = getSelectedOptionValue(document.getElementById('page-size-select'));
+                paramObject['pageSize'] = selectedPageSize;
+            }
+            if(sortColumn) {
+                paramObject['sortColumn'] = sortColumn;
+                if(sortColumn !== 'DEFAULT' && sortOrder) {
+                    paramObject['sortOrder'] = sortOrder;
+                }
+            }
+
+            var paramStr = convertToUrlEncodedDataStr(paramObject);
+            var xhrKey = 'search';
+            abortXhr(xhrKey);
+            var resultContainerDiv = document.getElementById('result-container-div');
+            resultContainerDiv.style.display = '';
+            var searchHint = document.getElementById('searchHint');
+            searchHint.innerText = '正在搜索...';
+            var searchMessage = document.getElementById('searchMessage');
+            searchMessage.style.display = 'none';
+            var searchMessageBr1 = document.getElementById('searchMessageBr1');
+            searchMessageBr1.style.display = 'none';
+            var searchMessageBr2 = document.getElementById('searchMessageBr2')
+            searchMessageBr2.style.display = 'none';
+            var sortDiv = document.getElementById('sort-div');
+            //sortDiv.style.display = 'none';
+            var resultDiv = document.getElementById('result-div');
+            //resultDiv.style.display = 'none';
+            var pageInfo = document.getElementById('pageInfo');
+            //pageInfo.style.display = 'none';
+            var pageDiv = document.getElementById('page-div');
+            //pageDiv.style.display = 'none';
+            sendPostFormRequest(
+                contextPath + '/searchApi',
+                paramStr,
+                true,
+                xhrKey,
+                function (xhr) {
+                    searchHint.innerText = '正在处理数据...';
+                    if (xhr.status === 200) {
+                        var returnObject = JSON.parse(xhr.responseText);
+                        if(returnObject.success) {
+                            var returnData = returnObject.data;
+                            if(returnData) {
+                                handleErrorMessage();
+                                prevKeyword = keyword;
+                                prevAscObject = ascObject;
+                                prevSortColumn = sortColumn;
+                                prevSortOrder = sortOrder;
+                                var sortColumnSelect = document.getElementById('sortColumnSelect');
+                                handleSortSelect(sortColumnSelect, ascObject, sortColumn, sortOrder);
+                                sortDiv.style.display = '';
+                                handleResultDiv(resultDiv, returnData);
+                                resultDiv.style.display = '';
+                                handlePageInfo(pageInfo, returnData);
+                                pageInfo.style.display = '';
+                                handlePageDiv(pageDiv, returnData);
+                                pageDiv.style.display = '';
+                            } else {
+                                handleErrorMessage('接口返回数据为空');
+                            }
+                        } else {
+                            handleErrorMessage('搜索失败:' + returnObject.message);
+                        }
+                    } else {
+                        handleErrorMessage('搜索失败，状态码:' + xhr.status);
+                    }
+                    searchHint.innerText = '搜索结果';
+                }, function(e) {
+                    var errorMsg = '搜索失败:连接服务器失败';
+                    if(e) {
+                        if(e.name) {
+                            errorMsg = errorMsg + '(' + e.name + ')';
+                        } else if(e.message) {
+                            errorMsg = errorMsg + '(' + e.message + ')';
+                        }
+                    }
+                    searchHint.innerText = '搜索结果';
+                    handleErrorMessage(errorMsg);
+                }, 40000, function() {
+                    var errorMsg = '搜索失败:接口超时';
+                    searchHint.innerText = '搜索结果';
+                    handleErrorMessage(errorMsg);
+                }
+            );
+        }
+        function handleErrorMessage(errorMessage) {
+            var searchMessage = document.getElementById('searchMessage');
+            if(errorMessage) {
+                searchMessage.innerText = errorMessage;
+                searchMessage.style.display = '';
+                document.getElementById('searchMessageBr1').style.display = '';
+                document.getElementById('searchMessageBr2').style.display = '';
+            } else {
+                searchMessage.style.display = 'none';
+                document.getElementById('searchMessageBr1').style.display = 'none';
+                document.getElementById('searchMessageBr2').style.display = 'none';
+                hideElementById('pageNoMsg');
+            }
+        }
+        function handlePageDiv(pageDiv, returnData)
+        {
+            var ftsPageNo = returnData.currentPage;
+            var ftsPageCurrentPage = returnData.currentPage;
+            var ftsPageCurrentSize = returnData.currentSize;
+            var ftsPageTotalPage = returnData.totalPage;
+            var ftsPageTotalSize = returnData.totalSize;
+            document.getElementById('page-no').value = ftsPageNo;
+
+            //deal with first-page,previous-page,next-page,last-page buttons
+            var firstPageNo = 1;
+            var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
+            var previousPageNo = (ftsPageCurrentPage > 1) ? (ftsPageCurrentPage - 1) : 1;
+            var nextPageNo = (ftsPageCurrentPage < lastPageNo) ? (ftsPageCurrentPage + 1) : lastPageNo;
+            document.getElementById("first-page-button").onclick = function() {
+                //pageNoInput.value = firstPageNo;
+                //pageForm.submit();
+                submitSearch(prevKeyword, prevAscObject, firstPageNo, null, prevSortColumn, prevSortOrder);
+            };
+            document.getElementById("last-page-button").onclick = function() {
+                //pageNoInput.value = lastPageNo;
+                //pageForm.submit();
+                submitSearch(prevKeyword, prevAscObject, lastPageNo, null, prevSortColumn, prevSortOrder);
+            };
+            document.getElementById("previous-page-button").onclick = function() {
+                //pageNoInput.value = previousPageNo;
+                //pageForm.submit();
+                submitSearch(prevKeyword, prevAscObject, previousPageNo, null, prevSortColumn, prevSortOrder);
+            };
+            document.getElementById("next-page-button").onclick = function() {
+                //pageNoInput.value = nextPageNo;
+                //pageForm.submit();
+                submitSearch(prevKeyword, prevAscObject, nextPageNo, null, prevSortColumn, prevSortOrder);
+            };
+
+            //deal with page-size-select
+            var tagSelectOptions = document.getElementById("page-size-select").children;
+            var foundOption = false;
+            for(var i=0;i<tagSelectOptions.length;i++) {
+                if(tagSelectOptions[i].value == returnData.pageSize) {
+                    foundOption = true;
+                    //tagSelectOptions[i].setAttribute("selected", "selected");
+                    //tagSelectOptions[i].selected = true;
+                    setOptionSelected(tagSelectOptions[i]);
+                    break;
+                }
+            }
+            //alert('foundOption='+foundOption);
+            if(!foundOption) {
+                //tagSelectOptions[0].setAttribute("selected", "selected");
+                //tagSelectOptions[0].selected = true;
+                setOptionSelected(tagSelectOptions[0]);
+            }
+        }
+        function handlePageInfo(pageInfo, returnData) {
+            document.getElementById('current-page').innerText = returnData.currentPage;
+            document.getElementById('current-size').innerText = returnData.currentSize;
+            document.getElementById('total-page').innerText = returnData.totalPage;
+            document.getElementById('total-size').innerText = returnData.totalSize;
+        }
+        function handleResultDiv(resultDiv, returnData) {
+            clearChildren(resultDiv);
+            var dataArr = returnData.data;
+            var fcsDescObject = {
+                'NOT_COMPRESSED': '未压缩',
+                'COMPRESSING': '压缩中',
+                'COMPRESSED': '已压缩'
+            };
+            if(dataArr) {
+                for(var i=0;i<dataArr.length;i++) {
+                    var item = dataArr[i];
+                    var div = document.createElement('div');
+                    var span = document.createElement('span');
+                    span.innerText = (item.directory ? '文件夹名称：' : '文件名称：') + item.filename;
+                    div.appendChild(span);
+                    resultDiv.appendChild(div);
+                    
+                    div = document.createElement('div');
+                    div.innerText = '所在路径：' + item.parentRelativePath;
+                    resultDiv.appendChild(div);
+                    
+                    if(searchMode === 'INDEXED' && indexFileContent && !item.directory) {
+                        div = document.createElement('div');
+                        div.innerHTML = '文件内容：' + item.fileContent;
+                        resultDiv.appendChild(div);
+                    }
+                    
+                    div = document.createElement('div');
+                    span = document.createElement('span');
+                    span.innerText = '类型：' + (item.directory ? '文件夹' : '文件');
+                    div.appendChild(span);
+                    var space = null;
+                    if(!item.directory) {
+                        space = document.createTextNode(' ');
+                        div.appendChild(space);
+                        span = document.createElement('span');
+                        span.innerText =  '文件大小：' + item.fileSizeStr;
+                        div.appendChild(span);
+                    }
+                    space = document.createTextNode(' ');
+                    div.appendChild(space);
+                    span = document.createElement('span');
+                    span.innerText =  '修改时间：' + item.lastModifiedStr;
+                    div.appendChild(span);
+                    resultDiv.appendChild(div);
+                    
+                    if(zipEnabled && item.directory) {
+                        div = document.createElement('div');
+                        span = document.createElement('span');
+                        span.innerText =  '文件夹压缩状态：' + fcsDescObject[item.compressStatus];
+                        div.appendChild(span); 
+                        if(item.compressStatus == 'COMPRESSED') {
+                            space = document.createTextNode(' ');
+                            div.appendChild(space);
+                            span = document.createElement('span');
+                            span.innerText =  '压缩文件大小：' + item.compressedFileSizeStr;
+                            div.appendChild(span);
+                            space = document.createTextNode(' ');
+                            div.appendChild(space);
+                            span = document.createElement('span');
+                            span.innerText =  '压缩文件修改时间：' + item.compressedFileLastModifiedStr;
+                            div.appendChild(span); 
+                        }
+                        resultDiv.appendChild(div);
+                    }
+                    
+                    div = document.createElement('div');
+                    div.innerText = '相关链接：';
+                    if(item.directory) {
+                        var a = document.createElement('a');
+                        a.innerText = '访问目录';
+                        a.setAttribute('href',concatUrlList(item.parentRelativePath + '/' + item.filename, 1, returnData.pageSize));
+                        div.appendChild(a);
+                        var space = document.createTextNode(' ');
+                        div.appendChild(space);
+                        a = document.createElement('a');
+                        a.innerText = '上传文件';
+                        a.setAttribute('href', concatUrlUpload(item.parentRelativePath + '/' + item.filename));
+                        div.appendChild(a);
+                        if(zipEnabled) {
+                            space = document.createTextNode(' ');
+                            div.appendChild(space);
+                            a = document.createElement('a');
+                            a.innerText = '压缩管理';
+                            a.setAttribute('href', concatUrlCompressFolder(item.parentRelativePath + '/' + item.filename));
+                            div.appendChild(a);
+                            if(item.compressStatus == 'COMPRESSED') {
+                                space = document.createTextNode(' ');
+                                div.appendChild(space);
+                                a = document.createElement('a');
+                                a.innerText = '下载文件夹(zip)';
+                                a.setAttribute('href', concatUrlDownload(item.compressedFilePath));
+                                div.appendChild(a);
+                            }
+                        }
+                    } else {
+                        var a = document.createElement('a');
+                        a.innerText = '下载文件';
+                        a.setAttribute('href', concatUrlDownload(item.parentRelativePath + '/' + item.filename));
+                        div.appendChild(a);
+                    }
+                    resultDiv.appendChild(div); 
+                    
+                    var br = document.createElement('br');
+                    resultDiv.appendChild(br);
+                }
+            }
+        }
+        function handleSortSelect(sortColumnSelect, advancedSearchCondition, sortColumn, sortOrder) {
+            clearChildren(sortColumnSelect);
+            var option = document.createElement('option');
+            option.innerText = '默认';
+            option.value = 'DEFAULT';
+            sortColumnSelect.appendChild(option);
+            option = document.createElement('option');
+            option.innerText = '文件/文件夹名称';
+            option.value = 'FILENAME';
+            sortColumnSelect.appendChild(option);
+            option = document.createElement('option');
+            option.innerText = '所在路径';
+            option.value = 'PARENT_PATH';
+            sortColumnSelect.appendChild(option);
+            option = document.createElement('option');
+            option.innerText = '修改时间';
+            option.value = 'LAST_MODIFIED';
+            sortColumnSelect.appendChild(option);
+
+            var requireFileValue = requireFile(advancedSearchCondition);
+            var requireDirectoryValue = requireDirectory(advancedSearchCondition);
+            var requireFileOrDirectoryValue = requireFileOrDirectory(advancedSearchCondition);
+            var sortColumnDescObject = {
+                TYPE: '类型',
+                FILE_CONTENT: '文件内容',
+                SIZE: '文件大小',
+                COMPRESS_STATUS: '文件夹压缩状态',
+                COMPRESS_FILE_SIZE: '压缩文件大小',
+                COMPRESS_FILE_LAST_MODIFIED: '压缩文件修改时间'
+            };
+            var needTypeOption = requireFileOrDirectoryValue;
+            if(needTypeOption) {
+                var option = document.createElement('option');
+                option.innerText = sortColumnDescObject['TYPE'];
+                option.value = 'TYPE';
+                sortColumnSelect.appendChild(option);
+            }
+            var needFileContentOption = searchMode === 'INDEXED' && indexFileContent;
+            if(needFileContentOption) {
+                needFileContentOption = !requireDirectoryValue;
+            }
+            if(needFileContentOption) {
+                var option = document.createElement('option');
+                option.innerText = sortColumnDescObject['FILE_CONTENT'];
+                option.value = 'FILE_CONTENT';
+                sortColumnSelect.appendChild(option);
+            }
+            var needSizeOption = !requireDirectoryValue;
+            if(needSizeOption) {
+                var option = document.createElement('option');
+                option.innerText = sortColumnDescObject['SIZE'];
+                option.value = 'SIZE';
+                sortColumnSelect.appendChild(option);
+            }
+            if(zipEnabled) {
+                var needCompressColumnOptions = !requireFileValue;
+                if(needCompressColumnOptions) {
+                    var compressColumns = ['COMPRESS_STATUS', 'COMPRESS_FILE_SIZE', 'COMPRESS_FILE_LAST_MODIFIED'];
+                    for(var i=0;i<compressColumns.length;i++) {
+                        var column = compressColumns[i];
+                        var option = document.createElement('option');
+                        option.innerText = sortColumnDescObject[column];
+                        option.value = column;
+                        sortColumnSelect.appendChild(option);
+                    }
+                }
+            }
+            var sortColumnOptions = sortColumnSelect.children;
+            if(sortColumn) {
+                for(var i=0;i<sortColumnOptions.length;i++) {
+                    if(sortColumnOptions[i].value == sortColumn) {
+                        setOptionSelected(sortColumnOptions[i]);
+                        break;
+                    }
+                }
+            } else {
+                document.getElementById('sortOrderSelect').disabled = 'disabled';
+            }
+            sortColumnSelect.onchange = function(e) {
+                var selectedValue = getSelectedOptionValue(this);
+                if(selectedValue === 'DEFAULT') {
+                    document.getElementById('sortOrderSelect').disabled = 'disabled';
+                } else {
+                    document.getElementById('sortOrderSelect').disabled = '';
+                }
+            };
+            var sortOrderOptions = document.getElementById("sortOrderSelect").children;
+            if(sortOrder) {
+                for(var i=0;i<sortOrderOptions.length;i++) {
+                    if(sortOrderOptions[i].value == sortOrder) {
+                        setOptionSelected(sortOrderOptions[i]);
+                        break;
+                    }
+                }
+            } else {
+                setOptionSelected(sortOrderOptions[0]);
             }
         }
         function setDateTime(id,msgId) {
@@ -1189,7 +1365,6 @@
                 targetInput.value = sourceInput.value;
             }
             updateMsg('dateTimeCheckHint', CHECK_PASSED, 'green');
-            //updateMsg(msgId, CHECK_PASSED, 'green');
             hideDateTimeDialog();
         }
         function showDateTimeDialog(id, format) {
@@ -1235,31 +1410,13 @@
             input.style.width = '50%';
             input.style.textAlign = 'center';
             div.appendChild(input);
-            var keyboardButton = document.createElement('button');
-            setClass(keyboardButton, 'imgButton');
-            keyboardButton.setAttribute('type', 'button');
-            keyboardButton.id = 'searchPathsKeyboardButton' + newNumberId;
-            bindEventListener(keyboardButton, 'click', function() {
+            var keyboardButton = createImgButton(keyboardIconSrc,'选择路径','searchPathsKeyboardButton' + newNumberId,function() {
                 showSearchPathDialog(newNumberId);
             });
-            var img = document.createElement('img');
-            setClass(img, 'buttonImg');
-            img.setAttribute('alt', '选择路径');
-            keyboardButton.appendChild(img);
-            setButtonImgSrc(keyboardButton, keyboardIconSrc);
             div.appendChild(keyboardButton);
-            var deleteButton = document.createElement('button');
-            setClass(deleteButton, 'imgButton');
-            deleteButton.setAttribute('type', 'button');
-            deleteButton.id = 'searchPathsDeleteButton' + newNumberId;
-            bindEventListener(deleteButton, 'click', function() {
+            var deleteButton = createImgButton(deleteIconSrc,'删除路径','searchPathsDeleteButton' + newNumberId,function() {
                 deleteSearchPathElement(newNumberId);
             });
-            var img = document.createElement('img');
-            setClass(img, 'buttonImg');
-            img.setAttribute('alt', '删除路径');
-            deleteButton.appendChild(img);
-            setButtonImgSrc(deleteButton, deleteIconSrc);
             div.appendChild(deleteButton);
             var span = document.createElement('span');
             setClass(span, 'inline');
@@ -1730,22 +1887,46 @@
             }
         }
         function pageJump() {
-            var form = document.getElementById('pageForm');
-            if(!advancedSearchSwitch) {
-                var formChildren = form.children;
-                for(var i=0;i<formChildren.length;i++) {
-                    var formChild = formChildren[i];
-                    var formChildTagName = formChild.tagName.toLowerCase();
-                    if(formChildTagName === 'input' || formChildTagName === 'select') {
-                        var formChildName = formChild.getAttribute('name');
-                        if(pageJumpKeyParams.indexOf(formChildName) === -1) {
-                            formChild.disabled = 'disabled';
-                            alert('Disabled:' + formChildName);
-                        }
-                    }
+            var pageNoValue = document.getElementById('page-no').value;
+            if(!pageNoValue || pageNoValue.trim() === '') {
+                updateMsg('pageNoMsg', '页数为空', 'red');
+                return;
+            } else {
+                var numberRegex = /\d+/;
+                var matchResult = pageNoValue.match(numberRegex);
+                if(!matchResult) {
+                    updateMsg('pageNoMsg', '页数不符合规则', 'red');
+                    return;
                 }
             }
-            form.submit();
+            hideElementById('pageNoMsg');
+            submitSearch(prevKeyword, prevAscObject, pageNoValue, null, prevSortColumn, prevSortOrder);
+        }
+        function sortSearch() {
+            var validSortColumns = ['DEFAULT', 'FILENAME', 'PARENT_PATH', 'FILE_CONTENT', 'TYPE', 'SIZE', 'LAST_MODIFIED'];
+            if(zipEnabled) {
+                validSortColumns[validSortColumns.length] = 'COMPRESS_STATUS';
+                validSortColumns[validSortColumns.length] = 'COMPRESS_FILE_SIZE';
+                validSortColumns[validSortColumns.length] = 'COMPRESS_FILE_LAST_MODIFIED';
+            }
+            var validSortOrders = ['ASC', 'DESC'];
+            var sortColumnSelect = document.getElementById('sortColumnSelect'),
+                sortOrderSelect = document.getElementById('sortOrderSelect');
+            var sortColumn = getSelectedOptionValue(sortColumnSelect),
+                sortOrder = getSelectedOptionValue(sortOrderSelect);
+            if(validSortColumns.indexOf(sortColumn) === -1) {
+                updateMsg('sortColumnMsg', '非法的排序列', 'red');
+                return;
+            } else {
+                hideElementById('sortColumnMsg');
+            }
+            if(validSortOrders.indexOf(sortOrder) === -1) {
+                updateMsg('sortOrderMsg', '非法的排序方式', 'red');
+                return;
+            } else {
+                hideElementById('sortOrderMsg');
+            }
+            submitSearch(prevKeyword, prevAscObject, 1, null, sortColumn, sortOrder);
         }
         function requireFileOrDirectory(asc) {
             if(!asc) {
@@ -1757,13 +1938,13 @@
                     return false;
                 }
             }
-            return asc.directory === null;
+            return asc.directory === undefined || asc.directory === null;
         }
         function requireFile(asc) {
             if(!asc) {
                 return false;
             }
-            return asc.directory !== null && !asc.directory;
+            return asc.directory !== null && asc.directory !== undefined && !asc.directory;
         }
         function requireDirectory(asc) {
             if(!asc) {
@@ -1775,7 +1956,7 @@
                     return false;
                 }
             }
-            return asc.directory !== null && asc.directory;
+            return asc.directory !== null && asc.directory !== undefined && asc.directory;
         }
         function addFileTypeInput() {
             var div = document.getElementById('customFileTypesDiv');
@@ -1837,102 +2018,11 @@
             }
         }
     </script>
-    <script type="text/javascript" th:inline="javascript" th:if="${rtObj != null and rtObj.success and rtObj.data != null}">
-        var ftsPageSize = Number(document.getElementById("page-size").value);
+    <script type="text/javascript" th:inline="javascript">
         var keyword = [[${keyword}]];
         var URL_LIST = concatUrlForConstant(contextPath, '/list');
         var URL_DOWNLOAD = concatUrlForConstant(contextPath, '/downloadFile');
         var URL_UPLOAD = concatUrlForConstant(contextPath, '/uploadFile');
-        var URL_SEARCH = concatUrlForConstant(contextPath, '/search');
-
-        if(sortColumn === null) {
-            sortColumn = undefined;
-            sortOrder = undefined;
-        }
-
-        main();
-
-        function main()
-        {
-            var ftsPageNo = Number(document.getElementById("page-no").value);
-            var ftsPageCurrentPage = Number(document.getElementById("current-page").innerText);
-            var ftsPageCurrentSize = Number(document.getElementById("current-size").innerText);
-            var ftsPageTotalPage = Number(document.getElementById("total-page").innerText);
-            var ftsPageTotalSize = Number(document.getElementById("total-size").innerText);
-
-            //deal with directory-path
-            var directoryPaths = document.getElementsByName("directory-path");
-            if(!directoryPaths) {
-                directoryPaths = getElementsByName("a", "directory-path");
-            }
-            for(var i=0;i<directoryPaths.length;i++) {
-                directoryPaths[i].setAttribute("href", concatUrlList(directoryPaths[i].getAttribute('relative-path'), 1, ftsPageSize));
-                directoryPaths[i].removeAttribute('relative-path');
-            }
-
-            //deal with download-file
-            var downloadFiles = document.getElementsByName("download-file");
-            if(!downloadFiles) {
-                downloadFiles = getElementsByName("a", "download-file");
-            }
-            for(var i=0;i<downloadFiles.length;i++) {
-                downloadFiles[i].setAttribute("href", concatUrlDownload(downloadFiles[i].innerText));
-                downloadFiles[i].innerText = "下载文件";
-            }
-
-            //deal with upload-file
-            var uploadFiles = document.getElementsByName("upload-file");
-            if(!uploadFiles) {
-                uploadFiles = getElementsByName("a", "upload-file");
-            }
-            for(var i=0;i<uploadFiles.length;i++) {
-                uploadFiles[i].setAttribute("href", concatUrlUpload(uploadFiles[i].innerText));
-                uploadFiles[i].innerText = "上传文件";
-            }
-
-            //deal with first-page,previous-page,next-page,last-page buttons
-            var pageNoInput = document.getElementById('page-no');
-            var firstPageNo = 1;
-            var lastPageNo = (ftsPageTotalPage == 0) ? 1 : ftsPageTotalPage;
-            var previousPageNo = (ftsPageCurrentPage > 1) ? (ftsPageCurrentPage - 1) : 1;
-            var nextPageNo = (ftsPageCurrentPage < lastPageNo) ? (ftsPageCurrentPage + 1) : lastPageNo;
-            document.getElementById("first-page").onclick = function() {
-                pageNoInput.value = firstPageNo;
-                pageForm.submit();
-            };
-            document.getElementById("last-page").onclick = function() {
-                pageNoInput.value = lastPageNo;
-                pageForm.submit();
-            };
-            document.getElementById("previous-page").onclick = function() {
-                pageNoInput.value = previousPageNo;
-                pageForm.submit();
-            };
-            document.getElementById("next-page").onclick = function() {
-                pageNoInput.value = nextPageNo;
-                pageForm.submit();
-            };
-
-            //deal with page-size-select
-            var tagSelectOptions = document.getElementById("page-size-select").children;
-            var foundOption = false;
-            for(var i=0;i<tagSelectOptions.length;i++) {
-                if(tagSelectOptions[i].value == ftsPageSize) {
-                    foundOption = true;
-                    //tagSelectOptions[i].setAttribute("selected", "selected");
-                    //tagSelectOptions[i].selected = true;
-                    setOptionSelected(tagSelectOptions[i]);
-                    break;
-                }
-            }
-            //alert('foundOption='+foundOption);
-            if(!foundOption) {
-                //tagSelectOptions[0].setAttribute("selected", "selected");
-                //tagSelectOptions[0].selected = true;
-                setOptionSelected(tagSelectOptions[0]);
-            }
-            
-        }
 
         function concatUrlForConstant(contextPath, path) {
             return contextPath + path;
@@ -1941,32 +2031,16 @@
         function concatUrlList(path, pageNo, pageSize, sortColumn, sortOrder) {
             //return URL_LIST + "?path=" + encodeURIComponent(path) + "&pageNo=" + pageNo + "&pageSize=" + pageSize;
             var result = URL_LIST + "?path=" + encodeURIComponent(path);
-            if(pageNo !== undefined) {
+            if(pageNo) {
                 result = result + "&pageNo=" + pageNo;
             }
-            if(pageSize !== undefined) {
+            if(pageSize) {
                 result = result + "&pageSize=" + pageSize;
             }
-            if(sortColumn !== undefined) {
+            if(sortColumn) {
                 result = result + "&sortColumn=" + sortColumn;
             }
-            if(sortOrder !== undefined) {
-                result = result + "&sortOrder=" + sortOrder;
-            }
-            return result;
-        }
-        function concatUrlSearch(keyword, pageNo, pageSize, sortColumn, sortOrder) {
-            var result = URL_SEARCH + "?keyword=" + encodeURIComponent(keyword);
-            if(pageNo !== undefined) {
-                result = result + "&pageNo=" + pageNo;
-            }
-            if(pageSize !== undefined) {
-                result = result + "&pageSize=" + pageSize;
-            }
-            if(sortColumn !== undefined) {
-                result = result + "&sortColumn=" + sortColumn;
-            }
-            if(sortOrder !== undefined) {
+            if(sortOrder) {
                 result = result + "&sortOrder=" + sortOrder;
             }
             return result;
@@ -1977,44 +2051,9 @@
         function concatUrlUpload(dirName) {
             return URL_UPLOAD + "?dirName=" + encodeURIComponent(dirName);
         }
-        //for IE, not supporting document.getElementsByName
-        function getElementsByName(tagName, name) {
-            var collection = document.getElementsByTagName(tagName);
-            var result = [];
-            if(collection) {
-                for(var i=0;i<collection.length;i++) {
-                    if(collection[i].getAttribute("name") == name) {
-                        result[result.length] = collection[i];
-                    }
-                }
-            }
-            return result;
-        }
     </script>
-    <script type="text/javascript" th:if="${rtObj != null and rtObj.success and rtObj.data != null and zipEnabled}">
+    <script type="text/javascript" th:if="${zipEnabled}">
         var URL_COMPRESS_FOLDER = concatUrlForConstant(contextPath, '/compressFolder');
-
-        //deal with compress-folder
-        var compressFolders = document.getElementsByName("compress-folder");
-        if(!compressFolders) {
-            compressFolders = getElementsByName("a", "compress-folder");
-        }
-        for(var i=0;i<compressFolders.length;i++) {
-            compressFolders[i].setAttribute("href", concatUrlCompressFolder(compressFolders[i].innerText));
-            compressFolders[i].innerText = "压缩管理";
-        }
-
-        //deal with download-folder
-        var downloadFolders = document.getElementsByName("download-folder");
-        if(!downloadFolders) {
-            downloadFolders = getElementsByName("a", "download-folder");
-        }
-        if(downloadFolders) {
-            for(var i=0;i<downloadFolders.length;i++) {
-                downloadFolders[i].setAttribute("href", concatUrlDownload(downloadFolders[i].innerText));
-                downloadFolders[i].innerText = "下载文件夹(zip)";
-            }
-        }
 
         function concatUrlCompressFolder(dirName) {
             return URL_COMPRESS_FOLDER + "?path=" + encodeURIComponent(dirName);

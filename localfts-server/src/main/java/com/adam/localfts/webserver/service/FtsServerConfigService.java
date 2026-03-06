@@ -60,6 +60,7 @@ public class FtsServerConfigService implements DisposableBean {
     public void checkPropertiesAndPostConstruct() {
         //check properties
         checkSystem();
+        checkConstants();
         boolean checkRootPath = checkRootPath();
         if(!checkRootPath) {
             String oldRootPath = localFtsProperties.getRootPath();
@@ -431,6 +432,15 @@ public class FtsServerConfigService implements DisposableBean {
     private void checkSystem() {
         if(!Util.isSystemWindows() && !Util.isSystemLinux() && !Util.isSystemMacOS()) {
             throw new LocalFtsStartupException("Unknown system:" + Util.getOsName());
+        }
+    }
+
+    private void checkConstants() {
+        int physicalAvailableProcessors = Constants.PHYSICAL_AVAILABLE_PROCESSORS;
+        if(physicalAvailableProcessors < 1) {
+            throw new LocalFtsStartupException("Unacceptable physical available processors:" + physicalAvailableProcessors);
+        } else if(physicalAvailableProcessors == 1) {
+            LOGGER.warn("[Performance warning]Only 1 physical processor available! Requests may wait long.");
         }
     }
 

@@ -59,6 +59,7 @@ button.imgButton {
     margin: 0;
     width: auto;
     height: 2em;
+    cursor: pointer;
 }
 img.buttonImg {
     vertical-align: middle;
