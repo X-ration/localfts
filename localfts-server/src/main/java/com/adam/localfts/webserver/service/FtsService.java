@@ -2,14 +2,17 @@ package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.*;
 import com.adam.localfts.webserver.common.compress.*;
+import com.adam.localfts.webserver.common.search.SearchFileModel;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
+import com.adam.localfts.webserver.config.properties.IndexFileContentProperties;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.apache.catalina.connector.ClientAbortException;
+import org.apache.tika.exception.TikaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +42,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -207,6 +211,112 @@ public class FtsService {
         model.setSubModelList(subModelList);
     }
 
+    /**
+     * 只在应用启动时调用一次，遍历根路径的文件。不应暴露给用户
+     * @param function
+     * @return
+     */
+    public void scanAndApplySearchFileModel(Function<SearchFileModel, Void> function) {
+        Assert.notNull(function, "function is null!");
+        Util.incrementAndCheckMethodCallCount("scanAndApplySearchFileModel", 1);
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        File rootDirectory = new File(rootPath);
+        Assert.isTrue(rootDirectory.exists() && rootDirectory.isDirectory(), "根路径不存在或不是文件夹");
+        File zipDirectory = new File(rootDirectory, zipFolderPath);
+        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
+        IndexFileContentProperties indexFileContentProperties = ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent();
+        Integer maxStringLength = indexFileContentProperties.getMaxStringLength();
+        boolean requireFileContent = indexFileContentProperties.getEnabled();
+        boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
+        scanAndApplySearchFileModel(rootDirectory, zipDirectory, function, rootPath, zipFileParentRelativePath, requireFileContent, maxStringLength, tryReadAllFiles, true);
+    }
+
+    private void scanAndApplySearchFileModel(File directory, File zipDirectory, Function<SearchFileModel, Void> function,
+                                             String rootPath, String zipFileParentRelativePath, boolean requireFileContent, Integer maxStringLength, boolean tryReadAllFiles, boolean outerCall) {
+        if(!directory.exists()) {
+            return;
+        }
+        if(directory.isFile()) {
+            LOGGER.warn("Path {} is not a directory!", directory.getAbsolutePath());
+            return;
+        }
+        //不索引根路径
+        if(!outerCall) {
+            SearchFileModel model = new SearchFileModel();
+            model.setFileName(directory.getName());
+            model.setDirectory(true);
+            model.setFileSize(0);
+            model.setLastModified(directory.lastModified());
+            fillSearchModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, model);
+            function.apply(model);
+        }
+        File[] items = directory.listFiles();
+        if(items == null || items.length == 0) {
+            return;
+        }
+        for(File item: items) {
+            if(item.isFile()) {
+                SearchFileModel model = new SearchFileModel();
+                model.setFileName(item.getName());
+                model.setDirectory(false);
+                if(requireFileContent && item.length() > 0) {
+                    try {
+                        String fileContent = null;
+                        if(item.getName().toLowerCase().endsWith(".class")) {
+                            fileContent = IOUtil.getClassFileContent(item);
+                        } else if(tryReadAllFiles || isFileReadable(item.getName())) {
+                            if(isFilePlainReadable(item.getName())) {
+                                fileContent = IOUtil.getFileContentPlain(item);
+                            } else {
+                                fileContent = IOUtil.getFileContentTika(item, maxStringLength);
+                            }
+                            if(fileContent != null) {
+                                fileContent = fileContent.replaceAll("(?m)^\\s+$", "") // 清空空白行
+                                        .replaceAll("(\\r\\n|\\r|\\n){2,}", "\n")
+                                        .replaceAll("\\r\\n|\\r|\\n", System.lineSeparator()) // 统一所有换行
+                                        .replaceAll("\\u00A0", " ")                // NBSP → 普通空格
+                                        .trim();
+                            }
+                        }
+                        model.setFileContent(fileContent);
+                    } catch (IOException | TikaException e) {
+                        LOGGER.warn("Exception occured getting file content of {}, ex type:{}, msg:{}",
+                                item.getAbsolutePath(), e.getClass().getName(), e.getMessage());
+                    }
+                }
+                model.setFileSize(item.length());
+                model.setLastModified(item.lastModified());
+                function.apply(model);
+            } else {
+                scanAndApplySearchFileModel(item, zipDirectory, function, rootPath, zipFileParentRelativePath,
+                        requireFileContent, maxStringLength, tryReadAllFiles, false);
+            }
+        }
+    }
+
+    private boolean isFilePlainReadable(String fileName) {
+        return checkFileExtIgnoreCase(fileName, Constants.PLAIN_READABLE_FILE_EXTS);
+    }
+
+    private boolean isFileReadable(String fileName) {
+        return checkFileExtIgnoreCase(fileName, Constants.READABLE_FILE_EXTS);
+    }
+
+    private boolean checkFileExtIgnoreCase(String fileName, String[] exts) {
+        Assert.notNull(fileName, "fileName is null!");
+        Assert.notNull(exts, "exts is null!");
+        for(String ext: exts) {
+            if(!ext.startsWith(".")) {
+                ext = "." + ext;
+            }
+            if(fileName.toLowerCase().endsWith(ext)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public FtsPageModel getDirectoryModel(String relativePath, int pageNo, int pageSize, ListTableColumn sortColumn, SortOrder sortOrder) {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
@@ -298,6 +408,27 @@ public class FtsService {
         }
         model.setData(fileModelList);
         return model;
+    }
+
+    private void fillSearchModelCompress(File directory, File zipDirectory, String rootPath, String zipFileParentRelativePath,
+                                         SearchFileModel model) {
+        String folderAbsolutePath = directory.getAbsolutePath();
+        //添加压缩文件标识
+        FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
+        model.setCompressStatus(folderCompressStatus);
+        String zipFileName = folderPathToZipFileName(folderAbsolutePath, rootPath);
+        File zipFile = new File(zipDirectory, zipFileName);
+        if(folderCompressStatus == FolderCompressStatus.COMPRESSED) {
+            String zipFileRelativePath = zipFileParentRelativePath + "/" + zipFileName;
+            if(Util.isSystemWindows()) {
+                zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
+            }
+            model.setCompressedPath(zipFileRelativePath);
+            long zipFileSize = zipFile.length();
+            model.setCompressedFileSize(zipFileSize);
+            long zipFileLastModified = zipFile.lastModified();
+            model.setCompressedFileLastModified(zipFileLastModified);
+        }
     }
 
     private void fillDirectoryModelCompress(File directory, File zipDirectory, String rootPath, String zipFileParentRelativePath,

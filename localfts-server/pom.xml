@@ -118,6 +118,28 @@
       <version>2012_u6</version>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.tika</groupId>
+      <artifactId>tika-app</artifactId>
+      <version>1.28</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.benf</groupId>
+      <artifactId>cfr</artifactId>
+      <version>0.152</version>
+    </dependency>
+    <dependency>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm</artifactId>
+      <version>9.7</version>
+    </dependency>
+    <!-- 文件编码检测 -->
+    <dependency>
+      <groupId>com.googlecode.juniversalchardet</groupId>
+      <artifactId>juniversalchardet</artifactId>
+      <version>1.0.3</version>
+    </dependency>
 
     <dependency>
       <groupId>org.projectlombok</groupId>

@@ -13,7 +13,6 @@ import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import lombok.Getter;
-import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -28,8 +27,6 @@ import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.PostConstruct;
 import java.io.*;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.*;
 import java.util.*;
 import java.util.jar.JarFile;
@@ -129,16 +126,16 @@ public class FtsServerConfigService implements DisposableBean {
         ApplicationPid applicationPid = new ApplicationPid();
         String pidString = applicationPid.toString();
         if(pidString == null) {
-            throwException(exClass, "Error getting pid:pidString is null!");
+            Util.throwException(exClass, "Error getting pid:pidString is null!");
         }
         if(pidString.equals("???")) {
-            throwException(exClass, "Cannot get pid!");
+            Util.throwException(exClass, "Cannot get pid!");
         }
         try {
             return Long.parseLong(pidString);
         } catch (NumberFormatException e) {
             LOGGER.error("Error parsing pidString as long:{}", pidString);
-            throwException(exClass, "Error parsing pidString as long:" + pidString);
+            Util.throwException(exClass, "Error parsing pidString as long:" + pidString);
             return -1L;
         }
     }
@@ -307,7 +304,15 @@ public class FtsServerConfigService implements DisposableBean {
                 stringBuilder.append("[Search index path]").append(localFtsProperties.getSearch().getIndexPath()).append(System.lineSeparator())
                         .append("[Search index before start]").append(localFtsProperties.getSearch().getIndexBeforeStart()).append(System.lineSeparator())
                         .append("[Search use existing index]").append(localFtsProperties.getSearch().getUseExistingIndex()).append(System.lineSeparator())
-                        .append("[Search index file content]").append(localFtsProperties.getSearch().getIndexFileContent()).append(System.lineSeparator());
+                        .append("[Search index file content enabled]").append(localFtsProperties.getSearch().getIndexFileContent().getEnabled()).append(System.lineSeparator());
+                if(localFtsProperties.getSearch().getIndexFileContent().getEnabled()) {
+                    if(localFtsProperties.getSearch().getIndexFileContent().getMaxStringLength() != null) {
+                        stringBuilder.append("[Search index file content max string length]").append(localFtsProperties.getSearch().getIndexFileContent().getMaxStringLength()).append(System.lineSeparator());
+                    }
+                    if(localFtsProperties.getSearch().getIndexFileContent().getTryReadAllFiles() != null) {
+                        stringBuilder.append("[Search index file content try read all files]").append(localFtsProperties.getSearch().getIndexFileContent().getTryReadAllFiles()).append(System.lineSeparator());
+                    }
+                }
             }
         }
         Map<TestLanguageText, Boolean> testLanguageMap = localFtsProperties.getTestLanguage();
@@ -374,9 +379,18 @@ public class FtsServerConfigService implements DisposableBean {
     }
 
     private void setIndexFileContentIfNull() {
-        Boolean indexFileContent = localFtsProperties.getSearch().getIndexFileContent();
-        if(indexFileContent == null) {
-            localFtsProperties.getSearch().setIndexFileContent(false);
+        IndexFileContentProperties indexFileContentProperties = localFtsProperties.getSearch().getIndexFileContent();
+        if(indexFileContentProperties == null) {
+            indexFileContentProperties = new IndexFileContentProperties();
+            localFtsProperties.getSearch().setIndexFileContent(indexFileContentProperties);
+        }
+        if(indexFileContentProperties.getEnabled() == null) {
+            indexFileContentProperties.setEnabled(false);
+        }
+        if(indexFileContentProperties.getEnabled()) {
+            if(indexFileContentProperties.getTryReadAllFiles() == null) {
+                indexFileContentProperties.setTryReadAllFiles(false);
+            }
         }
     }
 
@@ -455,7 +469,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkTestLanguageAndDeleteNullKeyValue(Map<TestLanguageText, Boolean> testLanguageMap, Class<? extends RuntimeException> exClass) {
         if(testLanguageMap == null) {
             if(exClass != null) {
-                throwException(exClass, "Test language object is null!");
+                Util.throwException(exClass, "Test language object is null!");
             } else {
                 return false;
             }
@@ -491,7 +505,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkPseudoUnloadUaContains(List<String> pseudoUnloadUaContains, Class<? extends RuntimeException> exClass) {
         if(pseudoUnloadUaContains == null) {
             if(exClass != null) {
-                throwException(exClass, "pseudoUnloadUaContains is null!");
+                Util.throwException(exClass, "pseudoUnloadUaContains is null!");
             } else {
                 return false;
             }
@@ -506,7 +520,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkSearchProperties(SearchProperties searchProperties, Class<? extends RuntimeException> exClass) {
         if(searchProperties == null) {
             if(exClass != null) {
-                throwException(exClass, "Search properties object is null!");
+                Util.throwException(exClass, "Search properties object is null!");
             } else {
                 return false;
             }
@@ -515,7 +529,7 @@ public class FtsServerConfigService implements DisposableBean {
         if(searchProperties.getEnabled() != null && searchProperties.getEnabled()) {
             if(searchProperties.getMode() == null) {
                 if(exClass != null) {
-                    throwException(exClass, "Search mode is null!");
+                    Util.throwException(exClass, "Search mode is null!");
                 } else {
                     return false;
                 }
@@ -524,7 +538,7 @@ public class FtsServerConfigService implements DisposableBean {
             if(searchProperties.getMode() == SearchMode.INDEXED) {
                 if(searchProperties.getIndexPath() == null) {
                     if(exClass != null) {
-                        throwException(exClass, "Index path is null!");
+                        Util.throwException(exClass, "Index path is null!");
                     } else {
                         return false;
                     }
@@ -534,7 +548,7 @@ public class FtsServerConfigService implements DisposableBean {
             if(searchProperties.getTimeout() != null) {
                 if(searchProperties.getTimeout() <= 0) {
                     if(exClass != null) {
-                        throwException(exClass, "Timeout is not positive!");
+                        Util.throwException(exClass, "Timeout is not positive!");
                     } else {
                         return false;
                     }
@@ -547,7 +561,7 @@ public class FtsServerConfigService implements DisposableBean {
                 boolean isMatch = pattern.matcher(activeTaskThresholdStr).matches();
                 if(!isMatch) {
                     if(exClass != null) {
-                        throwException(exClass, "Active task threshold does not match!");
+                        Util.throwException(exClass, "Active task threshold does not match!");
                     } else {
                         return false;
                     }
@@ -564,13 +578,13 @@ public class FtsServerConfigService implements DisposableBean {
                 activeTaskThreshold = (int) aDouble;
                 if(activeTaskThreshold <= 0){
                     if(exClass != null) {
-                        throwException(exClass, "Active task threshold is not positive!");
+                        Util.throwException(exClass, "Active task threshold is not positive!");
                     } else {
                         return false;
                     }
                 } else if(activeTaskThreshold > Constants.PHYSICAL_AVAILABLE_PROCESSORS) {
                     if(exClass != null) {
-                        throwException(exClass, "Active task threshold exceeds physical available processors!");
+                        Util.throwException(exClass, "Active task threshold exceeds physical available processors!");
                     } else {
                         return false;
                     }
@@ -578,8 +592,40 @@ public class FtsServerConfigService implements DisposableBean {
                     searchProperties.setActiveTaskThreshold(activeTaskThreshold);
                 }
             }
+
+            if(searchProperties.getIndexFileContent() != null) {
+                checkIndexFileContentProperties(searchProperties.getIndexFileContent(), exClass);
+            }
         }
 
+        return true;
+    }
+
+    private boolean checkIndexFileContentProperties(IndexFileContentProperties indexFileContentProperties, Class<? extends RuntimeException> exClass) {
+        if(indexFileContentProperties.getEnabled() != null && indexFileContentProperties.getEnabled() && indexFileContentProperties.maxStringLengthMemoryStr() != null) {
+            String maxStringLengthMemoryStr = indexFileContentProperties.maxStringLengthMemoryStr();
+            if(maxStringLengthMemoryStr.trim().equals("-1")) {
+                indexFileContentProperties.setMaxStringLength(-1);
+            } else {
+                try {
+                    DataSize dataSize = DataSize.parse(maxStringLengthMemoryStr);
+                    long dataSizeBytes = dataSize.toBytes();
+                    long maxChars = dataSizeBytes / 2;
+                    if (maxChars > (long) Integer.MAX_VALUE) {
+                        LOGGER.warn("Specified max string length memory value '{}' exceeds max limit, will be set to Integer.MAX_VALUE(2147483647)x2.", maxStringLengthMemoryStr);
+                        indexFileContentProperties.setMaxStringLength(Integer.MAX_VALUE);
+                    } else {
+                        indexFileContentProperties.setMaxStringLength((int) maxChars);
+                    }
+                } catch (IllegalArgumentException e) {
+                    if (exClass != null) {
+                        Util.throwException(exClass, "Cannot parse max string length memory str:" + maxStringLengthMemoryStr);
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
         return true;
     }
 
@@ -590,7 +636,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkUploadProperties(UploadProperties uploadProperties, Class<? extends RuntimeException> exClass) {
         if(uploadProperties == null) {
             if(exClass != null) {
-                throwException(exClass, "Upload properties object is null!");
+                Util.throwException(exClass, "Upload properties object is null!");
             } else {
                 return false;
             }
@@ -608,14 +654,14 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkUploadDirectoryProperties(UploadDirectoryProperties uploadDirectoryProperties, Class<? extends RuntimeException> exClass) {
         if(uploadDirectoryProperties == null) {
             if(exClass != null) {
-                throwException(exClass, "Upload directory properties object is null!");
+                Util.throwException(exClass, "Upload directory properties object is null!");
             } else {
                 return false;
             }
         }
         if(uploadDirectoryProperties.getPseudoUaContains() == null) {
             if(exClass != null) {
-                throwException(exClass, "Upload directory properties object is null!");
+                Util.throwException(exClass, "Upload directory properties object is null!");
             } else {
                 return false;
             }
@@ -630,7 +676,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkLogProperties(LogProperties logProperties, Class<? extends RuntimeException> exClass) {
         if(logProperties == null) {
             if(exClass != null) {
-                throwException(exClass, "Log properties object is null!");
+                Util.throwException(exClass, "Log properties object is null!");
             } else {
                 return false;
             }
@@ -654,7 +700,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkLogFilePath(String logFilePath, Class<? extends RuntimeException> exClass) {
         if(logFilePath == null) {
             if(exClass != null) {
-                throwException(exClass, "Log file path is null!");
+                Util.throwException(exClass, "Log file path is null!");
             } else {
                 return false;
             }
@@ -669,7 +715,7 @@ public class FtsServerConfigService implements DisposableBean {
         }
         if(!isMatch) {
             if(exClass != null) {
-                throwException(exClass, "Log file path does not match rules:" + logFilePath);
+                Util.throwException(exClass, "Log file path does not match rules:" + logFilePath);
             } else {
                 return false;
             }
@@ -680,7 +726,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkLogRootLevel(LogLevel rootLevel, Class<? extends RuntimeException> exClass) {
         if(rootLevel == null) {
             if(exClass != null) {
-                throwException(exClass, "Log root level is null!");
+                Util.throwException(exClass, "Log root level is null!");
             } else {
                 return false;
             }
@@ -707,14 +753,14 @@ public class FtsServerConfigService implements DisposableBean {
         } catch (IllegalArgumentException e) {
             LOGGER.error("解析Zip max folder size配置失败:{}", e.getMessage());
             if(exClass != null) {
-                throwException(exClass, "Error parsing zip max folder size '" + zipMaxFolderSize + "': " + e.getMessage());
+                Util.throwException(exClass, "Error parsing zip max folder size '" + zipMaxFolderSize + "': " + e.getMessage());
             } else {
                 return false;
             }
         }
         if(dataSize.toBytes() < 0) {
             if(exClass != null) {
-                throwException(exClass, "Zip max folder size '" + dataSize.toBytes() + "' is negative!");
+                Util.throwException(exClass, "Zip max folder size '" + dataSize.toBytes() + "' is negative!");
             } else {
                 return false;
             }
@@ -729,7 +775,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkZip(ZipProperties zipProperties, Class<? extends RuntimeException> exClass) {
         if(zipProperties == null) {
             if(exClass != null) {
-                throwException(exClass, "localfts.zip not configured!");
+                Util.throwException(exClass, "localfts.zip not configured!");
             } else {
                 return false;
             }
@@ -745,7 +791,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkZipFolderPath(String zipFolderPath, String rootPath, boolean allowNonExist, Class<? extends RuntimeException> exClass) {
         if(zipFolderPath == null) {
             if(exClass != null) {
-                throwException(exClass, "Zip folder path is null!");
+                Util.throwException(exClass, "Zip folder path is null!");
             } else {
                 return false;
             }
@@ -759,7 +805,7 @@ public class FtsServerConfigService implements DisposableBean {
         }
         if(!isMatch) {
             if(exClass != null) {
-                throwException(exClass, "Zip folder path '" + zipFolderPath + "' does not match rules!");
+                Util.throwException(exClass, "Zip folder path '" + zipFolderPath + "' does not match rules!");
             } else {
                 return false;
             }
@@ -769,14 +815,14 @@ public class FtsServerConfigService implements DisposableBean {
         File zipFolderPathFile = new File(rootFile, zipFolderPath);
         if(!allowNonExist && !zipFolderPathFile.exists()) {
             if(exClass != null) {
-                throwException(exClass, "Zip folder path '" + zipFolderPath + "' does not exist!");
+                Util.throwException(exClass, "Zip folder path '" + zipFolderPath + "' does not exist!");
             } else {
                 return false;
             }
         }
         if(zipFolderPathFile.isFile()) {
             if(exClass != null) {
-                throwException(exClass, "Zip folder path '" + zipFolderPath + "' is not a directory!");
+                Util.throwException(exClass, "Zip folder path '" + zipFolderPath + "' is not a directory!");
             } else {
                 return false;
             }
@@ -801,16 +847,16 @@ public class FtsServerConfigService implements DisposableBean {
             }
             zipFolderStack.push(zipFolderPathFile);
         } else {
-            throwException(exClass, "Zip folder path '" + zipFolderPath + "' is a file!");
+            Util.throwException(exClass, "Zip folder path '" + zipFolderPath + "' is a file!");
         }
     }
 
     private void createHintFile(File directory, Class<? extends RuntimeException> exClass) {
         if(!directory.exists()) {
-            throwException(exClass, "Directory '" + directory.getAbsolutePath() + "' does not exist!");
+            Util.throwException(exClass, "Directory '" + directory.getAbsolutePath() + "' does not exist!");
         }
         if(!directory.isDirectory()) {
-            throwException(exClass, "Directory '" + directory.getAbsolutePath() + "' is not a directory!");
+            Util.throwException(exClass, "Directory '" + directory.getAbsolutePath() + "' is not a directory!");
         }
 
         String fileName = Constants.FOLDER_DELETE_ON_EXIT_HINT_FILE_NAME.replaceAll("\\$\\{pid}", "" + pid) + ".txt";
@@ -818,11 +864,11 @@ public class FtsServerConfigService implements DisposableBean {
         try {
             boolean createFile = IOUtil.createFile(directory, fileName);
             if(!createFile) {
-                throwException(exClass, "Create hint file under '" + directory.getAbsolutePath() + "' failed!");
+                Util.throwException(exClass, "Create hint file under '" + directory.getAbsolutePath() + "' failed!");
             }
         } catch (IOException e) {
             LOGGER.error("Create hint file under '{}' failed:{}", directory.getAbsolutePath(), e.getMessage(), e);
-            throwException(exClass, "Create hint file under '" + directory.getAbsolutePath() + "' failed!");
+            Util.throwException(exClass, "Create hint file under '" + directory.getAbsolutePath() + "' failed!");
         }
 
         File file = new File(directory, fileName);
@@ -830,7 +876,7 @@ public class FtsServerConfigService implements DisposableBean {
             IOUtil.rewriteFile(file, fileContent);
         } catch (IOException e) {
             LOGGER.error("Rewrite hint file under '{}' failed:{}", directory.getAbsolutePath(), e.getMessage(), e);
-            throwException(exClass, "Rewrite hint file under '" + directory.getAbsolutePath() + "' failed!");
+            Util.throwException(exClass, "Rewrite hint file under '" + directory.getAbsolutePath() + "' failed!");
         }
     }
 
@@ -842,12 +888,12 @@ public class FtsServerConfigService implements DisposableBean {
      */
     private void createFolderHierarchically(File folderFile, Stack<File> stack, boolean zipDeleteOnExit, Class<? extends RuntimeException> exClass) {
         if(folderFile == null) {
-            throwException(exClass, "folderFile is null!");
+            Util.throwException(exClass, "folderFile is null!");
         }
 
         boolean folderExists = folderFile.exists();
         if(folderExists && folderFile.isFile()) {
-            throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!");
+            Util.throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!");
         }
 
         if(!folderExists) {
@@ -855,7 +901,7 @@ public class FtsServerConfigService implements DisposableBean {
             if (parentFile != null) {
                 boolean parentFileExists = parentFile.exists();
                 if (parentFileExists && parentFile.isFile()) {
-                    throwException(exClass, "parentFile[" + parentFile.getAbsolutePath() + "] is a file!");
+                    Util.throwException(exClass, "parentFile[" + parentFile.getAbsolutePath() + "] is a file!");
                 }
                 if (!parentFileExists) {
                     createFolderHierarchically(parentFile, stack, zipDeleteOnExit, exClass);
@@ -869,14 +915,14 @@ public class FtsServerConfigService implements DisposableBean {
                 boolean mkdir = folderFile.mkdir();
                 if (!mkdir) {
                     if (!folderFile.exists()) {
-                        throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] failed!");
+                        Util.throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] failed!");
                     } else if (folderFile.isFile()) {
-                        throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!(when mkdir)");
+                        Util.throwException(exClass, "folderFile[" + folderFile.getAbsolutePath() + "] is a file!(when mkdir)");
                     }
                 }
             } catch (SecurityException e) {
                 LOGGER.error("Error creating folder {}", folderFile.getAbsolutePath(), e);
-                throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
+                Util.throwException(exClass, "mkdir[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
             }
 
             if(zipDeleteOnExit) {
@@ -885,7 +931,7 @@ public class FtsServerConfigService implements DisposableBean {
                     createHintFile(folderFile, exClass);
                 } catch (SecurityException e) {
                     LOGGER.error("Error creating hint file under {}", folderFile.getAbsolutePath(), e);
-                    throwException(exClass, "create hint file[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
+                    Util.throwException(exClass, "create hint file[" + folderFile.getAbsolutePath() + "] encountered SecurityException!");
                 }
             }
         }
@@ -939,7 +985,7 @@ public class FtsServerConfigService implements DisposableBean {
     private boolean checkRootPath(String rootPath, Class<? extends RuntimeException> exClass) {
         if(rootPath == null) {
             if(exClass != null) {
-                throwException(exClass, "Root path is null!");
+                Util.throwException(exClass, "Root path is null!");
             } else {
                 return false;
             }
@@ -953,7 +999,7 @@ public class FtsServerConfigService implements DisposableBean {
         }
         if(!isMatch) {
             if(exClass != null) {
-                throwException(exClass, "Root path '" + rootPath + "' does not match rules!");
+                Util.throwException(exClass, "Root path '" + rootPath + "' does not match rules!");
             } else {
                 return false;
             }
@@ -962,14 +1008,14 @@ public class FtsServerConfigService implements DisposableBean {
         File rootPathFile = IOUtil.getFile(rootPath);
         if(!rootPathFile.exists()) {
             if(exClass != null) {
-                throwException(exClass, "Root path '" + rootPath + "' does not exist!");
+                Util.throwException(exClass, "Root path '" + rootPath + "' does not exist!");
             } else {
                 return false;
             }
         }
         if(!rootPathFile.isDirectory()) {
             if(exClass != null) {
-                throwException(exClass, "Root path '" + rootPath + "' is not a directory!");
+                Util.throwException(exClass, "Root path '" + rootPath + "' is not a directory!");
             } else {
                 return false;
             }
@@ -988,20 +1034,6 @@ public class FtsServerConfigService implements DisposableBean {
         }
         localFtsProperties.setRootPath(newRootPath);
         return newRootPath;
-    }
-
-    @Contract("_, _ -> fail")
-    private <T extends RuntimeException> void throwException(Class<T> exClass, String message) {
-        try {
-            Constructor<T> constructor = exClass.getConstructor(String.class);
-            throw constructor.newInstance(message);
-        } catch (NoSuchMethodException e) {
-            LOGGER.warn("error finding exception constructor {}: no such constructor", exClass.getName());
-            throw new RuntimeException(e.getMessage());
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
-            LOGGER.warn("error instantiating exception {}", exClass.getName());
-            throw new RuntimeException(e.getMessage());
-        }
     }
 
     private FtsServerIpInfoModel getServerIpInfoModelImpl() {

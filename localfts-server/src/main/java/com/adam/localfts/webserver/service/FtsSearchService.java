@@ -3,19 +3,18 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.PageObject;
 import com.adam.localfts.webserver.common.ReturnObject;
-import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
-import com.adam.localfts.webserver.common.search.SearchDTO;
-import com.adam.localfts.webserver.common.search.SearchMode;
-import com.adam.localfts.webserver.common.search.SearchType;
+import com.adam.localfts.webserver.common.search.*;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.ShutdownListener;
 import com.adam.localfts.webserver.component.WebServerStartListener;
 import com.adam.localfts.webserver.config.properties.SearchProperties;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
+import com.adam.localfts.webserver.util.LuceneIndexUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +27,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -223,7 +223,7 @@ public class FtsSearchService implements DisposableBean {
         if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() == SearchMode.PLAIN) {
             advancedSearchCondition.setSearchType(SearchType.FILENAME_ONLY);
         } else if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() == SearchMode.INDEXED &&
-                !ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent()) {
+                !ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled()) {
             advancedSearchCondition.setSearchType(SearchType.FILENAME_ONLY);
         }
         if(advancedSearchCondition.getSearchType() == SearchType.FILE_CONTENT_ONLY) {
@@ -255,8 +255,12 @@ public class FtsSearchService implements DisposableBean {
     /**
      * 创建索引
      */
-    private void createIndex() {
-        logger.info("Creating lucene index");
+    private void scanFilesAndCreateIndex(String indexPath, Class<? extends RuntimeException> exClass) {
+        logger.info("Prepare to scan files and create lucene index");
+        ftsService.scanAndApplySearchFileModel(model -> {
+            //TODO 写入索引
+            return null;
+        });
     }
 
     @PostConstruct
@@ -267,11 +271,20 @@ public class FtsSearchService implements DisposableBean {
             if(physicalAvailableProcessors == 1) {
                 logger.warn("[Performance warning]LuceneIndexThread takes only 1 available physical processor! Requests may wait long.");
             }
+            String indexPath = searchProperties.getIndexPath();
+            if(!searchProperties.getUseExistingIndex()) {
+                try {
+                    LuceneIndexUtil.createEmptyIndex(indexPath);
+                } catch (IOException e) {
+                    logger.error("Error creating empty index", e);
+                    Util.throwException(LocalFtsStartupException.class, "Failed to create empty index");
+                }
+            }
             LuceneIndexThread.getInstance().start();
             if(searchProperties.getIndexBeforeStart()) {
-                createIndex();
+                scanFilesAndCreateIndex(indexPath, LocalFtsStartupException.class);
             } else {
-                webServerStartListener.addAsyncTask(this::createIndex);
+                webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(indexPath, LocalFtsRuntimeException.class));
             }
         }
     }

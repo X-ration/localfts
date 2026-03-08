@@ -1,16 +1,18 @@
 package com.adam.localfts.webserver.util;
 
 import com.adam.localfts.webserver.common.Constants;
+import org.apache.tika.Tika;
+import org.apache.tika.exception.TikaException;
+import org.benf.cfr.reader.api.CfrDriver;
+import org.benf.cfr.reader.api.OutputSinkFactory;
+import org.mozilla.universalchardet.UniversalDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Enumeration;
-import java.util.Objects;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -19,6 +21,93 @@ public class IOUtil {
     private static final int BUFFER_SIZE = 1024;
     private static final String[] SELECTED_HTTP_REQUEST_HEADERS = new String[]{"range", "if-range", "user-agent"};
     private static final Logger LOGGER = LoggerFactory.getLogger(IOUtil.class);
+
+    public static String getFileContentPlain(File file) throws IOException {
+        String charset = detectCharset(file);
+        try(InputStream inputStream = new FileInputStream(file);
+                InputStreamReader reader = new InputStreamReader(inputStream, charset)) {
+            StringBuilder stringBuilder = new StringBuilder();
+            char[] bufferArr = new char[BUFFER_SIZE];
+            int len;
+            while((len = reader.read(bufferArr)) != -1) {
+                stringBuilder.append(bufferArr, 0, len);
+            }
+            return stringBuilder.toString();
+        }
+    }
+
+    public static String getFileContentTika(File file, Integer maxStringLength) throws TikaException, IOException {
+        Tika tika = new Tika();
+        if(maxStringLength != null) {
+            if (maxStringLength == -1 || maxStringLength > 0) {
+                tika.setMaxStringLength(maxStringLength);
+            } else {
+                LOGGER.warn("Unacceptable maxStringLength:{}", maxStringLength);
+            }
+        }
+        return tika.parseToString(file);
+    }
+
+    /**
+     * 检测文件编码
+     * @param file
+     * @return 编码格式字符串，默认为UTF-8
+     */
+    public static String detectCharset(File file) {
+        byte[] buf = new byte[BUFFER_SIZE];
+        try (InputStream in = new FileInputStream(file)) {
+            UniversalDetector detector = new UniversalDetector(null);
+            int nread;
+            while ((nread = in.read(buf)) > 0 && !detector.isDone()) {
+                detector.handleData(buf, 0, nread);
+            }
+            detector.dataEnd();
+            String encoding = detector.getDetectedCharset();
+            detector.reset();
+            return encoding == null ? "UTF-8" : encoding;
+        } catch (Exception e) {
+            return "UTF-8";
+        }
+    }
+
+    public static String getClassFileContent(File classFile) {
+        StringBuilder stringBuilder = new StringBuilder();
+        Map<String, String> options = new HashMap<>();
+        options.put("hideutf", "false");          // 不隐藏特殊字符
+        options.put("showinferrable", "true");    // 显示完整代码
+        options.put("showversion", "false");       // 关闭 CFR 版本广告
+        options.put("noprogress", "true");          // 关闭 Analysing type
+        options.put("silent", "true");              // 关闭类加载失败警告
+        CfrDriver driver = new CfrDriver.Builder()
+                .withOptions(options)
+                .withOutputSink(new OutputSinkFactory() {
+                    @Override
+                    public List<SinkClass> getSupportedSinks(SinkType sinkType, Collection<SinkClass> collection) {
+                        return Collections.singletonList(SinkClass.STRING);
+                    }
+                    @Override
+                    public <T> Sink<T> getSink(SinkType sinkType, SinkClass sinkClass) {
+                        return t -> {
+                            String str = String.valueOf(t);
+                            if(str != null && !str.startsWith("Analysing type")) {
+                                if(str.startsWith("/*")) {
+//                                    str = str.replaceAll("/\\*.*\\*/", "");
+                                    int idx = str.indexOf("*/");
+                                    str = str.substring(idx + 2);
+                                    if(str.startsWith("\n")) {
+                                        str = str.substring(1);
+                                    }
+                                }
+                                str = str.replace("\n", System.lineSeparator());
+                                stringBuilder.append(str);
+                            }
+                        };
+                    }
+                })
+                .build();
+        driver.analyse(Collections.singletonList(classFile.getAbsolutePath()));
+        return stringBuilder.toString();
+    }
 
     public static void rewriteFile(File file, String content) throws IOException {
         Assert.notNull(file, "File is null!");

@@ -333,7 +333,7 @@ public class WebController {
         LOGGER.debug("search keyword={},searchId={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
                 keyword, searchId, pageNo, pageSize, sortColumn, sortOrder, advancedSearchCondition);
         SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
-        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
+        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled() : false;
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         if(pageNo <= 0) {
             pageNo = 1;
@@ -370,7 +370,7 @@ public class WebController {
         model.addAttribute("fileInvalidCharacters", fileInvalidCharacters);
         SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         model.addAttribute("searchMode", searchMode);
-        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent() : false;
+        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled() : false;
         model.addAttribute("indexFileContent", indexFileContent);
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         model.addAttribute("zipEnabled", zipEnabled);

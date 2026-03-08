@@ -41,7 +41,7 @@ public enum FileType {
      * 6.可执行文件
      */
     EXE("Windows可执行文件"), BAT("Windows批处理文件"), DLL("Windows动态链接库"),
-    SH("Shell脚本文件"), JAR("Java归档文件"),
+    SH("Shell脚本文件"), JAR("Java归档文件"), CLASS("Java编译生成的字节码文件"),
     /**
      * 7.编程
      */

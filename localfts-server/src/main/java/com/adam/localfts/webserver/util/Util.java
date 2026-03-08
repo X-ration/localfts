@@ -3,15 +3,19 @@ package com.adam.localfts.webserver.util;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,6 +24,13 @@ import static com.adam.localfts.webserver.common.Constants.*;
 public class Util {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(Util.class);
+    private static final Map<String, Integer> METHOD_CALL_COUNTER = new ConcurrentHashMap<>();
+
+    public static synchronized void incrementAndCheckMethodCallCount(String methodName, int threshold) {
+        int callCount = METHOD_CALL_COUNTER.getOrDefault(methodName, 0);
+        Assert.isTrue(++callCount <= threshold, "Method " + methodName + " call count exceeds limit " + threshold + "!");
+        METHOD_CALL_COUNTER.put(methodName, callCount);
+    }
 
     public static boolean isValidFileSuffix(String suffix) {
         Pattern pattern;
@@ -257,6 +268,20 @@ public class Util {
     public static boolean isSystemMacOS() {
         String osName = getOsName().toLowerCase();
         return osName.startsWith("mac");
+    }
+
+    @Contract("_, _ -> fail")
+    public static <T extends RuntimeException> void throwException(Class<T> exClass, String message) {
+        try {
+            Constructor<T> constructor = exClass.getConstructor(String.class);
+            throw constructor.newInstance(message);
+        } catch (NoSuchMethodException e) {
+            LOGGER.warn("error finding exception constructor {}: no such constructor", exClass.getName());
+            throw new RuntimeException(e.getMessage());
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            LOGGER.warn("error instantiating exception {}", exClass.getName());
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     public static boolean checkInterrupted() {
