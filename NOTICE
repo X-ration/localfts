@@ -42,7 +42,7 @@ This project incorporates or uses the following open-source components:
 
 6. IKAnalyzer (com.janeluo:ikanalyzer)
    - Version: 2012_u6
-   - Copyright: Copyright (c) 2012 linliangyi, All Rights Reserved
+   - Copyright: provided by Linliangyi and copyright 2012 by Oolong studio
    - License: Apache License 2.0
    - For full license text, see: https://www.apache.org/licenses/LICENSE-2.0.txt
 
@@ -70,22 +70,28 @@ This project incorporates or uses the following open-source components:
    - License: MIT License
    - For full license text, see: https://opensource.org/licenses/MIT
 
-11. PrimeTek icons (https://icon.sucai999.com/, https://github.com/primefaces/primeicons)
+11. opencc4j (com.github.houbb:opencc4j)
+   - Version: 1.14.0
+   - Copyright: Copyright (c) 2019-2025 houbb
+   - License: Apache License 2.0
+   - For full license text, see: https://www.apache.org/licenses/LICENSE-2.0.txt
+
+12. PrimeTek icons (https://icon.sucai999.com/, https://github.com/primefaces/primeicons)
    - Copyright: Copyright (c) 2018-2021 PrimeTek
    - License: MIT License
    - For full license text, see: https://opensource.org/licenses/MIT
 
-12. Icons8 icons (https://icon.sucai999.com/, https://icons8.com/)
+13. Icons8 icons (https://icon.sucai999.com/, https://icons8.com/)
    - Copyright: © 2026 - Icons8 LLC
    - License: Apache License 2.0
    - For full license text, see: https://www.apache.org/licenses/LICENSE-2.0.txt
 
-13. Microsoft fluentui icons (https://icon.sucai999.com/, https://github.com/microsoft/fluentui-system-icons)
+14. Microsoft fluentui icons (https://icon.sucai999.com/, https://github.com/microsoft/fluentui-system-icons)
    - Copyright: Copyright (c) 2020 Microsoft Corporation
    - License: MIT License
    - For full license text, see: https://opensource.org/licenses/MIT
 
-14. GitLab B.V. icons (https://icon.sucai999.com/, https://gitlab.com/gitlab-org/gitlab-svgs/)
+15. GitLab B.V. icons (https://icon.sucai999.com/, https://gitlab.com/gitlab-org/gitlab-svgs/)
    - Copyright: Copyright (c) 2011-present GitLab Inc.
    - License: MIT License
    - For full license text, see: https://opensource.org/licenses/MIT

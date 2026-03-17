@@ -1,4 +1,7 @@
 /**
+ * 基于源代码修改（查询区分大小写）
+ * 原始注释如下：
+ *
  * IK 中文分词  版本 5.0
  * IK Analyzer release 5.0
  * 
@@ -24,6 +27,9 @@
  * 字符集识别工具类
  */
 package org.wltea.analyzer.core;
+
+import com.adam.localfts.webserver.util.Util;
+import com.github.houbb.opencc4j.util.ZhConverterUtil;
 
 /**
  *
@@ -80,21 +86,28 @@ class CharacterUtil {
   }
 
   /**
+   * 基于源码修改的方法，原始注释如下：
+   *
    * 进行字符规格化（全角转半角，大写转小写处理）
    * @param input
+   * @param lowerCaseEnglish 是否对英文转小写
+   * @param simplifyChinese  是否对繁体中文转简体
    * @return char
    */
-  static char regularize(char input) {
+  static char regularize(char input, boolean lowerCaseEnglish, boolean simplifyChinese) {
     if (input == 12288) {
       input = (char) 32;
 
     } else if (input > 65280 && input < 65375) {
       input = (char) (input - 65248);
 
-    } else if (input >= 'A' && input <= 'Z') {
+    } else if (lowerCaseEnglish && input >= 'A' && input <= 'Z') {
       input += 32;
+    } else if(simplifyChinese && ZhConverterUtil.isTraditional(input)) {
+      input = Util.toSC(input);
     }
 
     return input;
   }
+
 }

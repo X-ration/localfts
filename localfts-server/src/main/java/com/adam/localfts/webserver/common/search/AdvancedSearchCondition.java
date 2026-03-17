@@ -35,7 +35,10 @@ public class AdvancedSearchCondition implements Cloneable{
     private List<String> fileTypeList;
     private Boolean filterFileType;
     private SearchType searchType;
-    private Boolean caseSensitive;
+    /**
+     * 是否区分大小写和简繁体
+     */
+    private Boolean caseAndSTCSensitive;
     private Boolean directory;
     @Getter(AccessLevel.NONE)
     private Date lastModifiedLower, lastModifiedUpper;
@@ -69,7 +72,7 @@ public class AdvancedSearchCondition implements Cloneable{
     private boolean emptyResult;
 
     public boolean isEmpty() {
-        return caseSensitive == null && searchType == null
+        return caseAndSTCSensitive == null && searchType == null
                 && (filterFileType == null || CollectionUtils.isEmpty(fileTypeList))
                 && CollectionUtils.isEmpty(searchPathList) && directory == null && fileSizeLower == null && fileSizeUpper == null
                 && lastModifiedLower == null && lastModifiedUpper == null && folderCompressStatus == null
@@ -280,8 +283,8 @@ public class AdvancedSearchCondition implements Cloneable{
         if(searchType != null) {
             stringBuilder.append(", searchType=").append(searchType);
         }
-        if(caseSensitive != null) {
-            stringBuilder.append(", caseSensitive=").append(caseSensitive);
+        if(caseAndSTCSensitive != null) {
+            stringBuilder.append(", caseAndSTCSensitive=").append(caseAndSTCSensitive);
         }
         if(directory != null) {
             stringBuilder.append(", directory=").append(directory);

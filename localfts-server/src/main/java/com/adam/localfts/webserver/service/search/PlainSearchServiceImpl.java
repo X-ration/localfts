@@ -72,6 +72,10 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 logger.debug("排序耗时{}ms", endMills - startMills);
             }
         }
+        for(int i=0;i<searchDTOList.size();i++) {
+            SearchDTO searchDTO = searchDTOList.get(i);
+            searchDTO.setId(i + 1);
+        }
         return new PageObject<>(pageNo, pageSize, searchDTOList);
     }
 
@@ -82,8 +86,6 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 CHINESE_COLLATOR.compare(sd1.getFilename(), sd2.getFilename()));
         searchComparatorMap.put(SearchColumn.PARENT_PATH, (sd1, sd2) ->
                 CHINESE_COLLATOR.compare(sd1.getParentRelativePath(), sd2.getParentRelativePath()));
-        searchComparatorMap.put(SearchColumn.FILE_CONTENT, (sd1, sd2) ->
-                CHINESE_COLLATOR.compare(sd1.getFileContent(), sd2.getFileContent()));
         searchComparatorMap.put(SearchColumn.TYPE, (sd1, sd2) -> {
             String typeStr1 = sd1.getDirectory() ? "文件夹" : "文件";
             String typeStr2 = sd2.getDirectory() ? "文件夹" : "文件";
@@ -185,8 +187,8 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
 //                    relativePath = relativePath.replaceAll("\\\\", "/");
 //                }
                 String filename = file.getName();
-                boolean keywordMatches = advancedSearchCondition.getCaseSensitive() ? filename.contains(keyword) :
-                        filename.toLowerCase().contains(keyword.toLowerCase());
+                boolean keywordMatches = advancedSearchCondition.getCaseAndSTCSensitive() ? filename.contains(keyword) :
+                        Util.toLowerCaseAndSC(filename).contains(Util.toLowerCaseAndSC(keyword));
                 if(keywordMatches) {
                     boolean checkSearchCondition = checkSearchCondition(file, advancedSearchCondition);
                     if(checkSearchCondition) {

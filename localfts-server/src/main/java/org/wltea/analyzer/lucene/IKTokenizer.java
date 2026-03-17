@@ -1,4 +1,7 @@
 /**
+ * 基于源代码修改（查询区分大小写）
+ * 原始注释如下：
+ *
  * IK 中文分词  版本 5.0.1
  * IK Analyzer release 5.0.1
  * 
@@ -26,16 +29,14 @@
  */
 package org.wltea.analyzer.lucene;
 
-import java.io.IOException;
-import java.io.Reader;
-
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
-
 import org.wltea.analyzer.core.IKSegmenter;
 import org.wltea.analyzer.core.Lexeme;
+
+import java.io.IOException;
 
 /**
  * IK分词器 Lucene Tokenizer适配器类
@@ -55,17 +56,22 @@ public final class IKTokenizer extends Tokenizer {
   // 记录最后一个词元的结束位置
   private int endPosition;
 
+  public IKTokenizer(boolean useSmart) {
+    this(useSmart, true, true);
+  }
+
   /**
    * Lucene 4.0 Tokenizer适配器类构造函数
-   * @param in
    * @param useSmart
+   * @param lowerCaseEnglish 是否对英文转小写
+   * @param simplifyChinese 是否对繁体中文转简体
    */
-  public IKTokenizer(Reader in, boolean useSmart) {
-    super(in);
+  public IKTokenizer(boolean useSmart, boolean lowerCaseEnglish, boolean simplifyChinese) {
+    super();
     offsetAtt = addAttribute(OffsetAttribute.class);
     termAtt = addAttribute(CharTermAttribute.class);
     typeAtt = addAttribute(TypeAttribute.class);
-    _IKImplement = new IKSegmenter(input, useSmart);
+    _IKImplement = new IKSegmenter(input, useSmart, lowerCaseEnglish, simplifyChinese);
   }
 
   /*

@@ -8,6 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class SearchDTO implements CompressedColumns {
+    private long id;
     private String filename;
     private String parentRelativePath;
     private String fileContent;
@@ -17,9 +18,9 @@ public class SearchDTO implements CompressedColumns {
     private long lastModified;
     private String lastModifiedStr;
     private FolderCompressStatus compressStatus;
-    private long compressedFileSize;
+    private Long compressedFileSize;
     private String compressedFileSizeStr;
-    private long compressedFileLastModified;
+    private Long compressedFileLastModified;
     private String compressedFileLastModifiedStr;
     private String compressedFilePath;
 }

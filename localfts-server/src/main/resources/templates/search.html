@@ -105,11 +105,11 @@
                 </div>
                 <br>
             </div>
-            是否区分大小写：
-            <input type="radio" id="caseSensitiveRadio1" name="caseSensitive" value="true" checked="checked">
-            <label for="caseSensitiveRadio1">区分大小写</label>
-            <input type="radio" id="caseSensitiveRadio2" name="caseSensitive" value="false">
-            <label for="caseSensitiveRadio2">不区分大小写</label>
+            是否区分大小写和简繁体：
+            <input type="radio" id="caseSensitiveRadio1" name="caseAndSTCSensitive" value="true">
+            <label for="caseSensitiveRadio1">区分大小写和简繁体</label>
+            <input type="radio" id="caseSensitiveRadio2" name="caseAndSTCSensitive" value="false" checked="checked">
+            <label for="caseSensitiveRadio2">不区分大小写和简繁体</label>
             <span class="inline" style="color:red; display:none" id="caseSensitiveMsg"></span>
             <br>
             文件类型：
@@ -207,7 +207,7 @@
                 <br>
             </div>
             <div id="compressedFileLastModifiedLowerDiv">
-                压缩文件修改时间不晚于：
+                压缩文件修改时间不早于：
                 <input type="text" id="compressedFileLastModifiedLower" name="compressedFileLastModifiedLower" readonly="readonly" style="display: none; width: 10em">
                 <button class="imgButton" type="button" id="compressedFileLastModifiedLowerButton" onclick="showDateTimeDialog('compressedFileLastModifiedLower')" style="display: none"><img class="buttonImg" alt="输入"></button>
                 <input type="date" id="compressedFileLastModifiedLowerDate">
@@ -706,7 +706,7 @@
                         }
                     }
                 }
-                var caseSensitive = getCheckedValue('caseSensitive');
+                var caseSensitive = getCheckedValue('caseAndSTCSensitive');
                 var caseSensitiveValue = null;
                 if(caseSensitive !== 'true' && caseSensitive !== 'false') {
                     hasError = true;
@@ -773,6 +773,9 @@
                                 document.getElementById(inputId).value = dateInputValue + ' ' + timeInputValue;
                                 updateMsg(msgId, CHECK_PASSED, 'green');
                             }
+                        } else {
+                            document.getElementById(inputId).value = '';
+                            hideElementById(msgId);
                         }
                     }
                 } else {
@@ -794,6 +797,7 @@
                         var inputValue = input.value;
                         if(!inputValue || inputValue.trim() === '') {
                             input.value = '';
+                            hideElementById(msgId);
                         } else {
                             var isValid = isValidDateTime(inputValue);
                             if(isValid) {
@@ -817,6 +821,8 @@
                             hasError = true;
                             updateMsg(folderCompressStatusMsgId, '非法的压缩状态', 'red');
                         }
+                    } else {
+                        hideElementById(folderCompressStatusMsgId);
                     }
                 }
                 var fileSizeValidUnits = ['B','KiB','MiB','GiB','TiB'];
@@ -840,6 +846,7 @@
                         select = document.getElementById(selectId);
                     if(!numberInput.value || numberInput.value.trim() === '') {
                         input.value = '';
+                        hideElementById(msgId);
                     } else {
                         var number = Number(numberInput.value);
                         var unit = getSelectedOptionValue(select,false);
@@ -899,9 +906,9 @@
                     if(searchType) {
                         ascObject['searchType'] = searchType;
                     }
-                    var caseSensitive = getCheckedValue('caseSensitive');
+                    var caseSensitive = getCheckedValue('caseAndSTCSensitive');
                     if(caseSensitive) {
-                        ascObject['caseSensitive'] = caseSensitive;
+                        ascObject['caseAndSTCSensitive'] = caseSensitive;
                     }
                     if(directoryValue !== null) {
                         ascObject['directory'] = directoryValue;
@@ -1143,9 +1150,9 @@
                 for(var i=0;i<dataArr.length;i++) {
                     var item = dataArr[i];
                     var div = document.createElement('div');
-                    var span = document.createElement('span');
-                    span.innerText = (item.directory ? '文件夹名称：' : '文件名称：') + item.filename;
-                    div.appendChild(span);
+                    var strong = document.createElement('strong');
+                    strong.innerHTML = '#' + item.id + ' ' + (item.directory ? '文件夹名称：' : '文件名称：') + item.filename;
+                    div.appendChild(strong);
                     resultDiv.appendChild(div);
                     
                     div = document.createElement('div');
@@ -1154,7 +1161,7 @@
                     
                     if(searchMode === 'INDEXED' && indexFileContent && !item.directory) {
                         div = document.createElement('div');
-                        div.innerHTML = '文件内容：' + item.fileContent;
+                        div.innerHTML = '文件内容：' + (item.fileContent ? '<br/>' + item.fileContent : '空');
                         resultDiv.appendChild(div);
                     }
                     
@@ -1276,7 +1283,8 @@
                 option.value = 'TYPE';
                 sortColumnSelect.appendChild(option);
             }
-            var needFileContentOption = searchMode === 'INDEXED' && indexFileContent;
+            //文件内容不参与排序
+            /*var needFileContentOption = searchMode === 'INDEXED' && indexFileContent;
             if(needFileContentOption) {
                 needFileContentOption = !requireDirectoryValue;
             }
@@ -1285,7 +1293,7 @@
                 option.innerText = sortColumnDescObject['FILE_CONTENT'];
                 option.value = 'FILE_CONTENT';
                 sortColumnSelect.appendChild(option);
-            }
+            }*/
             var needSizeOption = !requireDirectoryValue;
             if(needSizeOption) {
                 var option = document.createElement('option');

@@ -178,8 +178,10 @@ public class WebController {
         model.addAttribute("lastModified", lastModifiedStr);
         if(compressStatus == FolderCompressStatus.COMPRESSING || compressStatus == FolderCompressStatus.COMPRESSED) {
             long compressStartTime = folderCompressInfo.getCompressStartTime();
-            String compressStartTimeStr = simpleDateFormat.format(new Date(compressStartTime));
-            model.addAttribute("compressStartTime", compressStartTimeStr);
+            if(compressStartTime != -1L) {
+                String compressStartTimeStr = simpleDateFormat.format(new Date(compressStartTime));
+                model.addAttribute("compressStartTime", compressStartTimeStr);
+            }
         }
         if(compressStatus == FolderCompressStatus.COMPRESSED) {
             model.addAttribute("compressedFilePath", folderCompressInfo.getZipFileRelativePath());
@@ -189,8 +191,10 @@ public class WebController {
             String compressedFileLastModified = simpleDateFormat.format(new Date(folderCompressInfo.getCompressedFileLastModified()));
             model.addAttribute("compressedFileLastModified", compressedFileLastModified);
             long compressFinishTime = folderCompressInfo.getCompressFinishTime();
-            String compressFinishTimeStr = simpleDateFormat.format(new Date(compressFinishTime));
-            model.addAttribute("compressFinishTime", compressFinishTimeStr);
+            if(compressFinishTime != -1L) {
+                String compressFinishTimeStr = simpleDateFormat.format(new Date(compressFinishTime));
+                model.addAttribute("compressFinishTime", compressFinishTimeStr);
+            }
             long compressCostTime = compressFinishTime - folderCompressInfo.getCompressStartTime();
             String compressCostTimeStr = Util.formatCostTime(compressCostTime);
             model.addAttribute("compressCostTime", compressCostTimeStr);
@@ -398,15 +402,6 @@ public class WebController {
             }
         }
         if(sortColumn == SearchColumn.SIZE) {
-            if(requireDirectory) {
-                return false;
-            }
-        }
-        if(sortColumn == SearchColumn.FILE_CONTENT) {
-            boolean check = searchMode == SearchMode.INDEXED && indexFileContent;
-            if(!check) {
-                return false;
-            }
             if(requireDirectory) {
                 return false;
             }

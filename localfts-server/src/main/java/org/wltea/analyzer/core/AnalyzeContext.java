@@ -1,4 +1,7 @@
 /**
+ * 基于源代码修改（查询区分大小写）
+ * 原始注释如下：
+ *
  * IK 中文分词  版本 5.0
  * IK Analyzer release 5.0
  * 
@@ -24,16 +27,12 @@
  */
 package org.wltea.analyzer.core;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Set;
-
 import org.wltea.analyzer.cfg.Configuration;
 import org.wltea.analyzer.dic.Dictionary;
+
+import java.io.IOException;
+import java.io.Reader;
+import java.util.*;
 
 /**
  * 
@@ -73,8 +72,16 @@ class AnalyzeContext {
 
   // 分词器配置项
   private Configuration cfg;
+  /**
+   * 是否对英文进行小写处理
+   */
+  private final boolean lowerCaseEnglish;
+  /**
+   * 是否对繁体中文转简体
+   */
+  private final boolean simplifyChinese;
 
-  public AnalyzeContext(Configuration cfg) {
+  public AnalyzeContext(Configuration cfg, boolean lowerCaseEnglish, boolean simplifyChinese) {
     this.cfg = cfg;
     this.segmentBuff = new char[BUFF_SIZE];
     this.charTypes = new int[BUFF_SIZE];
@@ -82,6 +89,8 @@ class AnalyzeContext {
     this.orgLexemes = new QuickSortSet();
     this.pathMap = new HashMap<Integer, LexemePath>();
     this.results = new LinkedList<Lexeme>();
+    this.lowerCaseEnglish = lowerCaseEnglish;
+    this.simplifyChinese = simplifyChinese;
   }
 
   int getCursor() {
@@ -142,7 +151,7 @@ class AnalyzeContext {
    */
   void initCursor() {
     this.cursor = 0;
-    this.segmentBuff[this.cursor] = CharacterUtil.regularize(this.segmentBuff[this.cursor]);
+    this.segmentBuff[this.cursor] = CharacterUtil.regularize(this.segmentBuff[this.cursor], lowerCaseEnglish, simplifyChinese);
     this.charTypes[this.cursor] = CharacterUtil.identifyCharType(this.segmentBuff[this.cursor]);
   }
 
@@ -154,7 +163,7 @@ class AnalyzeContext {
   boolean moveCursor() {
     if (this.cursor < this.available - 1) {
       this.cursor++;
-      this.segmentBuff[this.cursor] = CharacterUtil.regularize(this.segmentBuff[this.cursor]);
+      this.segmentBuff[this.cursor] = CharacterUtil.regularize(this.segmentBuff[this.cursor], lowerCaseEnglish, simplifyChinese);
       this.charTypes[this.cursor] = CharacterUtil.identifyCharType(this.segmentBuff[this.cursor]);
       return true;
     } else {
@@ -313,13 +322,18 @@ class AnalyzeContext {
     while (result != null) {
       // 数量词合并
       this.compound(result);
-      if (Dictionary.getSingleton().isStopWord(this.segmentBuff, result.getBegin(),
+      //2026-03-17修改：忽略单字词元
+      String trimmedText = String.valueOf(segmentBuff, result.getBegin(), result.getLength()).trim();
+      if (trimmedText.length() == 1 || Dictionary.getSingleton().isStopWord(this.segmentBuff, result.getBegin(),
+//      if (Dictionary.getSingleton().isStopWord(this.segmentBuff, result.getBegin(),
         result.getLength())) {
         // 是停止词继续取列表的下一个
         result = this.results.pollFirst();
       } else {
         // 不是停止词, 生成lexeme的词元文本,输出
-        result.setLexemeText(String.valueOf(segmentBuff, result.getBegin(), result.getLength()));
+        //2026-03-17修改：对词元文本去除前后空格
+        result.setLexemeText(trimmedText);
+//        result.setLexemeText(String.valueOf(segmentBuff, result.getBegin(), result.getLength()));
         break;
       }
     }

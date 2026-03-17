@@ -105,6 +105,15 @@ function bindUnloadFunctionUrlEncoded(path,paramObject,condFunc) {
     }
 }
 
+function escapeHtml(str) {
+    if(!str) {
+        return null;
+    }
+    var tempDiv = document.createElement('div');
+    tempDiv.innerText = str;
+    return tempDiv.innerHTML;
+}
+
 function convertToUrlEncodedDataStr(paramObject) {
     if(!paramObject) {
         return null;

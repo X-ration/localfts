@@ -5,6 +5,6 @@ package com.adam.localfts.webserver.common.compress;
  */
 public interface CompressedColumns {
     FolderCompressStatus getCompressStatus();
-    long getCompressedFileSize();
-    long getCompressedFileLastModified();
+    Long getCompressedFileSize();
+    Long getCompressedFileLastModified();
 }

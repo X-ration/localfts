@@ -42,7 +42,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -216,7 +215,7 @@ public class FtsService {
      * @param function
      * @return
      */
-    public void scanAndApplySearchFileModel(Function<SearchFileModel, Void> function) {
+    public void scanAndApplySearchFileModel(VoidFunction<SearchFileModel> function) {
         Assert.notNull(function, "function is null!");
         Util.incrementAndCheckMethodCallCount("scanAndApplySearchFileModel", 1);
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
@@ -232,7 +231,7 @@ public class FtsService {
         scanAndApplySearchFileModel(rootDirectory, zipDirectory, function, rootPath, zipFileParentRelativePath, requireFileContent, maxStringLength, tryReadAllFiles, true);
     }
 
-    private void scanAndApplySearchFileModel(File directory, File zipDirectory, Function<SearchFileModel, Void> function,
+    private void scanAndApplySearchFileModel(File directory, File zipDirectory, VoidFunction<SearchFileModel> function,
                                              String rootPath, String zipFileParentRelativePath, boolean requireFileContent, Integer maxStringLength, boolean tryReadAllFiles, boolean outerCall) {
         if(!directory.exists()) {
             return;
@@ -246,8 +245,9 @@ public class FtsService {
             SearchFileModel model = new SearchFileModel();
             model.setFileName(directory.getName());
             model.setDirectory(true);
-            model.setFileSize(0);
+            model.setFileSize(0L);
             model.setLastModified(directory.lastModified());
+            setParentRelativePath(model, directory, rootPath);
             fillSearchModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, model);
             function.apply(model);
         }
@@ -260,6 +260,7 @@ public class FtsService {
                 SearchFileModel model = new SearchFileModel();
                 model.setFileName(item.getName());
                 model.setDirectory(false);
+                setParentRelativePath(model, item, rootPath);
                 if(requireFileContent && item.length() > 0) {
                     try {
                         String fileContent = null;
@@ -293,6 +294,16 @@ public class FtsService {
                         requireFileContent, maxStringLength, tryReadAllFiles, false);
             }
         }
+    }
+
+    private void setParentRelativePath(SearchFileModel model, File file, String rootPath) {
+        String parentRelativePath = file.getAbsolutePath().substring(rootPath.length())
+                .replace(File.separator, "/");
+        parentRelativePath = parentRelativePath.substring(0, parentRelativePath.length() - file.getName().length());
+        if(!parentRelativePath.equals("/")) {
+            parentRelativePath = parentRelativePath.substring(0, parentRelativePath.length() - 1);
+        }
+        model.setParentRelativePath(parentRelativePath);
     }
 
     private boolean isFilePlainReadable(String fileName) {
@@ -423,7 +434,7 @@ public class FtsService {
             if(Util.isSystemWindows()) {
                 zipFileRelativePath = zipFileRelativePath.replaceAll("\\\\", "/");
             }
-            model.setCompressedPath(zipFileRelativePath);
+            model.setCompressedFilePath(zipFileRelativePath);
             long zipFileSize = zipFile.length();
             model.setCompressedFileSize(zipFileSize);
             long zipFileLastModified = zipFile.lastModified();
@@ -766,7 +777,6 @@ public class FtsService {
 
         FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
         if(folderCompressingContextHolder != null) {
-            folderCompressInfo.setCompressedFileSize(folderCompressingContextHolder.getCompressSize());
             folderCompressInfo.setCompressStartTime(folderCompressingContextHolder.getStartTime());
             folderCompressInfo.setCompressFinishTime(folderCompressingContextHolder.getFinishTime());
         }
@@ -776,6 +786,7 @@ public class FtsService {
         long zipFileLastModified = 0;
         if(zipFile.exists() && zipFile.isFile()) {
             zipFileLastModified = zipFile.lastModified();
+            folderCompressInfo.setCompressedFileSize(zipFile.length());
         }
         folderCompressInfo.setCompressedFileLastModified(zipFileLastModified);
 
@@ -809,12 +820,16 @@ public class FtsService {
             return FolderCompressStatus.NOT_COMPRESSED;
         } else {
             FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
-            long recordSize = folderCompressingContextHolder != null ? folderCompressingContextHolder.getCompressSize() : -1L;
-            long zipFileSize = zipFile.length();
-            if(recordSize == zipFileSize) {
-                return FolderCompressStatus.COMPRESSED;
+            if(folderCompressingContextHolder != null) {
+                long recordSize = folderCompressingContextHolder.getCompressSize();
+                long zipFileSize = zipFile.length();
+                if (recordSize == zipFileSize) {
+                    return FolderCompressStatus.COMPRESSED;
+                } else {
+                    return FolderCompressStatus.COMPRESSING;
+                }
             } else {
-                return FolderCompressStatus.COMPRESSING;
+                return FolderCompressStatus.COMPRESSED;
             }
         }
     }

@@ -1,4 +1,7 @@
 /**
+ * 基于源代码修改（查询区分大小写）
+ * 原始注释如下：
+ *
  * IK 中文分词  版本 5.0
  * IK Analyzer release 5.0
  * 
@@ -23,14 +26,14 @@
  */
 package org.wltea.analyzer.core;
 
+import org.wltea.analyzer.cfg.Configuration;
+import org.wltea.analyzer.cfg.DefaultConfig;
+import org.wltea.analyzer.dic.Dictionary;
+
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.wltea.analyzer.cfg.Configuration;
-import org.wltea.analyzer.cfg.DefaultConfig;
-import org.wltea.analyzer.dic.Dictionary;
 
 /**
  * IK分词器主类
@@ -53,37 +56,42 @@ public final class IKSegmenter {
    * IK分词器构造函数
    * @param input 
    * @param useSmart 为true，使用智能分词策略
-   * 
+   *
    * 非智能分词：细粒度输出所有可能的切分结果
    * 智能分词： 合并数词和量词，对分词结果进行歧义判断
    */
   public IKSegmenter(Reader input, boolean useSmart) {
+    this(input, useSmart, true, true);
+  }
+
+  public IKSegmenter(Reader input, boolean useSmart, boolean lowerCaseEnglish, boolean simplifiyChinese) {
     this.input = input;
     this.cfg = DefaultConfig.getInstance();
     this.cfg.setUseSmart(useSmart);
-    this.init();
+    this.init(lowerCaseEnglish, simplifiyChinese);
   }
 
   /**
    * IK分词器构造函数
    * @param input
    * @param cfg 使用自定义的Configuration构造分词器
-   * 
+   *
    */
-  public IKSegmenter(Reader input, Configuration cfg) {
+  public IKSegmenter(Reader input, Configuration cfg, boolean lowerCaseEnglish, boolean simplifiyChinese) {
     this.input = input;
     this.cfg = cfg;
-    this.init();
+    this.init(lowerCaseEnglish, simplifiyChinese);
   }
 
   /**
    * 初始化
+   * @param lowerCaseEnglish 是否对英文进行小写处理
    */
-  private void init() {
+  private void init(boolean lowerCaseEnglish, boolean simplifyChinese) {
     // 初始化词典单例
     Dictionary.initial(this.cfg);
     // 初始化分词上下文
-    this.context = new AnalyzeContext(this.cfg);
+    this.context = new AnalyzeContext(this.cfg, lowerCaseEnglish, simplifyChinese);
     // 加载子分词器
     this.segmenters = this.loadSegmenters();
     // 加载歧义裁决器

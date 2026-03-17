@@ -3,6 +3,7 @@ package com.adam.localfts.webserver.util;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import com.github.houbb.opencc4j.util.ZhConverterUtil;
 import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,56 @@ public class Util {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(Util.class);
     private static final Map<String, Integer> METHOD_CALL_COUNTER = new ConcurrentHashMap<>();
+
+    public static String toLowerCaseAndSC(String str) {
+        if(str == null) {
+            return null;
+        }
+        String lowerCasedStr = str.toLowerCase();
+        String scStr = ZhConverterUtil.toSimple(lowerCasedStr);
+        if(scStr == null) {
+            LOGGER.warn("Failed to convert str \"{}\" to SC", lowerCasedStr);
+            return lowerCasedStr;
+        } else {
+            return scStr;
+        }
+    }
+
+    public static Character toLowerCase(Character character) {
+//        ZhConverterUtil.toSimple()
+        if(character == null) {
+            return null;
+        } else {
+            return character.toString().toLowerCase().charAt(0);
+        }
+    }
+
+    public static Character toSC(Character character) {
+        if(character == null) {
+            return null;
+        } else {
+            String converted = ZhConverterUtil.toSimple(character.toString());
+            if(converted == null || converted.length() == 0) {
+                LOGGER.warn("Failed to convert character '{}' to SC", character);
+                return character;
+            } else {
+                return converted.charAt(0);
+            }
+        }
+    }
+
+    public static String escapeHtmlChars(String htmlText) {
+        if(htmlText == null) {
+            return null;
+        }
+        return htmlText.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;")
+                .replace("\t", "&#9;")
+                .replace(System.lineSeparator(), "<br/>");
+    }
 
     public static synchronized void incrementAndCheckMethodCallCount(String methodName, int threshold) {
         int callCount = METHOD_CALL_COUNTER.getOrDefault(methodName, 0);

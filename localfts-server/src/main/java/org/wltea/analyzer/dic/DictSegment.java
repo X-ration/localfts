@@ -1,4 +1,6 @@
 /**
+ * 基于源代码修改（兼容大小写）
+ * 原始协议：Apache License 2.0
  * 
  * IK 中文分词  版本 5.0
  * IK Analyzer release 5.0
@@ -24,6 +26,8 @@
  * 
  */
 package org.wltea.analyzer.dic;
+
+import com.adam.localfts.webserver.util.Util;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -114,6 +118,9 @@ class DictSegment implements Comparable<DictSegment> {
     searchHit.setEnd(begin);
 
     Character keyChar = new Character(charArray[begin]);
+    //2026-03-17修改：转小写+简体（忽略词典的大小写和简繁体）
+    keyChar = Util.toLowerCase(keyChar);
+    keyChar = Util.toSC(keyChar);
     DictSegment ds = null;
 
     // 引用实例变量为本地变量，避免查询时遇到更新的同步问题

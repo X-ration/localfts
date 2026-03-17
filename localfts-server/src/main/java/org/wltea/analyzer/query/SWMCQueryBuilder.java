@@ -24,18 +24,17 @@
  */
 package org.wltea.analyzer.query;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.util.Version;
 import org.wltea.analyzer.core.IKSegmenter;
 import org.wltea.analyzer.core.Lexeme;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Single Word Multi Char Query Builder
@@ -85,7 +84,7 @@ public class SWMCQueryBuilder {
   /**
    * 根据分词结果生成SWMC搜索
    * @param fieldName
-   * @param pathOption
+   * @param lexemes
    * @param quickMode
    * @return
    */
@@ -123,8 +122,9 @@ public class SWMCQueryBuilder {
     }
 
     // 借助lucene queryparser 生成SWMC Query
-    QueryParser qp = new QueryParser(Version.LUCENE_43, fieldName, new StandardAnalyzer(
-        Version.LUCENE_43));
+//    QueryParser qp = new QueryParser(Version.LUCENE_43, fieldName, new StandardAnalyzer(
+//        Version.LUCENE_43));
+    QueryParser qp = new QueryParser(fieldName, new StandardAnalyzer());
     qp.setDefaultOperator(QueryParser.AND_OPERATOR);
     qp.setAutoGeneratePhraseQueries(true);
 

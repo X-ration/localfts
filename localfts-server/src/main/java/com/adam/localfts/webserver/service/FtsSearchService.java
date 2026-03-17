@@ -3,7 +3,10 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.PageObject;
 import com.adam.localfts.webserver.common.ReturnObject;
-import com.adam.localfts.webserver.common.search.*;
+import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
+import com.adam.localfts.webserver.common.search.SearchDTO;
+import com.adam.localfts.webserver.common.search.SearchMode;
+import com.adam.localfts.webserver.common.search.SearchType;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.ShutdownListener;
@@ -14,7 +17,6 @@ import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
-import com.adam.localfts.webserver.util.LuceneIndexUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +29,6 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -131,24 +132,24 @@ public class FtsSearchService implements DisposableBean {
             searchFutureMap.remove(searchId, future);
             return ReturnObject.success(pageObject);
         } catch (RejectedExecutionException e) {
-            logger.warn("搜索线程池已满");
+            logger.warn("搜索线程池已满, searchId={}", searchId);
             return ReturnObject.fail("搜索线程池已满");
             //return ReturnObject.fail("搜索服务不可用");
         } catch (TimeoutException e) {
-            logger.warn("搜索任务超时");
+            logger.warn("搜索任务超时, searchId={}", searchId);
             future.cancel(true);
             searchFutureMap.remove(searchId, future);
             return ReturnObject.fail("搜索超时");
         } catch (ExecutionException e) {
-            logger.error("搜索执行异常", e);
+            logger.error("搜索执行异常, searchId={}", searchId, e);
             searchFutureMap.remove(searchId, future);
             return ReturnObject.fail("搜索失败");
         } catch (CancellationException e) {
-            logger.warn("搜索任务被取消");;
+            logger.warn("搜索任务被取消, searchId={}", searchId);;
             searchFutureMap.remove(searchId, future);
             return ReturnObject.fail("搜索任务被取消");
         } catch (InterruptedException e) {
-            logger.warn("搜索任务被中断");
+            logger.warn("搜索任务被中断, searchId={}", searchId);
             searchFutureMap.remove(searchId, future);
             return ReturnObject.fail("搜索任务被中断");
         }
@@ -217,13 +218,16 @@ public class FtsSearchService implements DisposableBean {
                     .collect(Collectors.toList());
             advancedSearchCondition.setSearchPathList(newSearchPathList);
         }
-        if(advancedSearchCondition.getCaseSensitive() == null) {
-            advancedSearchCondition.setCaseSensitive(true);
+        if(advancedSearchCondition.getCaseAndSTCSensitive() == null) {
+            advancedSearchCondition.setCaseAndSTCSensitive(false);
         }
         if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() == SearchMode.PLAIN) {
             advancedSearchCondition.setSearchType(SearchType.FILENAME_ONLY);
         } else if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() == SearchMode.INDEXED &&
                 !ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled()) {
+            advancedSearchCondition.setSearchType(SearchType.FILENAME_ONLY);
+        }
+        if(advancedSearchCondition.getSearchType() == null) {
             advancedSearchCondition.setSearchType(SearchType.FILENAME_ONLY);
         }
         if(advancedSearchCondition.getSearchType() == SearchType.FILE_CONTENT_ONLY) {
@@ -257,10 +261,13 @@ public class FtsSearchService implements DisposableBean {
      */
     private void scanFilesAndCreateIndex(String indexPath, Class<? extends RuntimeException> exClass) {
         logger.info("Prepare to scan files and create lucene index");
+        LuceneIndexThread.getInstance().setBatchMode(true);
         ftsService.scanAndApplySearchFileModel(model -> {
-            //TODO 写入索引
-            return null;
+            LuceneIndexThread.getInstance().addModel(model);
         });
+        LuceneIndexThread.getInstance().setBatchMode(false);
+        LuceneIndexThread.getInstance().commitDocs();
+        logger.info("Finished creating lucene index");
     }
 
     @PostConstruct
@@ -272,19 +279,17 @@ public class FtsSearchService implements DisposableBean {
                 logger.warn("[Performance warning]LuceneIndexThread takes only 1 available physical processor! Requests may wait long.");
             }
             String indexPath = searchProperties.getIndexPath();
-            if(!searchProperties.getUseExistingIndex()) {
-                try {
-                    LuceneIndexUtil.createEmptyIndex(indexPath);
-                } catch (IOException e) {
-                    logger.error("Error creating empty index", e);
-                    Util.throwException(LocalFtsStartupException.class, "Failed to create empty index");
-                }
-            }
+            LuceneIndexThread.constructOnce(indexPath, searchProperties.getUseExistingIndex());
             LuceneIndexThread.getInstance().start();
-            if(searchProperties.getIndexBeforeStart()) {
-                scanFilesAndCreateIndex(indexPath, LocalFtsStartupException.class);
+            luceneSearchService.setIndexPath(indexPath);
+            if(!searchProperties.getUseExistingIndex()) {
+                if (searchProperties.getIndexBeforeStart()) {
+                    scanFilesAndCreateIndex(indexPath, LocalFtsStartupException.class);
+                } else {
+                    webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(indexPath, LocalFtsRuntimeException.class));
+                }
             } else {
-                webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(indexPath, LocalFtsRuntimeException.class));
+                logger.info("Using existing index");
             }
         }
     }

@@ -1,4 +1,7 @@
 /**
+ * 基于源代码修改（查询区分大小写）
+ * 原始注释如下：
+ *
  * IK 中文分词  版本 5.0.1
  * IK Analyzer release 5.0.1
  *
@@ -24,8 +27,6 @@
  */
 package org.wltea.analyzer.lucene;
 
-import java.io.Reader;
-
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Tokenizer;
 
@@ -36,13 +37,31 @@ import org.apache.lucene.analysis.Tokenizer;
 public final class IKAnalyzer extends Analyzer {
 
   private boolean useSmart;
+  private boolean lowerCaseEnglish;
+  private boolean simplifyChinese;
 
   public boolean useSmart() {
     return useSmart;
   }
 
+  public boolean lowerCaseEnglish() {
+    return lowerCaseEnglish;
+  }
+
+  public boolean simplifyChinese() {
+    return simplifyChinese;
+  }
+
   public void setUseSmart(boolean useSmart) {
     this.useSmart = useSmart;
+  }
+
+  public void setLowerCaseEnglish(boolean lowerCaseEnglish) {
+    this.lowerCaseEnglish = lowerCaseEnglish;
+  }
+
+  public void setSimplifyChinese(boolean simplifyChinese) {
+    this.simplifyChinese = simplifyChinese;
   }
 
   /**
@@ -60,16 +79,22 @@ public final class IKAnalyzer extends Analyzer {
    * @param useSmart 当为true时，分词器进行智能切分
    */
   public IKAnalyzer(boolean useSmart) {
+    this(useSmart, true, true);
+  }
+
+  public IKAnalyzer(boolean useSmart, boolean lowerCaseEnglish, boolean simplifyChinese) {
     super();
     this.useSmart = useSmart;
+    this.lowerCaseEnglish = lowerCaseEnglish;
+    this.simplifyChinese = simplifyChinese;
   }
 
   /**
    * 重载Analyzer接口，构造分词组件
    */
   @Override
-  protected TokenStreamComponents createComponents(String fieldName, final Reader in) {
-    Tokenizer _IKTokenizer = new IKTokenizer(in, this.useSmart());
+  protected TokenStreamComponents createComponents(String fieldName) {
+    Tokenizer _IKTokenizer = new IKTokenizer(this.useSmart(), lowerCaseEnglish, simplifyChinese);
     return new TokenStreamComponents(_IKTokenizer);
   }
 

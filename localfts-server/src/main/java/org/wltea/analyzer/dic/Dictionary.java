@@ -1,4 +1,7 @@
 /**
+ * 基于源代码修改（词典文件支持注释）
+ * 原始协议：Apache License 2.0
+ *
  * IK 中文分词  版本 5.0
  * IK Analyzer release 5.0
  * 
@@ -25,14 +28,14 @@
  */
 package org.wltea.analyzer.dic;
 
+import org.wltea.analyzer.cfg.Configuration;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collection;
 import java.util.List;
-
-import org.wltea.analyzer.cfg.Configuration;
 
 /**
  * 词典管理类,单子模式
@@ -202,7 +205,9 @@ public class Dictionary {
       String theWord = null;
       do {
         theWord = br.readLine();
-        if (theWord != null && !"".equals(theWord.trim())) {
+        //2026-03-17修改：支持注释
+        if (theWord != null && !theWord.startsWith("#") && !"".equals(theWord.trim())) {
+//        if (theWord != null && !"".equals(theWord.trim())) {
           _MainDict.fillSegment(theWord.trim().toLowerCase().toCharArray());
         }
       } while (theWord != null);
@@ -246,7 +251,9 @@ public class Dictionary {
           String theWord = null;
           do {
             theWord = br.readLine();
-            if (theWord != null && !"".equals(theWord.trim())) {
+            //2026-03-17修改：支持注释
+            if (theWord != null && !theWord.startsWith("#") && !"".equals(theWord.trim())) {
+//            if (theWord != null && !"".equals(theWord.trim())) {
               // 加载扩展词典数据到主内存词典中
               // System.out.println(theWord);
               _MainDict.fillSegment(theWord.trim().toLowerCase().toCharArray());
@@ -294,7 +301,9 @@ public class Dictionary {
           String theWord = null;
           do {
             theWord = br.readLine();
-            if (theWord != null && !"".equals(theWord.trim())) {
+            //2026-03-17修改：支持注释
+            if (theWord != null && !theWord.startsWith("#") && !"".equals(theWord.trim())) {
+//            if (theWord != null && !"".equals(theWord.trim())) {
               // System.out.println(theWord);
               // 加载扩展停止词典数据到内存中
               _StopWordDict.fillSegment(theWord.trim().toLowerCase().toCharArray());
@@ -336,7 +345,9 @@ public class Dictionary {
       String theWord = null;
       do {
         theWord = br.readLine();
-        if (theWord != null && !"".equals(theWord.trim())) {
+        //2026-03-17修改：支持注释
+        if (theWord != null && !theWord.startsWith("#") && !"".equals(theWord.trim())) {
+//        if (theWord != null && !"".equals(theWord.trim())) {
           _QuantifierDict.fillSegment(theWord.trim().toLowerCase().toCharArray());
         }
       } while (theWord != null);
