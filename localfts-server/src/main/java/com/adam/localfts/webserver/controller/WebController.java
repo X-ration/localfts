@@ -376,6 +376,8 @@ public class WebController {
         model.addAttribute("searchMode", searchMode);
         Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled() : false;
         model.addAttribute("indexFileContent", indexFileContent);
+        Integer timeout = ftsServerConfigService.getLocalFtsProperties().getSearch().getTimeout();
+        model.addAttribute("timeout", timeout);
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         model.addAttribute("zipEnabled", zipEnabled);
         FileTypeGroup[] fileTypeGroups = FileTypeGroup.values();

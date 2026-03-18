@@ -257,14 +257,16 @@ public class FtsSearchService implements DisposableBean {
     /**
      * 创建索引
      */
-    private void scanFilesAndCreateIndex(String indexPath, Class<? extends RuntimeException> exClass) {
+    private void scanFilesAndCreateIndex(Class<? extends RuntimeException> exClass) {
         logger.info("Prepare to scan files and create lucene index");
+        long startMillis = System.currentTimeMillis();
         LuceneIndexThread.getInstance().setBatchMode(true);
         ftsService.scanAndApplySearchFileModel(model -> {
             LuceneIndexThread.getInstance().addOperation(IndexType.CREATE, model);
         });
         LuceneIndexThread.getInstance().setBatchMode(false);
-        logger.info("Finished creating lucene index");
+        long endMillis = System.currentTimeMillis();
+        logger.info("Finished creating lucene index, cost time {} ms", (endMillis - startMillis));
     }
 
     @PostConstruct
@@ -284,9 +286,9 @@ public class FtsSearchService implements DisposableBean {
             luceneSearchService.setIndexPath(indexPath);
             if(!searchProperties.getUseExistingIndex()) {
                 if (searchProperties.getIndexBeforeStart()) {
-                    scanFilesAndCreateIndex(indexPath, LocalFtsStartupException.class);
+                    scanFilesAndCreateIndex(LocalFtsStartupException.class);
                 } else {
-                    webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(indexPath, LocalFtsRuntimeException.class));
+                    webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(LocalFtsRuntimeException.class));
                 }
             } else {
                 logger.info("Using existing index");

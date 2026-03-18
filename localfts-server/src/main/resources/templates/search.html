@@ -292,6 +292,8 @@
         //var sortColumn = [[${sortColumn}]];
         //var sortOrder = [[${sortOrder}]];
         var searchId = [[${searchId}]];
+        var timeout = [[${timeout}]];
+        var timeoutMills = timeout ? timeout * 1000 : 31000;
         var prevKeyword = null, prevAscObject = null,
             prevSortColumn = null, prevSortOrder = null;
         bindUnloadFunctionUrlEncoded(contextPath + "/cancelSearch", {'searchId': searchId});
@@ -1057,7 +1059,7 @@
                     }
                     searchHint.innerText = '搜索结果';
                     handleErrorMessage(errorMsg);
-                }, 40000, function() {
+                }, timeoutMills, function() {
                     var errorMsg = '搜索失败:接口超时';
                     searchHint.innerText = '搜索结果';
                     handleErrorMessage(errorMsg);
