@@ -14,7 +14,7 @@ public enum FileType {
     XLS("Microsoft Excel 表格"), XLSX("Microsoft Excel 表格"),
     PPT("Microsoft PowerPoint 演示文稿"), PPTX("Microsoft PowerPoint 演示文稿"),
     TXT("纯文本文件"), MD("Markdown标记语言文件"), CSV("逗号分隔表格文件"),
-    XML("可扩展标记语言"), LOG("日志文件"),
+    XML("可扩展标记语言"), LOG("日志文件"), LRC("歌词文件"),
     /**
      * 2.图像
      */

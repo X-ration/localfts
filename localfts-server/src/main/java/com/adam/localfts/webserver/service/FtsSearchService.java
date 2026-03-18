@@ -3,10 +3,7 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.PageObject;
 import com.adam.localfts.webserver.common.ReturnObject;
-import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
-import com.adam.localfts.webserver.common.search.SearchDTO;
-import com.adam.localfts.webserver.common.search.SearchMode;
-import com.adam.localfts.webserver.common.search.SearchType;
+import com.adam.localfts.webserver.common.search.*;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.ShutdownListener;
@@ -16,6 +13,7 @@ import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
+import com.adam.localfts.webserver.task.FileMonitorThread;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
 import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
@@ -263,16 +261,16 @@ public class FtsSearchService implements DisposableBean {
         logger.info("Prepare to scan files and create lucene index");
         LuceneIndexThread.getInstance().setBatchMode(true);
         ftsService.scanAndApplySearchFileModel(model -> {
-            LuceneIndexThread.getInstance().addModel(model);
+            LuceneIndexThread.getInstance().addOperation(IndexType.CREATE, model);
         });
         LuceneIndexThread.getInstance().setBatchMode(false);
-        LuceneIndexThread.getInstance().commitDocs();
         logger.info("Finished creating lucene index");
     }
 
     @PostConstruct
     public void postConstruct() {
         SearchProperties searchProperties = ftsServerConfigService.getLocalFtsProperties().getSearch();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         if(searchProperties.getEnabled() && searchProperties.getMode() == SearchMode.INDEXED) {
             int physicalAvailableProcessors = Constants.PHYSICAL_AVAILABLE_PROCESSORS;
             if(physicalAvailableProcessors == 1) {
@@ -281,6 +279,8 @@ public class FtsSearchService implements DisposableBean {
             String indexPath = searchProperties.getIndexPath();
             LuceneIndexThread.constructOnce(indexPath, searchProperties.getUseExistingIndex());
             LuceneIndexThread.getInstance().start();
+            FileMonitorThread.constructOnce(ftsService, rootPath);
+            FileMonitorThread.getInstance().start();
             luceneSearchService.setIndexPath(indexPath);
             if(!searchProperties.getUseExistingIndex()) {
                 if (searchProperties.getIndexBeforeStart()) {
@@ -298,6 +298,9 @@ public class FtsSearchService implements DisposableBean {
     public void destroy() throws Exception {
         if(LuceneIndexThread.constructed()) {
             LuceneIndexThread.getInstance().tryStop();
+        }
+        if(FileMonitorThread.constructed()) {
+            FileMonitorThread.getInstance().tryStop();
         }
     }
 }

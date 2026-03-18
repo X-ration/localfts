@@ -106,9 +106,9 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
                 if(advancedSearchCondition.getFilterFileType() != null && advancedSearchCondition.getFilterFileType()) {
                     BooleanQuery.Builder fileTypeQueryBuilder = new BooleanQuery.Builder();
                     for(String suffix: advancedSearchCondition.getFileTypes()) {
-                        Term term = new Term("fileName", "*" + suffix);
-                        WildcardQuery wildcardQuery = new WildcardQuery(term);
-                        fileTypeQueryBuilder.add(wildcardQuery, BooleanClause.Occur.SHOULD);
+                        Term term = new Term("fileName_simple_reversed", Util.reverseStr(suffix));
+                        PrefixQuery query = new PrefixQuery(term);
+                        fileTypeQueryBuilder.add(query, BooleanClause.Occur.SHOULD);
                     }
                     BooleanQuery fileTypeQuery = fileTypeQueryBuilder.build();
                     rootQueryBuilder.add(fileTypeQuery, BooleanClause.Occur.MUST);

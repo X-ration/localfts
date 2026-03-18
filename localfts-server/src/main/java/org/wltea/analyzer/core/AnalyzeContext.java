@@ -322,9 +322,9 @@ class AnalyzeContext {
     while (result != null) {
       // 数量词合并
       this.compound(result);
-      //2026-03-17修改：忽略单字词元
+      //2026-03-18修改：对词元trim处理
       String trimmedText = String.valueOf(segmentBuff, result.getBegin(), result.getLength()).trim();
-      if (trimmedText.length() == 1 || Dictionary.getSingleton().isStopWord(this.segmentBuff, result.getBegin(),
+      if (trimmedText.length() == 0 || Dictionary.getSingleton().isStopWord(this.segmentBuff, result.getBegin(),
 //      if (Dictionary.getSingleton().isStopWord(this.segmentBuff, result.getBegin(),
         result.getLength())) {
         // 是停止词继续取列表的下一个

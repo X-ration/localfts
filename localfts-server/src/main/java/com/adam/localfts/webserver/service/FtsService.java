@@ -216,23 +216,33 @@ public class FtsService {
      * @return
      */
     public void scanAndApplySearchFileModel(VoidFunction<SearchFileModel> function) {
-        Assert.notNull(function, "function is null!");
         Util.incrementAndCheckMethodCallCount("scanAndApplySearchFileModel", 1);
+        scanAndApplySearchFileModel(null, function);
+    }
+
+    public void scanAndApplySearchFileModel(File directory, VoidFunction<SearchFileModel> function) {
+        Assert.notNull(function, "function is null!");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         File rootDirectory = new File(rootPath);
         Assert.isTrue(rootDirectory.exists() && rootDirectory.isDirectory(), "根路径不存在或不是文件夹");
+        if(directory == null) {
+            directory = rootDirectory;
+        } else {
+            Assert.isTrue(directory.exists() && directory.isDirectory(), "扫描路径" + directory.getAbsolutePath() + "不存在或不是文件夹");
+            Assert.isTrue(directory.getAbsolutePath().startsWith(rootDirectory.getAbsolutePath()), "扫描路径" + directory.getAbsolutePath() + "不是根路径的子文件夹");
+        }
         File zipDirectory = new File(rootDirectory, zipFolderPath);
         String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
         IndexFileContentProperties indexFileContentProperties = ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent();
         Integer maxStringLength = indexFileContentProperties.getMaxStringLength();
         boolean requireFileContent = indexFileContentProperties.getEnabled();
         boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
-        scanAndApplySearchFileModel(rootDirectory, zipDirectory, function, rootPath, zipFileParentRelativePath, requireFileContent, maxStringLength, tryReadAllFiles, true);
+        scanAndApplySearchFileModel(directory, zipDirectory, function, rootPath, zipFileParentRelativePath, requireFileContent, maxStringLength, tryReadAllFiles, directory != rootDirectory);
     }
 
     private void scanAndApplySearchFileModel(File directory, File zipDirectory, VoidFunction<SearchFileModel> function,
-                                             String rootPath, String zipFileParentRelativePath, boolean requireFileContent, Integer maxStringLength, boolean tryReadAllFiles, boolean outerCall) {
+                                             String rootPath, String zipFileParentRelativePath, boolean requireFileContent, Integer maxStringLength, boolean tryReadAllFiles, boolean indexDirectory) {
         if(!directory.exists()) {
             return;
         }
@@ -240,8 +250,7 @@ public class FtsService {
             LOGGER.warn("Path {} is not a directory!", directory.getAbsolutePath());
             return;
         }
-        //不索引根路径
-        if(!outerCall) {
+        if(indexDirectory) {
             SearchFileModel model = new SearchFileModel();
             model.setFileName(directory.getName());
             model.setDirectory(true);
@@ -262,38 +271,94 @@ public class FtsService {
                 model.setDirectory(false);
                 setParentRelativePath(model, item, rootPath);
                 if(requireFileContent && item.length() > 0) {
-                    try {
-                        String fileContent = null;
-                        if(item.getName().toLowerCase().endsWith(".class")) {
-                            fileContent = IOUtil.getClassFileContent(item);
-                        } else if(tryReadAllFiles || isFileReadable(item.getName())) {
-                            if(isFilePlainReadable(item.getName())) {
-                                fileContent = IOUtil.getFileContentPlain(item);
-                            } else {
-                                fileContent = IOUtil.getFileContentTika(item, maxStringLength);
-                            }
-                            if(fileContent != null) {
-                                fileContent = fileContent.replaceAll("(?m)^\\s+$", "") // 清空空白行
-                                        .replaceAll("(\\r\\n|\\r|\\n){2,}", "\n")
-                                        .replaceAll("\\r\\n|\\r|\\n", System.lineSeparator()) // 统一所有换行
-                                        .replaceAll("\\u00A0", " ")                // NBSP → 普通空格
-                                        .trim();
-                            }
-                        }
-                        model.setFileContent(fileContent);
-                    } catch (IOException | TikaException e) {
-                        LOGGER.warn("Exception occured getting file content of {}, ex type:{}, msg:{}",
-                                item.getAbsolutePath(), e.getClass().getName(), e.getMessage());
-                    }
+                    String fileContent = getFileContent(item, tryReadAllFiles, maxStringLength);
+                    model.setFileContent(fileContent);
                 }
                 model.setFileSize(item.length());
                 model.setLastModified(item.lastModified());
                 function.apply(model);
             } else {
                 scanAndApplySearchFileModel(item, zipDirectory, function, rootPath, zipFileParentRelativePath,
-                        requireFileContent, maxStringLength, tryReadAllFiles, false);
+                        requireFileContent, maxStringLength, tryReadAllFiles, true);
             }
         }
+    }
+
+    public void convertAndApplySearchFileModel(File file, VoidFunction<SearchFileModel> function) {
+        if(!file.exists()) {
+            return;
+        }
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        File rootDirectory = new File(rootPath);
+        Assert.isTrue(rootDirectory.exists() && rootDirectory.isDirectory(), "根路径不存在或不是文件夹");
+        File zipDirectory = new File(rootDirectory, zipFolderPath);
+        String zipFileParentRelativePath = getZipFileParentRelativePath(zipFolderPath);
+        IndexFileContentProperties indexFileContentProperties = ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent();
+        Integer maxStringLength = indexFileContentProperties.getMaxStringLength();
+        boolean requireFileContent = indexFileContentProperties.getEnabled();
+        boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
+
+        if(file.isDirectory()) {
+            SearchFileModel model = new SearchFileModel();
+            model.setFileName(file.getName());
+            model.setDirectory(true);
+            model.setFileSize(0L);
+            model.setLastModified(file.lastModified());
+            setParentRelativePath(model, file, rootPath);
+            fillSearchModelCompress(file, zipDirectory, rootPath, zipFileParentRelativePath, model);
+            function.apply(model);
+        } else {
+            SearchFileModel model = new SearchFileModel();
+            model.setFileName(file.getName());
+            model.setDirectory(false);
+            setParentRelativePath(model, file, rootPath);
+            if(requireFileContent && file.length() > 0) {
+                String fileContent = getFileContent(file, tryReadAllFiles, maxStringLength);
+                model.setFileContent(fileContent);
+            }
+            model.setFileSize(file.length());
+            model.setLastModified(file.lastModified());
+            function.apply(model);
+        }
+    }
+
+    private String getFileContent(File file, boolean tryReadAllFiles, int maxStringLength) {
+        try {
+            String fileContent = null;
+            if(file.getName().toLowerCase().endsWith(".class")) {
+                fileContent = IOUtil.getClassFileContent(file);
+            } else if(tryReadAllFiles || isFileReadable(file.getName())) {
+                if(isFilePlainReadable(file.getName())) {
+                    fileContent = IOUtil.getFileContentPlain(file);
+                } else {
+                    fileContent = IOUtil.getFileContentTika(file, maxStringLength);
+                }
+                if(fileContent != null) {
+                    fileContent = fileContent.replaceAll("(?m)^\\s+$", "") // 清空空白行
+                            .replaceAll("(\\r\\n|\\r|\\n){2,}", "\n")
+                            .replaceAll("\\r\\n|\\r|\\n", System.lineSeparator()) // 统一所有换行
+                            .replaceAll("\\u00A0", " ")                // NBSP → 普通空格
+                            .trim();
+                }
+            }
+            return fileContent;
+        } catch (IOException | TikaException e) {
+            LOGGER.warn("Exception occured getting file content of {}, ex type:{}, msg:{}",
+                    file.getAbsolutePath(), e.getClass().getName(), e.getMessage());
+            return null;
+        }
+    }
+
+    public String getParentRelativePath(File file) {
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String parentRelativePath = file.getAbsolutePath().substring(rootPath.length())
+                .replace(File.separator, "/");
+        parentRelativePath = parentRelativePath.substring(0, parentRelativePath.length() - file.getName().length());
+        if(!parentRelativePath.equals("/")) {
+            parentRelativePath = parentRelativePath.substring(0, parentRelativePath.length() - 1);
+        }
+        return parentRelativePath;
     }
 
     private void setParentRelativePath(SearchFileModel model, File file, String rootPath) {

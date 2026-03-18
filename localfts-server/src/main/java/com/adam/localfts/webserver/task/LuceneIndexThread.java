@@ -1,6 +1,8 @@
 package com.adam.localfts.webserver.task;
 
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
+import com.adam.localfts.webserver.common.search.IndexOperation;
+import com.adam.localfts.webserver.common.search.IndexType;
 import com.adam.localfts.webserver.common.search.SearchFileModel;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
@@ -10,13 +12,18 @@ import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.PrefixQuery;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
-import org.wltea.analyzer.lucene.IKAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
+import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,13 +31,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class LuceneIndexThread extends Thread{
 
     private final AtomicBoolean isBusy = new AtomicBoolean(false);
     private final AtomicBoolean batchMode = new AtomicBoolean(false);
+    private final AtomicInteger batchCount = new AtomicInteger(0);
     private final AtomicBoolean running = new AtomicBoolean(true);
-    private final LinkedBlockingQueue<SearchFileModel> queue = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<IndexOperation> queue = new LinkedBlockingQueue<>();
     private final String indexPath;
     private final IndexWriter indexWriter;
     private final Directory directory;
@@ -90,9 +99,19 @@ public class LuceneIndexThread extends Thread{
                 if(queue.size() == 0) {
                     isBusy.set(false);
                 }
-                SearchFileModel model = queue.take();
+                IndexOperation indexOperation = queue.take();
                 isBusy.set(true);
-                indexModel(model);
+                indexModel(indexOperation);
+                if(batchMode.get()) {
+                    int count = batchCount.incrementAndGet();
+                    if(count >= 100) {
+                        logger.debug("Batch commit docs count {}", count);
+                        commitDocs();
+                        batchCount.set(0);
+                    }
+                } else {
+                    commitDocs();
+                }
             } catch (InterruptedException e) {
                 running.set(false);
             } catch (Exception e) {
@@ -112,15 +131,25 @@ public class LuceneIndexThread extends Thread{
         this.analyzer.close();
     }
 
-    public void addModel(SearchFileModel model) {
-        queue.offer(model);
+    public void addOperation(IndexType indexType, SearchFileModel model) {
+        IndexOperation indexOperation = new IndexOperation(indexType, model);
+        queue.offer(indexOperation);
     }
 
+    /**
+     * 切换批处理状态。当批处理状态由true变为false时会强制提交修改
+     * @param enabled
+     */
     public void setBatchMode(boolean enabled) {
         boolean prevEnabled = batchMode.get();
         if(prevEnabled != enabled) {
             logger.info("Batch mode changed from {} to {}", prevEnabled, enabled);
             batchMode.set(enabled);
+            if(!enabled) {
+                logger.debug("Batch commit docs count {}", batchCount);
+                commitDocs();
+                batchCount.set(0);
+            }
         }
     }
 
@@ -148,7 +177,29 @@ public class LuceneIndexThread extends Thread{
         }
     }
 
-    private void indexModel(SearchFileModel model) {
+    private void indexModel(IndexOperation indexOperation) {
+        Assert.notNull(indexOperation, "indexOperation is null!");
+        Assert.notNull(indexOperation.getIndexType(), "indexOperation.indexType is null!");
+        Assert.notNull(indexOperation.getSearchFileModel(), "indexOperation.searchFileModel is null!");
+        switch (indexOperation.getIndexType()) {
+            case CREATE:
+                addModel(indexOperation.getSearchFileModel());
+                break;
+            case UPDATE:
+                updateModel(indexOperation.getSearchFileModel());
+                break;
+            case DELETE:
+                deleteModel(indexOperation.getSearchFileModel());
+                break;
+            case DELETE_DIRECTORY:
+                deleteDirectoryModel(indexOperation.getSearchFileModel());
+                break;
+            default:
+                throw new LocalFtsRuntimeException("Invalid state:" + indexOperation.getIndexType());
+        }
+    }
+
+    private void addModel(SearchFileModel model) {
         Assert.notNull(model, "model is null!");
         FieldType fullFieldType = new FieldType();
         fullFieldType.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
@@ -165,6 +216,8 @@ public class LuceneIndexThread extends Thread{
         Document document = new Document();
         document.add(new Field("fileName", model.getFileName(), fullFieldType));
         document.add(new Field("fileName_lowercase", Util.toLowerCaseAndSC(model.getFileName()), fullFieldType));
+        document.add(new Field("fileName_simple", model.getFileName(), simpleFieldType));
+        document.add(new Field("fileName_simple_reversed", Util.reverseStr(model.getFileName()), simpleFieldType));
         document.add(new SortedDocValuesField("fileName_sort", new BytesRef(model.getFileName())));
         if(model.getFileContent() != null) {
             document.add(new Field("fileContent", model.getFileContent(), fullFieldType));
@@ -199,9 +252,45 @@ public class LuceneIndexThread extends Thread{
             document.add(new SortedNumericDocValuesField("fileSize_sort", model.getFileSize()));
         }
         addDoc(document, model);
-        if(!batchMode.get()) {
-            commitDocs();
+    }
+
+    private void deleteDirectoryModel(SearchFileModel model) {
+        deleteModel(model);
+        String directoryRelativePath = model.getParentRelativePath();
+        if(!directoryRelativePath.equals("/")) {
+            directoryRelativePath = directoryRelativePath + "/";
         }
+        directoryRelativePath = directoryRelativePath + model.getFileName();
+        Term term = new Term("parentRelativePath", directoryRelativePath);
+        PrefixQuery query = new PrefixQuery(term);
+        try {
+            indexWriter.deleteDocuments(query);
+        } catch (IOException e) {
+            logger.error("Error deleting directory documents with fileName {} and parentRelativePath {}", model.getFileName(), model.getParentRelativePath());
+            throw new LocalFtsRuntimeException("Error deleting directory documents with fileName " + model.getFileName() + " and parentRelativePath " + model.getParentRelativePath());
+        }
+    }
+
+    private void deleteModel(SearchFileModel model) {
+        Term term = new Term("fileName_simple", model.getFileName());
+        TermQuery termQuery1 = new TermQuery(term);
+        term = new Term("parentRelativePath", model.getParentRelativePath());
+        TermQuery termQuery2 = new TermQuery(term);
+        BooleanQuery query = new BooleanQuery.Builder()
+                .add(termQuery1, BooleanClause.Occur.MUST)
+                .add(termQuery2, BooleanClause.Occur.MUST)
+                .build();
+        try {
+            indexWriter.deleteDocuments(query);
+        } catch (IOException e) {
+            logger.error("Error deleting document with fileName {} and parentRelativePath {}", model.getFileName(), model.getParentRelativePath());
+            throw new LocalFtsRuntimeException("Error deleting document with fileName " + model.getFileName() + " and parentRelativePath " + model.getParentRelativePath());
+        }
+    }
+
+    private void updateModel(SearchFileModel model) {
+        deleteModel(model);
+        addModel(model);
     }
 
 }

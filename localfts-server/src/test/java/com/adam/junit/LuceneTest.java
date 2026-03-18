@@ -96,4 +96,29 @@ public class LuceneTest {
         }
     }
 
+    @Test
+    public void testLocateDocument() throws IOException, ParseException {
+        Path path = Paths.get(indexPath);
+        Assert.assertTrue(Files.isReadable(path));
+        Directory directory = FSDirectory.open(path);
+        IndexReader indexReader = DirectoryReader.open(directory);
+        IKAnalyzer analyzer = new IKAnalyzer(false, false, false);
+        IndexSearcher indexSearcher = new IndexSearcher(indexReader);
+        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+        Term term = new Term("fileName_simple", "2016PPT.ppt年美国大选英文PPT.ppt.txt");
+        TermQuery termQuery = new TermQuery(term);
+        queryBuilder.add(termQuery, BooleanClause.Occur.MUST);
+        term = new Term("parentRelativePath", "/");
+        termQuery = new TermQuery(term);
+        queryBuilder.add(termQuery, BooleanClause.Occur.MUST);
+        Query query = queryBuilder.build();
+        TopDocs topDocs = indexSearcher.search(query, 100);
+        System.out.println("totalHits=" + topDocs.totalHits);
+        Assert.assertTrue(topDocs.totalHits > 0);
+        for(ScoreDoc scoreDoc: topDocs.scoreDocs) {
+            Document document = indexSearcher.doc(scoreDoc.doc);
+            System.out.println(document.get("fileName"));
+        }
+    }
+
 }

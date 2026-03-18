@@ -27,6 +27,29 @@ public class Util {
     public static final Logger LOGGER = LoggerFactory.getLogger(Util.class);
     private static final Map<String, Integer> METHOD_CALL_COUNTER = new ConcurrentHashMap<>();
 
+    public static boolean isSingleArabicOrEnglish(String str) {
+        if(str == null) {
+            return false;
+        }
+        if(str.length() != 1) {
+            return false;
+        }
+        char chr = str.charAt(0);
+        chr = toLowerCase(chr);
+        return (chr >= '0' && chr <= '9') || (chr >= 'a' && chr <= 'z');
+    }
+
+    public static String reverseStr(String str) {
+        if(str == null || str.length() == 0) {
+            return str;
+        }
+        StringBuilder stringBuilder = new StringBuilder(str.length());
+        for(int i=str.length() - 1; i >= 0; i--) {
+            stringBuilder.append(str.charAt(i));
+        }
+        return stringBuilder.toString();
+    }
+
     public static String toLowerCaseAndSC(String str) {
         if(str == null) {
             return null;
