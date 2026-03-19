@@ -1,5 +1,6 @@
 package com.adam.localfts.webserver.task;
 
+import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.VoidFunction;
 import com.adam.localfts.webserver.common.search.IndexType;
 import com.adam.localfts.webserver.common.search.SearchFileModel;
@@ -21,17 +22,37 @@ public class FileMonitorThread extends Thread{
     private FtsService ftsService;
     private String rootPath;
     private WatchService watchService;
+    private boolean indexHiddenFiles;
     private final ConcurrentHashMap<String, Long> lastModifiedMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, WatchKey> watchKeyMap = new ConcurrentHashMap<>();
+    private final FileVisitor<? super java.nio.file.Path> registerFileVisitor = new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+            if(!indexHiddenFiles && dir.toFile().isHidden()) {
+                return FileVisitResult.SKIP_SUBTREE;
+            }
+            registerPath(dir);
+            return FileVisitResult.CONTINUE;
+        }
+    };
+    private final FileVisitor<? super java.nio.file.Path> unRegisterFileVisitor = new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+            unregisterPath(dir);
+            return FileVisitResult.CONTINUE;
+        }
+    };
 
     private final static Logger LOGGER = LoggerFactory.getLogger(FileMonitorThread.class);
     private static volatile FileMonitorThread INSTANCE = null;
 
-    private FileMonitorThread(FtsService ftsService, String rootPath) throws IOException {
+    private FileMonitorThread(FtsService ftsService, String rootPath, boolean indexHiddenFiles) throws IOException {
         super("FM-Thread");
         Assert.notNull(ftsService, "ftsService is null!");
         Assert.notNull(rootPath, "rootPath is null!");
         this.rootPath = rootPath;
         this.ftsService = ftsService;
+        this.indexHiddenFiles = indexHiddenFiles;
         File rootPathFile = new File(rootPath);
         Assert.isTrue(rootPathFile.exists(), "Root path " + rootPath + "does not exist!");
         Assert.isTrue(rootPathFile.isDirectory(), "Root path " + rootPath + "is not a directory!");
@@ -39,13 +60,7 @@ public class FileMonitorThread extends Thread{
         this.watchService = FileSystems.getDefault().newWatchService();
         Path rootPathPath = Paths.get(rootPath);
         //遍历所有子目录并注册
-        Files.walkFileTree(rootPathPath, new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                registerPath(dir);
-                return FileVisitResult.CONTINUE;
-            }
-        });
+        Files.walkFileTree(rootPathPath, registerFileVisitor);
     }
 
     @Override
@@ -86,12 +101,12 @@ public class FileMonitorThread extends Thread{
         return INSTANCE != null;
     }
 
-    public static void constructOnce(FtsService ftsService, String rootPath) {
+    public static void constructOnce(FtsService ftsService, String rootPath, boolean indexHiddenFiles) {
         if(INSTANCE == null) {
             synchronized (FileMonitorThread.class) {
                 if(INSTANCE == null) {
                     try {
-                        INSTANCE = new FileMonitorThread(ftsService, rootPath);
+                        INSTANCE = new FileMonitorThread(ftsService, rootPath, indexHiddenFiles);
                     } catch (IOException e) {
                         LOGGER.error("IOException occurred when constructing FileMonitorThread instance", e);
                         throw new LocalFtsRuntimeException("IOException occurred when constructing FileMonitorThread instance, msg:" + e.getMessage());
@@ -115,9 +130,12 @@ public class FileMonitorThread extends Thread{
         switch (kind.name()) {
             case "ENTRY_CREATE":
                 VoidFunction<SearchFileModel> voidFunction = model -> LuceneIndexThread.getInstance().addOperation(IndexType.CREATE, model);
+                if(!indexHiddenFiles && file.isHidden() ) {
+                    return;
+                }
                 if(file.isDirectory()) {
                     LuceneIndexThread.getInstance().setBatchMode(true);
-                    ftsService.scanAndApplySearchFileModel(file, voidFunction);
+                    ftsService.scanAndApplySearchFileModel(file, indexHiddenFiles, voidFunction);
                     registerPath(Paths.get(file.getAbsolutePath()));
                     LuceneIndexThread.getInstance().setBatchMode(false);
                 } else {
@@ -125,6 +143,25 @@ public class FileMonitorThread extends Thread{
                 }
                 break;
             case "ENTRY_MODIFY":
+                if(file.isDirectory()) {
+                    WatchKey watchKey = watchKeyMap.get(file.getAbsolutePath());
+                    Path path = Paths.get(file.getAbsolutePath());
+                    if(file.isHidden() && watchKey != null) {
+                        try {
+                            Files.walkFileTree(path, unRegisterFileVisitor);
+                        } catch (IOException e) {
+                            LOGGER.error("IOException occurred when un-monitoring path {}", path, e);
+                            throw new LocalFtsRuntimeException("IOException occurred when un-monitoring path " + path + ", msg:" + e.getMessage());
+                        }
+                    } else if(!file.isHidden() && watchKey == null) {
+                        try {
+                            Files.walkFileTree(path, registerFileVisitor);
+                        } catch (IOException e) {
+                            LOGGER.error("IOException occurred when monitoring path {}", path, e);
+                            throw new LocalFtsRuntimeException("IOException occurred when monitoring path " + path + ", msg:" + e.getMessage());
+                        }
+                    }
+                }
                 ftsService.convertAndApplySearchFileModel(file,
                         model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
                 break;
@@ -151,13 +188,26 @@ public class FileMonitorThread extends Thread{
     }
 
     private void registerPath(Path path) {
-        try {
-            path.register(watchService,
-                    StandardWatchEventKinds.ENTRY_CREATE,
-                    StandardWatchEventKinds.ENTRY_MODIFY,
-                    StandardWatchEventKinds.ENTRY_DELETE);
-        } catch (IOException e) {
-            LOGGER.error("监控目录{}失败", path, e);
+        if(!path.startsWith(Constants.SYSTEM_WORKING_DIR)) {
+            try {
+                WatchKey watchKey = path.register(watchService,
+                        StandardWatchEventKinds.ENTRY_CREATE,
+                        StandardWatchEventKinds.ENTRY_MODIFY,
+                        StandardWatchEventKinds.ENTRY_DELETE);
+                watchKeyMap.put(path.toString(), watchKey);
+                LOGGER.debug("已监控目录{}", path);
+            } catch (IOException e) {
+                LOGGER.error("监控目录{}失败", path, e);
+            }
+        }
+    }
+
+    private void unregisterPath(Path path) {
+        WatchKey watchKey = watchKeyMap.get(path.toString());
+        if(watchKey != null) {
+            watchKey.cancel();
+            watchKeyMap.remove(path.toString());
+            LOGGER.debug("已取消监控目录{}", path);
         }
     }
 }

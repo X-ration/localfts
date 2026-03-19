@@ -41,6 +41,7 @@ public class LuceneIndexThread extends Thread{
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final LinkedBlockingQueue<IndexOperation> queue = new LinkedBlockingQueue<>();
     private final String indexPath;
+    private final int maxStringLength;
     private final IndexWriter indexWriter;
     private final Directory directory;
     private final Analyzer analyzer;
@@ -49,10 +50,11 @@ public class LuceneIndexThread extends Thread{
 
     private final Logger logger = LoggerFactory.getLogger(LuceneIndexThread.class);
 
-    private LuceneIndexThread(String indexPath, boolean useExistingIndex) {
+    private LuceneIndexThread(String indexPath, int maxStringLength, boolean useExistingIndex) {
         super("LI-Thread");
         this.useExistingIndex = useExistingIndex;
         this.indexPath = indexPath;
+        this.maxStringLength = maxStringLength;
         this.analyzer = new IKAnalyzer(false, false, false);
         IndexWriterConfig indexWriterConfig = new IndexWriterConfig(this.analyzer);
         indexWriterConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
@@ -78,10 +80,10 @@ public class LuceneIndexThread extends Thread{
         return INSTANCE;
     }
 
-    public static void constructOnce(String indexPath, boolean useExistingIndex) {
+    public static void constructOnce(String indexPath, int maxStringLength, boolean useExistingIndex) {
         synchronized (LuceneIndexThread.class) {
             if(INSTANCE == null) {
-                INSTANCE = new LuceneIndexThread(indexPath, useExistingIndex);
+                INSTANCE = new LuceneIndexThread(indexPath, maxStringLength, useExistingIndex);
             }
         }
     }
@@ -104,7 +106,16 @@ public class LuceneIndexThread extends Thread{
                 indexModel(indexOperation);
                 if(batchMode.get()) {
                     int count = batchCount.incrementAndGet();
+                    boolean batchCommit = false;
                     if(count >= 100) {
+                        batchCommit = true;
+                    } else {
+                        String fileContent = indexOperation.getSearchFileModel().getFileContent();
+                        if(fileContent != null && maxStringLength > 0 && fileContent.length() >= maxStringLength) {
+                            batchCommit = true;
+                        }
+                    }
+                    if(batchCommit) {
                         logger.debug("Batch commit docs count {}", count);
                         commitDocs();
                         batchCount.set(0);
@@ -181,6 +192,7 @@ public class LuceneIndexThread extends Thread{
         Assert.notNull(indexOperation, "indexOperation is null!");
         Assert.notNull(indexOperation.getIndexType(), "indexOperation.indexType is null!");
         Assert.notNull(indexOperation.getSearchFileModel(), "indexOperation.searchFileModel is null!");
+
         switch (indexOperation.getIndexType()) {
             case CREATE:
                 addModel(indexOperation.getSearchFileModel());
@@ -220,8 +232,10 @@ public class LuceneIndexThread extends Thread{
         document.add(new Field("fileName_simple_reversed", Util.reverseStr(model.getFileName()), simpleFieldType));
         document.add(new SortedDocValuesField("fileName_sort", new BytesRef(model.getFileName())));
         if(model.getFileContent() != null) {
-            document.add(new Field("fileContent", model.getFileContent(), fullFieldType));
-            document.add(new Field("fileContent_lowercase", Util.toLowerCaseAndSC(model.getFileContent()), fullFieldType));
+            String fileContent = model.getFileContent();
+            model.setFileContent(null);  //便于回收
+            document.add(new Field("fileContent", fileContent, fullFieldType));
+            document.add(new Field("fileContent_lowercase", Util.toLowerCaseAndSC(fileContent), fullFieldType));
             //文件内容过长时无法创建排序字段
             //document.add(new SortedDocValuesField("fileContent_sort", new BytesRef(model.getFileContent())));
         }

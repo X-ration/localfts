@@ -12,7 +12,6 @@ import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.apache.catalina.connector.ClientAbortException;
-import org.apache.tika.exception.TikaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -215,12 +214,12 @@ public class FtsService {
      * @param function
      * @return
      */
-    public void scanAndApplySearchFileModel(VoidFunction<SearchFileModel> function) {
+    public void scanAndApplySearchFileModel(boolean indexHiddenFiles, VoidFunction<SearchFileModel> function) {
         Util.incrementAndCheckMethodCallCount("scanAndApplySearchFileModel", 1);
-        scanAndApplySearchFileModel(null, function);
+        scanAndApplySearchFileModel(null, indexHiddenFiles, function);
     }
 
-    public void scanAndApplySearchFileModel(File directory, VoidFunction<SearchFileModel> function) {
+    public void scanAndApplySearchFileModel(File directory, boolean indexHiddenFiles, VoidFunction<SearchFileModel> function) {
         Assert.notNull(function, "function is null!");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
@@ -238,16 +237,21 @@ public class FtsService {
         Integer maxStringLength = indexFileContentProperties.getMaxStringLength();
         boolean requireFileContent = indexFileContentProperties.getEnabled();
         boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
-        scanAndApplySearchFileModel(directory, zipDirectory, function, rootPath, zipFileParentRelativePath, requireFileContent, maxStringLength, tryReadAllFiles, directory != rootDirectory);
+        scanAndApplySearchFileModel(directory, zipDirectory, function, rootPath, zipFileParentRelativePath, indexHiddenFiles, requireFileContent, maxStringLength, tryReadAllFiles, directory != rootDirectory);
     }
 
     private void scanAndApplySearchFileModel(File directory, File zipDirectory, VoidFunction<SearchFileModel> function,
-                                             String rootPath, String zipFileParentRelativePath, boolean requireFileContent, Integer maxStringLength, boolean tryReadAllFiles, boolean indexDirectory) {
+                                             String rootPath, String zipFileParentRelativePath, boolean indexHiddenFiles,
+                                             boolean requireFileContent, Integer maxStringLength, boolean tryReadAllFiles,
+                                             boolean indexDirectory) {
         if(!directory.exists()) {
             return;
         }
         if(directory.isFile()) {
             LOGGER.warn("Path {} is not a directory!", directory.getAbsolutePath());
+            return;
+        }
+        if(directory.isHidden() && !indexHiddenFiles) {
             return;
         }
         if(indexDirectory) {
@@ -258,6 +262,7 @@ public class FtsService {
             model.setLastModified(directory.lastModified());
             setParentRelativePath(model, directory, rootPath);
             fillSearchModelCompress(directory, zipDirectory, rootPath, zipFileParentRelativePath, model);
+            LOGGER.debug("Prepare to apply function to {}", directory.getAbsolutePath());
             function.apply(model);
         }
         File[] items = directory.listFiles();
@@ -266,19 +271,23 @@ public class FtsService {
         }
         for(File item: items) {
             if(item.isFile()) {
-                SearchFileModel model = new SearchFileModel();
-                model.setFileName(item.getName());
-                model.setDirectory(false);
-                setParentRelativePath(model, item, rootPath);
-                if(requireFileContent && item.length() > 0) {
-                    String fileContent = getFileContent(item, tryReadAllFiles, maxStringLength);
-                    model.setFileContent(fileContent);
+                if(indexHiddenFiles || !item.isHidden()) {
+                    SearchFileModel model = new SearchFileModel();
+                    model.setFileName(item.getName());
+                    model.setDirectory(false);
+                    setParentRelativePath(model, item, rootPath);
+                    if (requireFileContent && item.length() > 0) {
+                        LOGGER.debug("Prepare to get file content of {}", item.getAbsolutePath());
+                        String fileContent = getFileContent(item, tryReadAllFiles, maxStringLength);
+                        model.setFileContent(fileContent);
+                    }
+                    model.setFileSize(item.length());
+                    model.setLastModified(item.lastModified());
+                    LOGGER.debug("Prepare to apply function to {}", item.getAbsolutePath());
+                    function.apply(model);
                 }
-                model.setFileSize(item.length());
-                model.setLastModified(item.lastModified());
-                function.apply(model);
             } else {
-                scanAndApplySearchFileModel(item, zipDirectory, function, rootPath, zipFileParentRelativePath,
+                scanAndApplySearchFileModel(item, zipDirectory, function, rootPath, zipFileParentRelativePath, indexHiddenFiles,
                         requireFileContent, maxStringLength, tryReadAllFiles, true);
             }
         }
@@ -330,20 +339,20 @@ public class FtsService {
                 fileContent = IOUtil.getClassFileContent(file);
             } else if(tryReadAllFiles || isFileReadable(file.getName())) {
                 if(isFilePlainReadable(file.getName())) {
-                    fileContent = IOUtil.getFileContentPlain(file);
+                    fileContent = IOUtil.getFileContentPlain(file, maxStringLength);
                 } else {
                     fileContent = IOUtil.getFileContentTika(file, maxStringLength);
                 }
                 if(fileContent != null) {
-                    fileContent = fileContent.replaceAll("(?m)^\\s+$", "") // 清空空白行
-                            .replaceAll("(\\r\\n|\\r|\\n){2,}", "\n")
-                            .replaceAll("\\r\\n|\\r|\\n", System.lineSeparator()) // 统一所有换行
-                            .replaceAll("\\u00A0", " ")                // NBSP → 普通空格
-                            .trim();
+                    fileContent = fileContent.replaceAll("(?m)^\\s+$", ""); // 清空空白行
+                    fileContent = fileContent.replaceAll("(\\r\\n|\\r|\\n){2,}", "\n");  //将连续的换行符统一换成单个\n
+                    fileContent = fileContent.replaceAll("\\r\\n|\\r|\\n", System.lineSeparator()); // 统一所有换行
+                    fileContent = fileContent.replaceAll("\\u00A0", " ");                // NBSP → 普通空格
+                    fileContent = fileContent.trim();
                 }
             }
             return fileContent;
-        } catch (IOException | TikaException e) {
+        } catch (Throwable e) {
             LOGGER.warn("Exception occured getting file content of {}, ex type:{}, msg:{}",
                     file.getAbsolutePath(), e.getClass().getName(), e.getMessage());
             return null;

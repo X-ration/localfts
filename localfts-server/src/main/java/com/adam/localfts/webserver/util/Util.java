@@ -3,7 +3,7 @@ package com.adam.localfts.webserver.util;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
-import com.github.houbb.opencc4j.util.ZhConverterUtil;
+import com.github.houbb.opencc4j.util.ZhSlimUtil;
 import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,22 +50,35 @@ public class Util {
         return stringBuilder.toString();
     }
 
+    public static String toLowerCase(String str) {
+        if(str == null) {
+            return null;
+        } else {
+            return str.toLowerCase();
+        }
+    }
+
+    public static String toSC(String str) {
+        if(str == null) {
+            return null;
+        } else {
+            StringBuilder stringBuilder = new StringBuilder(str.length());
+            for(int i=0;i<str.length();i++) {
+                stringBuilder.append(ZhSlimUtil.toSimple(str.charAt(i)));
+            }
+            return stringBuilder.toString();
+        }
+    }
+
     public static String toLowerCaseAndSC(String str) {
         if(str == null) {
             return null;
         }
         String lowerCasedStr = str.toLowerCase();
-        String scStr = ZhConverterUtil.toSimple(lowerCasedStr);
-        if(scStr == null) {
-            LOGGER.warn("Failed to convert str \"{}\" to SC", lowerCasedStr);
-            return lowerCasedStr;
-        } else {
-            return scStr;
-        }
+        return toSC(lowerCasedStr);
     }
 
     public static Character toLowerCase(Character character) {
-//        ZhConverterUtil.toSimple()
         if(character == null) {
             return null;
         } else {
@@ -77,13 +90,7 @@ public class Util {
         if(character == null) {
             return null;
         } else {
-            String converted = ZhConverterUtil.toSimple(character.toString());
-            if(converted == null || converted.length() == 0) {
-                LOGGER.warn("Failed to convert character '{}' to SC", character);
-                return character;
-            } else {
-                return converted.charAt(0);
-            }
+            return ZhSlimUtil.toSimple(character);
         }
     }
 
@@ -323,6 +330,10 @@ public class Util {
         }
         //LOGGER.info("Physical processors={}", result);
         return result;
+    }
+
+    public static String getWorkingDir() {
+        return System.getProperty("user.dir");
     }
 
     public static String getOsName() {

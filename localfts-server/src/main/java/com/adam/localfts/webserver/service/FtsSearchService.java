@@ -257,11 +257,11 @@ public class FtsSearchService implements DisposableBean {
     /**
      * 创建索引
      */
-    private void scanFilesAndCreateIndex(Class<? extends RuntimeException> exClass) {
+    private void scanFilesAndCreateIndex(boolean indexHiddenFiles, Class<? extends RuntimeException> exClass) {
         logger.info("Prepare to scan files and create lucene index");
         long startMillis = System.currentTimeMillis();
         LuceneIndexThread.getInstance().setBatchMode(true);
-        ftsService.scanAndApplySearchFileModel(model -> {
+        ftsService.scanAndApplySearchFileModel(indexHiddenFiles, model -> {
             LuceneIndexThread.getInstance().addOperation(IndexType.CREATE, model);
         });
         LuceneIndexThread.getInstance().setBatchMode(false);
@@ -279,16 +279,17 @@ public class FtsSearchService implements DisposableBean {
                 logger.warn("[Performance warning]LuceneIndexThread takes only 1 available physical processor! Requests may wait long.");
             }
             String indexPath = searchProperties.getIndexPath();
-            LuceneIndexThread.constructOnce(indexPath, searchProperties.getUseExistingIndex());
+            boolean indexHiddenFiles = searchProperties.getIndexHiddenFiles();
+            LuceneIndexThread.constructOnce(indexPath, searchProperties.getIndexFileContent().getMaxStringLength(), searchProperties.getUseExistingIndex());
             LuceneIndexThread.getInstance().start();
-            FileMonitorThread.constructOnce(ftsService, rootPath);
+            FileMonitorThread.constructOnce(ftsService, rootPath, indexHiddenFiles);
             FileMonitorThread.getInstance().start();
             luceneSearchService.setIndexPath(indexPath);
             if(!searchProperties.getUseExistingIndex()) {
                 if (searchProperties.getIndexBeforeStart()) {
-                    scanFilesAndCreateIndex(LocalFtsStartupException.class);
+                    scanFilesAndCreateIndex(indexHiddenFiles, LocalFtsStartupException.class);
                 } else {
-                    webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(LocalFtsRuntimeException.class));
+                    webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(indexHiddenFiles, LocalFtsRuntimeException.class));
                 }
             } else {
                 logger.info("Using existing index");

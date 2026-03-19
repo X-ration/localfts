@@ -48,10 +48,11 @@ localfts:
     active-task-threshold-str: 0.5p  #活跃搜索任务阈值，格式为正整数或正数+p(代表乘以物理核心数)，不能超过物理核心数。默认值：物理核心数/2
     index-path: index-dir  #索引相对路径
     index-before-start: true #是否在启动Web服务器前创建索引
+    index-hidden-files: false #是否索引隐藏的文件和文件夹,建议关闭
     use-existing-index: false  #是否使用已有的索引，不使用则在启动时删除已有索引并重新创建
     index-file-content:
       enabled: true  #!!是否对文件内容进行索引（索引耗时更长）
-      max-string-length-memory-str: 4GB  #限制文件内容字符串所占据的最大内存空间，-1表示无限制（不建议使用）。由于数据类型限制最大为接近4GB
-      try-read-all-files: true  #!!是否尝试读取所有类型的文件，影响性能
+      max-string-length-memory-str: 20MB  #!!限制文件内容字符串所占据的最大内存空间，-1表示无限制。建议不超过20MB,对应10,485,760长度的字符串，值过大时既消耗内存也消耗CPU。
+      try-read-all-files: false  #!!是否尝试读取所有类型的文件，影响性能
   test_language:
     Simplified_Chinese: true  #测试终端输出文字是否乱码(简体中文)

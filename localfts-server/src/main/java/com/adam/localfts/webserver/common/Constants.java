@@ -40,6 +40,8 @@ public class Constants {
     public static final String FILE_INVALID_CHARACTER_WINDOWS = "\\ / : * ? \" < > |";
     public static final String FILE_INVALID_CHARACTER_LINUX_MACOS = "/";
 
+    public static final String SYSTEM_WORKING_DIR = Util.getWorkingDir();
+
     public static final String FOLDER_DELETE_ON_EXIT_HINT_FILE_NAME = "【删除文件夹提示】此文件夹将在局域网文件传输服务器应用(pid-${pid})退出后删除，请及时保存重要文件！";
     public static final String FOLDER_DELETE_ON_EXIT_HINT_FILE_CONTENT = "【删除文件夹提示】此文件夹将在局域网文件传输服务器应用(pid-${pid})退出后删除，请及时保存重要文件！" + System.lineSeparator()
             + "如不希望退出应用时删除文件夹，可通过如下命令强制结束进程：" + System.lineSeparator()

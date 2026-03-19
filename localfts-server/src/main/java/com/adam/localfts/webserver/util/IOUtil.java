@@ -22,7 +22,7 @@ public class IOUtil {
     private static final String[] SELECTED_HTTP_REQUEST_HEADERS = new String[]{"range", "if-range", "user-agent"};
     private static final Logger LOGGER = LoggerFactory.getLogger(IOUtil.class);
 
-    public static String getFileContentPlain(File file) throws IOException {
+    public static String getFileContentPlain(File file, int maxStringLength) throws IOException {
         String charset = detectCharset(file);
         try(InputStream inputStream = new FileInputStream(file);
                 InputStreamReader reader = new InputStreamReader(inputStream, charset)) {
@@ -31,6 +31,9 @@ public class IOUtil {
             int len;
             while((len = reader.read(bufferArr)) != -1) {
                 stringBuilder.append(bufferArr, 0, len);
+                if(maxStringLength > 0 && stringBuilder.length() >= maxStringLength) {
+                    return stringBuilder.substring(0, maxStringLength);
+                }
             }
             return stringBuilder.toString();
         }
