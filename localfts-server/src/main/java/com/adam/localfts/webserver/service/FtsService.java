@@ -254,10 +254,11 @@ public class FtsService {
             LOGGER.warn("Path {} is not a directory!", directory.getAbsolutePath());
             return;
         }
-        fileIndexCounter.count(directory, (!directory.isHidden() || indexHiddenFiles) && indexDirectory);
         if(directory.isHidden() && !indexHiddenFiles) {
+            fileIndexCounter.count(directory,false);
             return;
         }
+        fileIndexCounter.count(directory,indexDirectory);
         if(indexDirectory) {
             SearchFileModel model = new SearchFileModel();
             model.setFileName(directory.getName());

@@ -10,6 +10,7 @@ import lombok.Setter;
 public class SearchDTO implements CompressedColumns {
     private long id;
     private String filename;
+    private String filenameFormatted;
     private String parentRelativePath;
     private String fileContent;
     private Boolean directory;

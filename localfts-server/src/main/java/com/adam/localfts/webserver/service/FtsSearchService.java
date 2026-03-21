@@ -106,10 +106,10 @@ public class FtsSearchService implements DisposableBean {
         Callable<PageObject<SearchDTO>> callable;
         switch (searchMode) {
             case PLAIN:
-                callable = () -> plainSearchService.search(keyword, finalAdvancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+                callable = () -> plainSearchService.search(keyword, searchId, finalAdvancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
                 break;
             case INDEXED:
-                callable = () -> luceneSearchService.search(keyword, finalAdvancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+                callable = () -> luceneSearchService.search(keyword, searchId, finalAdvancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
                 break;
             default:
                 logger.warn("Unknown search mode:{}", searchMode);

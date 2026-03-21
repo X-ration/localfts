@@ -7,6 +7,7 @@ import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
+import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.util.ReflectUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.apache.lucene.analysis.Analyzer;
@@ -23,6 +24,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -42,9 +44,11 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
 
     private String indexPath;
     private final Logger logger = LoggerFactory.getLogger(LuceneSearchServiceImpl.class);
+    @Autowired
+    private FtsServerConfigService ftsServerConfigService;
 
     @Override
-    public PageObject<SearchDTO> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
+    public PageObject<SearchDTO> search(String keyword, String searchId, AdvancedSearchCondition advancedSearchCondition,
                                         int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) {
         if(advancedSearchCondition != null && advancedSearchCondition.emptyResult()) {
             return new PageObject<>();
@@ -145,6 +149,7 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
                 }
             }
 
+            long startMillis = System.currentTimeMillis();
             Query rootQuery = rootQueryBuilder.build();
             Sort sort = null;
             TopDocs topDocs = null;
@@ -164,19 +169,24 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
             }
 
             if(topDocs == null) {
+                long endMillis = System.currentTimeMillis();
+                logger.info("搜索(结果为空)完成，耗时{}ms, searchId={}", (endMillis - startMillis), searchId);
                 return new PageObject<>();
             } else {
                 List<SearchDTO> dataList = new LinkedList<>();
                 SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
                 long startId = (pageNo - 1) * pageSize;
+                boolean indexFileContent = ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled();
                 for(int i=0;i<topDocs.scoreDocs.length;i++) {
                     ScoreDoc scoreDoc = topDocs.scoreDocs[i];
                     Document document = indexSearcher.doc(scoreDoc.doc);
                     long id = startId + i + 1;
                     SearchDTO searchDTO = mapToDTO(document, id, simpleDateFormat);
-                    handleHighlighter(searchDTO, rootQuery, indexReader, scoreDoc.doc, document, analyzer);
+                    handleHighlighter(searchDTO, rootQuery, indexReader, scoreDoc.doc, document, analyzer, indexFileContent);
                     dataList.add(searchDTO);
                 }
+                long endMillis = System.currentTimeMillis();
+                logger.info("搜索{}完成，耗时{}ms, searchId={}", sort == null ? "" : "并排序", (endMillis - startMillis), searchId);
                 return new PageObject<>(pageNo, pageSize, topDocs.totalHits, dataList);
             }
         } catch (Exception e) {
@@ -223,7 +233,9 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
             logger.warn("document is null!");
             return searchDTO;
         }
-        searchDTO.setFilename(document.get("fileName"));
+        String fileName = document.get("fileName");
+        searchDTO.setFilename(fileName);
+        searchDTO.setFilenameFormatted(fileName);
         searchDTO.setParentRelativePath(document.get("parentRelativePath"));
         String fileContent = document.get("fileContent");
         searchDTO.setFileContent(fileContent);
@@ -252,22 +264,24 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
         return searchDTO;
     }
 
-    private void handleHighlighter(SearchDTO searchDTO, Query query, IndexReader indexReader, int docId, Document document, IKAnalyzer analyzer) {
+    private void handleHighlighter(SearchDTO searchDTO, Query query, IndexReader indexReader, int docId, Document document, IKAnalyzer analyzer, boolean indexFileContent) {
         String fileNameFragment = getBestFragment(query, indexReader, docId, document, analyzer, "fileName");
         if(fileNameFragment != null) {
-            searchDTO.setFilename(fileNameFragment);
+            searchDTO.setFilenameFormatted(fileNameFragment);
         }
-        String fileContentFragment = getBestFragment(query, indexReader, docId, document, analyzer, "fileContent");
-        if(fileContentFragment != null) {
-            searchDTO.setFileContent(fileContentFragment);
-        } else {
-            String fileContent = searchDTO.getFileContent();
-            if(fileContent != null) {
-                if(fileContent.length() > 1000){
-                    fileContent = fileContent.substring(0, 1000) + "...";
+        if(!searchDTO.getDirectory() && indexFileContent) {
+            String fileContentFragment = getBestFragment(query, indexReader, docId, document, analyzer, "fileContent");
+            if (fileContentFragment != null) {
+                searchDTO.setFileContent(fileContentFragment);
+            } else {
+                String fileContent = searchDTO.getFileContent();
+                if (fileContent != null) {
+                    if (fileContent.length() > 1000) {
+                        fileContent = fileContent.substring(0, 1000) + "...";
+                    }
+                    fileContent = Util.escapeHtmlChars(fileContent);
+                    searchDTO.setFileContent(fileContent);
                 }
-                fileContent = Util.escapeHtmlChars(fileContent);
-                searchDTO.setFileContent(fileContent);
             }
         }
     }

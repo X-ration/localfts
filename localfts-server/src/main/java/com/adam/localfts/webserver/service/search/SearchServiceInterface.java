@@ -7,6 +7,6 @@ import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 
 public interface SearchServiceInterface {
-    PageObject<SearchDTO> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
+    PageObject<SearchDTO> search(String keyword, String searchId, AdvancedSearchCondition advancedSearchCondition,
                                  int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) throws InterruptedException;
 }

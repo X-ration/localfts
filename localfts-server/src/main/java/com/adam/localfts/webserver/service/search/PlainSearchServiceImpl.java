@@ -35,7 +35,7 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
-    public PageObject<SearchDTO> search(String keyword, AdvancedSearchCondition advancedSearchCondition,
+    public PageObject<SearchDTO> search(String keyword, String searchId, AdvancedSearchCondition advancedSearchCondition,
                                         int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) throws InterruptedException {
         List<File> searchPathFileList;
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
@@ -55,13 +55,13 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 .map(file -> mapToDTO(file, simpleDateFormat, rootPath))
                 .collect(Collectors.toList());
         long endMills = System.currentTimeMillis();
-        logger.debug("搜索{}耗时{}ms", Util.checkInterrupted() ? "[被中断]" : "", endMills - startMills);
+        logger.debug("搜索{}耗时{}ms, searchId={}", Util.checkInterrupted() ? "[被中断]" : "", endMills - startMills, searchId);
 
         Util.clearInterruptedAndThrowException();
         if(sortColumn != null) {
             Comparator<SearchDTO> comparator = searchComparatorMap.get(sortColumn);
             if(comparator == null) {
-                logger.warn("Search sort by '{}' requires a comparator!", sortColumn);
+                logger.warn("Search sort by '{}' requires a comparator! searchId={}", sortColumn, searchId);
             } else {
                 if(sortOrder == SortOrder.DESC) {
                     comparator = comparator.reversed();
@@ -69,7 +69,7 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 startMills = System.currentTimeMillis();
                 searchDTOList.sort(comparator);
                 endMills = System.currentTimeMillis();
-                logger.debug("排序耗时{}ms", endMills - startMills);
+                logger.debug("排序耗时{}ms, searchId={}", endMills - startMills, searchId);
             }
         }
         for(int i=0;i<searchDTOList.size();i++) {
@@ -114,6 +114,7 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
             return searchDTO;
         }
         searchDTO.setFilename(file.getName());
+        searchDTO.setFilenameFormatted(file.getName());
         String parentRelativePath = "/";
         if(!file.getAbsolutePath().equals(rootPath)) {
             File parentFile = file.getParentFile();

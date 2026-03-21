@@ -1153,7 +1153,7 @@
                     var item = dataArr[i];
                     var div = document.createElement('div');
                     var strong = document.createElement('strong');
-                    strong.innerHTML = '#' + item.id + ' ' + (item.directory ? '文件夹名称：' : '文件名称：') + item.filename;
+                    strong.innerHTML = '#' + item.id + ' ' + (item.directory ? '文件夹名称：' : '文件名称：') + item.filenameFormatted;
                     div.appendChild(strong);
                     resultDiv.appendChild(div);
                     
@@ -1211,20 +1211,20 @@
                     if(item.directory) {
                         var a = document.createElement('a');
                         a.innerText = '访问目录';
-                        a.setAttribute('href',concatUrlList(item.parentRelativePath + '/' + item.filename, 1, returnData.pageSize));
+                        a.setAttribute('href',concatUrlList(item.parentRelativePath + (item.parentRelativePath === '/' ? '' : '/') + item.filename, 1, returnData.pageSize));
                         div.appendChild(a);
                         var space = document.createTextNode(' ');
                         div.appendChild(space);
                         a = document.createElement('a');
                         a.innerText = '上传文件';
-                        a.setAttribute('href', concatUrlUpload(item.parentRelativePath + '/' + item.filename));
+                        a.setAttribute('href', concatUrlUpload(item.parentRelativePath + (item.parentRelativePath === '/' ? '' : '/') + item.filename));
                         div.appendChild(a);
                         if(zipEnabled) {
                             space = document.createTextNode(' ');
                             div.appendChild(space);
                             a = document.createElement('a');
                             a.innerText = '压缩管理';
-                            a.setAttribute('href', concatUrlCompressFolder(item.parentRelativePath + '/' + item.filename));
+                            a.setAttribute('href', concatUrlCompressFolder(item.parentRelativePath + (item.parentRelativePath === '/' ? '' : '/') + item.filename));
                             div.appendChild(a);
                             if(item.compressStatus == 'COMPRESSED') {
                                 space = document.createTextNode(' ');
@@ -1238,7 +1238,7 @@
                     } else {
                         var a = document.createElement('a');
                         a.innerText = '下载文件';
-                        a.setAttribute('href', concatUrlDownload(item.parentRelativePath + '/' + item.filename));
+                        a.setAttribute('href', concatUrlDownload(item.parentRelativePath + (item.parentRelativePath === '/' ? '' : '/') + item.filename));
                         div.appendChild(a);
                     }
                     resultDiv.appendChild(div); 
