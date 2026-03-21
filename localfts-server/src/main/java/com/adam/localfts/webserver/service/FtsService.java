@@ -2,6 +2,7 @@ package com.adam.localfts.webserver.service;
 
 import com.adam.localfts.webserver.common.*;
 import com.adam.localfts.webserver.common.compress.*;
+import com.adam.localfts.webserver.common.search.FileIndexCounter;
 import com.adam.localfts.webserver.common.search.SearchFileModel;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
@@ -237,13 +238,15 @@ public class FtsService {
         Integer maxStringLength = indexFileContentProperties.getMaxStringLength();
         boolean requireFileContent = indexFileContentProperties.getEnabled();
         boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
-        scanAndApplySearchFileModel(directory, zipDirectory, function, rootPath, zipFileParentRelativePath, indexHiddenFiles, requireFileContent, maxStringLength, tryReadAllFiles, directory != rootDirectory);
+        FileIndexCounter fileIndexCounter = new FileIndexCounter();
+        scanAndApplySearchFileModel(directory, zipDirectory, function, rootPath, zipFileParentRelativePath, indexHiddenFiles, requireFileContent, maxStringLength, tryReadAllFiles, directory != rootDirectory, fileIndexCounter);
+        LOGGER.info("Scan and apply function complete, counter={}", fileIndexCounter);
     }
 
     private void scanAndApplySearchFileModel(File directory, File zipDirectory, VoidFunction<SearchFileModel> function,
                                              String rootPath, String zipFileParentRelativePath, boolean indexHiddenFiles,
                                              boolean requireFileContent, Integer maxStringLength, boolean tryReadAllFiles,
-                                             boolean indexDirectory) {
+                                             boolean indexDirectory, FileIndexCounter fileIndexCounter) {
         if(!directory.exists()) {
             return;
         }
@@ -251,6 +254,7 @@ public class FtsService {
             LOGGER.warn("Path {} is not a directory!", directory.getAbsolutePath());
             return;
         }
+        fileIndexCounter.count(directory, (!directory.isHidden() || indexHiddenFiles) && indexDirectory);
         if(directory.isHidden() && !indexHiddenFiles) {
             return;
         }
@@ -271,7 +275,9 @@ public class FtsService {
         }
         for(File item: items) {
             if(item.isFile()) {
-                if(indexHiddenFiles || !item.isHidden()) {
+                boolean indexFile = indexHiddenFiles || !item.isHidden();
+                fileIndexCounter.count(item, indexFile);
+                if(indexFile) {
                     SearchFileModel model = new SearchFileModel();
                     model.setFileName(item.getName());
                     model.setDirectory(false);
@@ -288,7 +294,7 @@ public class FtsService {
                 }
             } else {
                 scanAndApplySearchFileModel(item, zipDirectory, function, rootPath, zipFileParentRelativePath, indexHiddenFiles,
-                        requireFileContent, maxStringLength, tryReadAllFiles, true);
+                        requireFileContent, maxStringLength, tryReadAllFiles, true, fileIndexCounter);
             }
         }
     }
