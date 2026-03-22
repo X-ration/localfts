@@ -26,6 +26,7 @@ spring:
       #file-size-threshold: 0
 localfts:
   root_path: D:\Users\Adam\Documents  #服务器根路径映射地址
+  show_hidden: false  #是否显示隐藏文件和文件夹
   zip:
     enabled: true  #文件夹压缩功能开关
     path: localfts_zip  #文件夹压缩文件存储路径，对根路径的相对路径

@@ -112,6 +112,19 @@ public class FtsService {
         }
     }
 
+    public boolean checkDirectoryExistsNoHidden(String path, boolean isAbsolute) {
+        if(!isAbsolute) {
+            Assert.isTrue(path != null && path.startsWith("/"), "非法请求参数");
+        }
+        String actualPath = path;
+        if(!isAbsolute) {
+            String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+            actualPath = rootPath + path;
+        }
+        File directory = IOUtil.getFile(actualPath);
+        return directory.exists() && directory.isDirectory() && !directory.isHidden();
+    }
+
     public boolean checkDirectoryExists(String path, boolean isAbsolute) {
         if(!isAbsolute) {
             Assert.isTrue(path != null && path.startsWith("/"), "非法请求参数");
@@ -127,15 +140,21 @@ public class FtsService {
 
     public ReturnObject<Map<String, Boolean>> checkPathExists(String[] relativePaths) {
         Assert.isTrue(relativePaths != null, "relativePaths is null!");
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
         Map<String, Boolean> pathExistsMap = new HashMap<>();
         for(String relativePath: relativePaths) {
-            boolean pathExists = checkDirectoryExists(relativePath, false);
+            boolean pathExists;
+            if(showHidden) {
+                pathExists = checkDirectoryExists(relativePath, false);
+            } else {
+                pathExists = checkDirectoryExistsNoHidden(relativePath, false);
+            }
             pathExistsMap.put(relativePath, pathExists);
         }
         return ReturnObject.success(pathExistsMap);
     }
 
-    public ReturnObject<FtsSubDirectoryModel> getSubDirectoryModel(final String relativePath, boolean fromRoot) {
+    public ReturnObject<FtsSubDirectoryModel> getSubDirectoryModel(final String relativePath, boolean fromRoot, boolean showHidden) {
         boolean condition = null != relativePath && relativePath.startsWith("/");
         if(!condition) {
             return ReturnObject.fail("非法请求参数");
@@ -150,10 +169,16 @@ public class FtsService {
         if(!condition) {
             return ReturnObject.fail("根路径不存在或不是文件夹");
         }
+        if(!showHidden && rootDirectory.isHidden()) {
+            return ReturnObject.fail("根路径是隐藏的");
+        }
         File directory = new File(rootDirectory, relativePath);
         condition = directory.exists() && directory.isDirectory();
         if(!condition) {
             return ReturnObject.fail("请求路径不存在或不是文件夹");
+        }
+        if(!showHidden && directory.isHidden()) {
+            return ReturnObject.fail("请求路径是隐藏的");
         }
 
         FtsSubDirectoryModel model = new FtsSubDirectoryModel();
@@ -161,14 +186,14 @@ public class FtsService {
         List<String> pathList = Arrays.stream(pathSplits).filter(str -> !StringUtils.isEmpty(str)).collect(Collectors.toList());
         File directoryToUse = fromRoot ? rootDirectory : directory;
         String relativePathToUse = fromRoot ? null : relativePath;
-        setSubDirectoryModel(relativePathToUse, directoryToUse, model, pathList, 0, false, fromRoot);
+        setSubDirectoryModel(relativePathToUse, directoryToUse, model, pathList, 0, false, fromRoot, showHidden);
 
         return ReturnObject.success(model);
     }
 
     private void setSubDirectoryModel(final String relativePath, final File directory, final FtsSubDirectoryModel model,
                                       final List<String> pathList, final int pathListIndex, final boolean isRecursiveCall,
-                                      final boolean fromRoot) {
+                                      final boolean fromRoot, final boolean showHidden) {
         String newRelativePath;
         if(!isRecursiveCall) {
             if(fromRoot) {
@@ -198,12 +223,18 @@ public class FtsService {
         }
 
         List<FtsSubDirectoryModel> subModelList = new LinkedList<>();
-        File[] subDirectories = directory.listFiles(f -> f.exists() && f.isDirectory());
+        FileFilter fileFilter;
+        if(showHidden) {
+            fileFilter = f -> f.exists() && f.isDirectory();
+        } else {
+            fileFilter = f -> f.exists() && f.isDirectory() && !f.isHidden();
+        }
+        File[] subDirectories = directory.listFiles(fileFilter);
         int nextPathListIndex = isRecursiveCall ? pathListIndex + 1 : pathListIndex;
         if(subDirectories != null) {
             for(File subDirectory : subDirectories) {
                 FtsSubDirectoryModel subModel = new FtsSubDirectoryModel();
-                setSubDirectoryModel(newRelativePath, subDirectory, subModel, pathList, nextPathListIndex, true, fromRoot);
+                setSubDirectoryModel(newRelativePath, subDirectory, subModel, pathList, nextPathListIndex, true, fromRoot, showHidden);
                 subModelList.add(subModel);
             }
         }
@@ -413,13 +444,20 @@ public class FtsService {
         Assert.isTrue(null != relativePath && relativePath.startsWith("/") && pageNo > 0 && pageSize > 0 && pageSize <= 50, "非法请求参数");
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
         File rootDirectory = new File(rootPath);
         Assert.isTrue(rootDirectory.exists() && rootDirectory.isDirectory(), "根路径不存在或不是文件夹");
+        if(!showHidden) {
+            Assert.isTrue(!rootDirectory.isHidden(), "根路径是隐藏的");
+        }
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         File zipDirectory = new File(rootDirectory, zipFolderPath);
         String actualPath = rootPath + relativePath;
         File directory = IOUtil.getFile(actualPath);
         Assert.isTrue(directory.exists() && directory.isDirectory(), "非法的请求路径");
+        if(!showHidden) {
+            Assert.isTrue(!directory.isHidden(), "请求路径是隐藏的");
+        }
         FtsPageModel model = new FtsPageModel();
         model.setPath(relativePath);
         model.setCurrentPage(pageNo);
@@ -462,6 +500,9 @@ public class FtsService {
         List<FtsPageModel.FtsPageFileModel> tempList = new ArrayList<>(actualPageSize);
         for(int i = 0; i < items.length; i++) {
             File item = items[i];
+            if(!showHidden && item.isHidden()) {
+                continue;
+            }
             FtsPageModel.FtsPageFileModel fileModel = model.new FtsPageFileModel();
             boolean isDirectory = item.isDirectory();
             fileModel.setDirectory(isDirectory);
@@ -560,6 +601,7 @@ public class FtsService {
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         FolderCompressCounter counter = new FolderCompressCounter();
         SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
         Stream<FolderCompressDTO> allStream = folderCompressingContextHolderMap.entrySet().stream()
                 .map(entry -> {
                     String folderAbsolutePath = entry.getKey();
@@ -568,19 +610,22 @@ public class FtsService {
                     if(Util.isSystemWindows()) {
                         relativePath = relativePath.replaceAll("\\\\", "/");
                     }
-                    FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
-                    counter.countFolder(folderCompressStatus);
                     boolean directoryExists = checkDirectoryExists(folderAbsolutePath, true);
                     FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
                     folderCompressDTO.setPath(relativePath);
                     if(directoryExists) {
                         File directory = new File(folderAbsolutePath);
+                        if(!showHidden && directory.isHidden()) {
+                            return null;
+                        }
                         long lastModified = directory.lastModified();
                         folderCompressDTO.setLastModified(lastModified);
                         if(lastModified != 0L) {
                             folderCompressDTO.setLastModifiedStr(simpleDateFormat.format(new Date(lastModified)));
                         }
                     }
+                    FolderCompressStatus folderCompressStatus = getFolderCompressStatus(folderAbsolutePath, true);
+                    counter.countFolder(folderCompressStatus);
                     folderCompressDTO.setDirectoryExists(directoryExists);
                     folderCompressDTO.setCompressStatus(folderCompressStatus);
                     FolderCompressInfo folderCompressInfo = getFolderCompressInfo(folderAbsolutePath, true);
@@ -607,7 +652,8 @@ public class FtsService {
                         folderCompressDTO.setCompressCostTimeStr(compressCostTimeStr);
                     }
                     return folderCompressDTO;
-                });
+                })
+                .filter(Objects::nonNull);
         if(sortColumn != null) {
             Comparator<FolderCompressDTO> comparator = compressManagementComparatorMap.get(sortColumn);
             if(comparator == null) {
@@ -637,10 +683,14 @@ public class FtsService {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String zipMaxFolderSizeStr = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize();
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
         long start = System.currentTimeMillis();
         String actualFolderPath = rootPath + relativePath;
         File folderFile = new File(actualFolderPath);
         Assert.isTrue(folderFile.exists() && folderFile.isDirectory(), "非法的请求路径");
+        if(!showHidden) {
+            Assert.isTrue(!folderFile.isHidden(), "请求路径是隐藏的");
+        }
 
         String folderAbsolutePath = folderFile.getAbsolutePath();
         if(zipMaxFolderSizeStr != null) {
@@ -726,8 +776,7 @@ public class FtsService {
             boolean directoryExists = checkDirectoryExists(relativePath, false);
             folderCompressDTO.setDirectoryExists(directoryExists);
             if(directoryExists) {
-                File directory = new File(folderAbsolutePath);
-                long lastModified = directory.lastModified();
+                long lastModified = folderFile.lastModified();
                 folderCompressDTO.setLastModified(lastModified);
                 if(lastModified != 0L) {
                     folderCompressDTO.setLastModifiedStr(simpleDateFormat.format(new Date(lastModified)));

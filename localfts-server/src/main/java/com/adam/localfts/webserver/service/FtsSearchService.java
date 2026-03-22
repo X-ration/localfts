@@ -200,11 +200,13 @@ public class FtsSearchService implements DisposableBean {
         }
 
         if(!CollectionUtils.isEmpty(searchPathList)) {
+            boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
             List<String> newSearchPathList = searchPathList.stream()
                     .distinct()
                     .filter(path -> !StringUtils.isEmpty(path))
                     .filter(path -> standardPathPattern.matcher(path).matches())
-                    .filter(path -> ftsService.checkDirectoryExists(path, false))
+                    .filter(path -> showHidden ? ftsService.checkDirectoryExists(path, false) :
+                            ftsService.checkDirectoryExistsNoHidden(path, false))
                     .filter(path -> {
                         for(String path1: searchPathList) {
                             if(!path.equals(path1) && path.startsWith(path1)) {

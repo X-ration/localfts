@@ -66,7 +66,13 @@ public class WebController {
                        @RequestParam(required = false) SortOrder sortOrder
                        ) {
         model.addAttribute("currentPath", relativePath);
-        boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        boolean directoryExists;
+        if(!showHidden) {
+            directoryExists = ftsService.checkDirectoryExistsNoHidden(relativePath, false);
+        } else {
+            directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        }
         model.addAttribute("directoryExists", directoryExists);
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         model.addAttribute("zipEnabled", zipEnabled);
@@ -104,11 +110,17 @@ public class WebController {
     public ReturnObject<FtsSubDirectoryModel> listSubDirectory(@RequestParam(name = "path") String relativePath,
                                                                @RequestParam(required = false, defaultValue = "true") boolean fromRoot
     ) {
-        boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        boolean directoryExists;
+        if(showHidden) {
+            directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        } else {
+            directoryExists = ftsService.checkDirectoryExistsNoHidden(relativePath, false);
+        }
         if(!directoryExists) {
             return ReturnObject.fail("该路径不存在");
         }
-        return ftsService.getSubDirectoryModel(relativePath, fromRoot);
+        return ftsService.getSubDirectoryModel(relativePath, fromRoot, showHidden);
     }
 
     @PostMapping("/checkPathExists")
@@ -163,9 +175,28 @@ public class WebController {
      */
     @GetMapping("/compressFolder")
     public String compressFolder(@RequestParam(value = "path") String relativePath, @RequestHeader(required = false, value = "User-Agent")String userAgent, Model model) {
-        boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        boolean directoryExists;
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        if(showHidden) {
+            directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        } else {
+            directoryExists = ftsService.checkDirectoryExistsNoHidden(relativePath, false);
+        }
         model.addAttribute("directoryExists", directoryExists);
         model.addAttribute("currentPath", relativePath);
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
+        String serverTime = Util.getServerTimeFormattedString();
+        model.addAttribute("serverTime", serverTime);
+        boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
+        model.addAttribute("needSizeCheck", needSizeCheck);
+        Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
+        model.addAttribute("backgroundEnabled", backgroundEnabled);
+        boolean pseudoUnload = ftsService.isPseudoUnload(userAgent);
+        model.addAttribute("pseudoUnload", pseudoUnload);
+        if(!showHidden && !directoryExists) {
+            return "compress_folder";
+        }
         FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
         model.addAttribute("compressStatus", compressStatus.name());
 
@@ -199,16 +230,6 @@ public class WebController {
             String compressCostTimeStr = Util.formatCostTime(compressCostTime);
             model.addAttribute("compressCostTime", compressCostTimeStr);
         }
-        boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
-        model.addAttribute("needSizeCheck", needSizeCheck);
-        Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
-        model.addAttribute("backgroundEnabled", backgroundEnabled);
-        boolean pseudoUnload = ftsService.isPseudoUnload(userAgent);
-        model.addAttribute("pseudoUnload", pseudoUnload);
-        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
-        model.addAttribute("serverIpInfo", serverIpInfoModel);
-        String serverTime = Util.getServerTimeFormattedString();
-        model.addAttribute("serverTime", serverTime);
         return "compress_folder";
     }
 
@@ -262,7 +283,13 @@ public class WebController {
     @GetMapping("/uploadFile")
     public String uploadFile(Model model, @RequestParam String dirName, @RequestHeader(required = false, value = "User-Agent")String userAgent) {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
-        boolean directoryExists = ftsService.checkDirectoryExists(dirName, false);
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        boolean directoryExists;
+        if(showHidden) {
+            directoryExists = ftsService.checkDirectoryExists(dirName, false);
+        } else {
+            directoryExists = ftsService.checkDirectoryExistsNoHidden(dirName, false);
+        }
         model.addAttribute("directoryExists", directoryExists);
         boolean pseudoDirectoryUpload = ftsService.isPseudoDirectoryUpload(userAgent);
         model.addAttribute("pseudoDirectoryUpload", pseudoDirectoryUpload);

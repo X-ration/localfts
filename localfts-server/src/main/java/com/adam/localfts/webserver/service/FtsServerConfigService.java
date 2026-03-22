@@ -274,6 +274,7 @@ public class FtsServerConfigService implements DisposableBean {
                 .append("[Max file size]").append(maxFileSize).append(System.lineSeparator())
                 .append("[Max request size]").append(maxRequestSize).append(System.lineSeparator())
                 .append("[Root path]").append(localFtsProperties.getRootPath()).append(System.lineSeparator())
+                .append("[Show hidden files and directories]").append(localFtsProperties.getShowHidden()).append(System.lineSeparator())
                 .append("[Total space]").append(rootPathInfo.getTotalSpace()).append(System.lineSeparator())
                 .append("[Usable space]").append(rootPathInfo.getUsableSpace()).append(System.lineSeparator())
                 .append("[Free space]").append(rootPathInfo.getFreeSpace()).append(System.lineSeparator());
@@ -363,6 +364,7 @@ public class FtsServerConfigService implements DisposableBean {
     }
 
     private void setPropertiesIfNull() {
+        setShowHiddenIfNull();
         setZipEnabledIfNull();
         if(localFtsProperties.getZip().getEnabled()) {
             setZipDeleteOnExistIfNull();
@@ -377,6 +379,13 @@ public class FtsServerConfigService implements DisposableBean {
                 setUseExistingIndexIfNull();
                 setIndexFileContentIfNull();
             }
+        }
+    }
+
+    private void setShowHiddenIfNull() {
+        Boolean showHidden = localFtsProperties.getShowHidden();
+        if(showHidden == null) {
+            localFtsProperties.setShowHidden(false);
         }
     }
 

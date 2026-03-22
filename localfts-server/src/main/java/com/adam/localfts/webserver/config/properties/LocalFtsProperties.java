@@ -17,6 +17,7 @@ import java.util.Map;
 public class LocalFtsProperties {
 
     private String rootPath;
+    private Boolean showHidden;
     @NestedConfigurationProperty
     private ZipProperties zip;
     @NestedConfigurationProperty

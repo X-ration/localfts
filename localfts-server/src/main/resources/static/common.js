@@ -149,6 +149,18 @@ function bindEventListener(element,eventName,func) {
     }
 }
 
+function stopPropagationFunction(e, func) {
+    e = e || window.event;
+    if(IE_VERSION && IE_VERSION < 9) {
+        e.cancelBubble = true;
+    } else {
+        e.stopPropagation();
+    }
+    if(func) {
+        func(e);
+    }
+}
+
 function isOptionSelected(option) {
     if(!option) {
         return;

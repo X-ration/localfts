@@ -126,33 +126,24 @@ public class FileMonitorThread extends Thread{
 
     private void handleFileEvent(WatchEvent.Kind<?> kind, File file) {
         String fileType = file.isDirectory() ? "directory" : "file";
+        fileType = (file.isHidden() ? "hidden " : "") + fileType;
         LOGGER.debug("Monitored file event kind {} of {} {}", kind.name(), fileType, file.getAbsolutePath());
         switch (kind.name()) {
             case "ENTRY_CREATE":
-                VoidFunction<SearchFileModel> voidFunction = model -> LuceneIndexThread.getInstance().addOperation(IndexType.CREATE, model);
-                if(!indexHiddenFiles && file.isHidden() ) {
-                    return;
-                }
-                if(file.isDirectory()) {
-                    LuceneIndexThread.getInstance().setBatchMode(true);
-                    ftsService.scanAndApplySearchFileModel(file, indexHiddenFiles, voidFunction);
-                    registerPath(Paths.get(file.getAbsolutePath()));
-                    LuceneIndexThread.getInstance().setBatchMode(false);
-                } else {
-                    ftsService.convertAndApplySearchFileModel(file, voidFunction);
-                }
+                createIndex(file);
                 break;
             case "ENTRY_MODIFY":
                 if(file.isDirectory()) {
                     WatchKey watchKey = watchKeyMap.get(file.getAbsolutePath());
                     Path path = Paths.get(file.getAbsolutePath());
-                    if(file.isHidden() && watchKey != null) {
+                    if(!indexHiddenFiles && file.isHidden() && watchKey != null) {
                         try {
                             Files.walkFileTree(path, unRegisterFileVisitor);
                         } catch (IOException e) {
                             LOGGER.error("IOException occurred when un-monitoring path {}", path, e);
                             throw new LocalFtsRuntimeException("IOException occurred when un-monitoring path " + path + ", msg:" + e.getMessage());
                         }
+                        deleteIndex(file);
                     } else if(!file.isHidden() && watchKey == null) {
                         try {
                             Files.walkFileTree(path, registerFileVisitor);
@@ -160,31 +151,54 @@ public class FileMonitorThread extends Thread{
                             LOGGER.error("IOException occurred when monitoring path {}", path, e);
                             throw new LocalFtsRuntimeException("IOException occurred when monitoring path " + path + ", msg:" + e.getMessage());
                         }
+                        createIndex(file);
                     }
+                } else if(!indexHiddenFiles && file.isHidden()) {
+                    deleteIndex(file);
+                } else {
+                    ftsService.convertAndApplySearchFileModel(file,
+                            model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
                 }
-                ftsService.convertAndApplySearchFileModel(file,
-                        model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
                 break;
             case "ENTRY_DELETE":
-                SearchFileModel model = new SearchFileModel();
-                model.setFileName(file.getName());
-                String parentRelativePath = ftsService.getParentRelativePath(file);
-                model.setParentRelativePath(parentRelativePath);
-                /**
-                 * 由于File对象不存在，isFile方法永远返回false，进入DELETE_DIRECTORY分支，会首先删除当前model，
-                 * 其次删除前缀匹配当前model.parentRelativePath + fileName的所有文件。
-                 * 如果这是一个文件，前缀匹配是不会结果的。
-                 * 如果这是一个目录，前缀匹配刚好会匹配到目录的子文件。
-                 */
-//                if(file.isFile()) {
-//                    LuceneIndexThread.getInstance().addOperation(IndexType.DELETE, model);
-//                } else {
-                LuceneIndexThread.getInstance().addOperation(IndexType.DELETE_DIRECTORY, model);
-//                }
+                deleteIndex(file);
                 break;
             default:
                 LOGGER.warn("Invalid state of kind {}", kind.name());
         }
+    }
+
+    private void createIndex(File file) {
+        VoidFunction<SearchFileModel> voidFunction = model -> LuceneIndexThread.getInstance().addOperation(IndexType.CREATE, model);
+        if(!indexHiddenFiles && file.isHidden() ) {
+            return;
+        }
+        if(file.isDirectory()) {
+            LuceneIndexThread.getInstance().setBatchMode(true);
+            ftsService.scanAndApplySearchFileModel(file, indexHiddenFiles, voidFunction);
+            registerPath(Paths.get(file.getAbsolutePath()));
+            LuceneIndexThread.getInstance().setBatchMode(false);
+        } else {
+            ftsService.convertAndApplySearchFileModel(file, voidFunction);
+        }
+    }
+
+    private void deleteIndex(File file) {
+        SearchFileModel model = new SearchFileModel();
+        model.setFileName(file.getName());
+        String parentRelativePath = ftsService.getParentRelativePath(file);
+        model.setParentRelativePath(parentRelativePath);
+        /**
+         * 由于File对象不存在，isFile方法永远返回false，进入DELETE_DIRECTORY分支，会首先删除当前model，
+         * 其次删除前缀匹配当前model.parentRelativePath + fileName的所有文件。
+         * 如果这是一个文件，前缀匹配是不会结果的。
+         * 如果这是一个目录，前缀匹配刚好会匹配到目录的子文件。
+         */
+//                if(file.isFile()) {
+//                    LuceneIndexThread.getInstance().addOperation(IndexType.DELETE, model);
+//                } else {
+        LuceneIndexThread.getInstance().addOperation(IndexType.DELETE_DIRECTORY, model);
+//                }
     }
 
     private void registerPath(Path path) {

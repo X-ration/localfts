@@ -1667,6 +1667,7 @@
                     fillSearchPathDialog(liUl,data.subModelList);
                 } else {
                     liUl.innerText = '无项目';
+                    liUl.onclick = stopPropagationFunction;
                 }
                 li.appendChild(liUl);
             }
@@ -1692,6 +1693,7 @@
                         fillSearchPathDialog(liUl,model.subModelList);
                     } else {
                         liUl.innerText = '无项目';
+                        liUl.onclick = stopPropagationFunction;
                     }
                     li.appendChild(liUl);
                 } else {
@@ -1756,6 +1758,7 @@
                                     fillSearchPathDialog(liUl, returnObject.data.subModelList);
                                 } else {
                                     liUl.innerText = '无项目';
+                                    liUl.onclick = stopPropagationFunction;
                                 }
                             } else {
                                 liUl.innerText = '获取文件列表失败:' + returnObject.message;
@@ -1831,7 +1834,8 @@
                     }
                 }
             }
-            selectedSearchPathLis[selectedSearchPathLis.length] = this;
+            //selectedSearchPathLis[selectedSearchPathLis.length] = this;
+            selectedSearchPathLis = [this];
             setClass(this, 'bg-black');
             var children = this.children;
             if(children) {
