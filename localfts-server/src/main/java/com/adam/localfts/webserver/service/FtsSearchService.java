@@ -3,6 +3,7 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.PageObject;
 import com.adam.localfts.webserver.common.ReturnObject;
+import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.common.search.*;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
@@ -192,6 +193,14 @@ public class FtsSearchService implements DisposableBean {
                 || advancedSearchCondition.getFolderCompressStatus() != null
                 || advancedSearchCondition.compressedFileSizeLower() != null || advancedSearchCondition.compressedFileSizeUpper() != null
                 || advancedSearchCondition.compressedFileLastModifiedLower() != null || advancedSearchCondition.compressedFileLastModifiedUpper() != null
+        )) {
+            advancedSearchCondition.setEmptyResult(true);
+        }
+        if(advancedSearchCondition.getFolderCompressStatus() == FolderCompressStatus.NOT_COMPRESSED && (
+                advancedSearchCondition.compressedFileSizeLower() != null
+                || advancedSearchCondition.compressedFileSizeUpper() != null
+                || advancedSearchCondition.compressedFileLastModifiedLower() != null
+                || advancedSearchCondition.compressedFileLastModifiedUpper() != null
         )) {
             advancedSearchCondition.setEmptyResult(true);
         }
