@@ -245,7 +245,7 @@ public class LuceneIndexThread extends Thread{
         document.add(new Field("isDirectory", String.valueOf(model.isDirectory()), simpleFieldType));
         document.add(new SortedDocValuesField("isDirectory_sort", new BytesRef(model.isDirectory() ? "文件夹" : "文件")));
         document.add(new LongPoint("lastModified", model.getLastModified()));
-        document.add(new SortedNumericDocValuesField("lastModified_sort", model.getLastModified()));
+        document.add(new NumericDocValuesField("lastModified_sort", model.getLastModified()));
         document.add(new Field("lastModified_value", String.valueOf(model.getLastModified()), simpleFieldType));
         if(model.isDirectory()) {
             document.add(new Field("compressStatus", model.getCompressStatus().name(), simpleFieldType));
@@ -255,15 +255,15 @@ public class LuceneIndexThread extends Thread{
                 document.add(new SortedDocValuesField("compressedFilePath_sort", new BytesRef(model.getCompressedFilePath())));
                 document.add(new LongPoint("compressedFileSize", model.getCompressedFileSize()));
                 document.add(new Field("compressedFileSize_value", String.valueOf(model.getCompressedFileSize()), simpleFieldType));
-                document.add(new SortedNumericDocValuesField("compressedFileSize_sort", model.getCompressedFileSize()));
+                document.add(new NumericDocValuesField("compressedFileSize_sort", model.getCompressedFileSize()));
                 document.add(new LongPoint("compressedFileLastModified", model.getCompressedFileLastModified()));
                 document.add(new Field("compressedFileLastModified_value", String.valueOf(model.getCompressedFileLastModified()), simpleFieldType));
-                document.add(new SortedNumericDocValuesField("compressedFileLastModified_sort", model.getCompressedFileLastModified()));
+                document.add(new NumericDocValuesField("compressedFileLastModified_sort", model.getCompressedFileLastModified()));
             }
         } else {
             document.add(new LongPoint("fileSize", model.getFileSize()));
             document.add(new Field("fileSize_value", String.valueOf(model.getFileSize()), simpleFieldType));
-            document.add(new SortedNumericDocValuesField("fileSize_sort", model.getFileSize()));
+            document.add(new NumericDocValuesField("fileSize_sort", model.getFileSize()));
         }
         addDoc(document, model);
     }
