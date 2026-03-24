@@ -230,7 +230,7 @@ public class LuceneIndexThread extends Thread{
         document.add(new Field("fileName_lowercase", Util.toLowerCaseAndSC(model.getFileName()), fullFieldType));
         document.add(new Field("fileName_simple", model.getFileName(), simpleFieldType));
         document.add(new Field("fileName_simple_reversed", Util.reverseStr(model.getFileName()), simpleFieldType));
-        document.add(new SortedDocValuesField("fileName_sort", new BytesRef(model.getFileName())));
+        document.add(new SortedDocValuesField("fileName_sort", new BytesRef(Util.convertToPinyin(model.getFileName(), true))));
         if(model.getFileContent() != null) {
             String fileContent = model.getFileContent();
             model.setFileContent(null);  //便于回收
@@ -241,7 +241,7 @@ public class LuceneIndexThread extends Thread{
         }
         document.add(new Field("parentRelativePath", model.getParentRelativePath(), simpleFieldType));
 //        document.add(new StringField("parentRelativePath", model.getParentRelativePath(), Field.Store.YES));
-        document.add(new SortedDocValuesField("parentRelativePath_sort", new BytesRef(model.getParentRelativePath())));
+        document.add(new SortedDocValuesField("parentRelativePath_sort", new BytesRef(Util.convertToPinyin(model.getParentRelativePath(), true))));
         document.add(new Field("isDirectory", String.valueOf(model.isDirectory()), simpleFieldType));
         document.add(new SortedDocValuesField("isDirectory_sort", new BytesRef(model.isDirectory() ? "文件夹" : "文件")));
         document.add(new LongPoint("lastModified", model.getLastModified()));
@@ -252,7 +252,7 @@ public class LuceneIndexThread extends Thread{
             document.add(new SortedDocValuesField("compressStatus_sort", new BytesRef(model.getCompressStatus().getDesc())));
             if(model.getCompressStatus() == FolderCompressStatus.COMPRESSED) {
                 document.add(new Field("compressedFilePath", model.getCompressedFilePath(), simpleFieldType));
-                document.add(new SortedDocValuesField("compressedFilePath_sort", new BytesRef(model.getCompressedFilePath())));
+                document.add(new SortedDocValuesField("compressedFilePath_sort", new BytesRef(Util.convertToPinyin(model.getCompressedFilePath(), true))));
                 document.add(new LongPoint("compressedFileSize", model.getCompressedFileSize()));
                 document.add(new Field("compressedFileSize_value", String.valueOf(model.getCompressedFileSize()), simpleFieldType));
                 document.add(new NumericDocValuesField("compressedFileSize_sort", model.getCompressedFileSize()));

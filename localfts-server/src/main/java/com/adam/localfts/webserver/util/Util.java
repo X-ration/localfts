@@ -4,6 +4,7 @@ import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.HttpRangeObject;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.github.houbb.opencc4j.util.ZhSlimUtil;
+import com.github.promeg.pinyinhelper.Pinyin;
 import org.jetbrains.annotations.Contract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,31 @@ public class Util {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(Util.class);
     private static final Map<String, Integer> METHOD_CALL_COUNTER = new ConcurrentHashMap<>();
+
+    static {
+        Pinyin.init(Pinyin.newConfig());
+    }
+
+    public static String convertToPinyin(String str) {
+        return convertToPinyin(str, false);
+    }
+    public static String convertToPinyin(String str, boolean lowercase) {
+        if(str == null) {
+            return null;
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        for(int i=0;i<str.length();i++) {
+            char c = str.charAt(i);
+            String cStr = Pinyin.toPinyin(c);
+            stringBuilder.append(cStr);
+        }
+        String newStr = stringBuilder.toString();
+        if(lowercase) {
+            return newStr.toLowerCase();
+        } else {
+            return newStr;
+        }
+    }
 
     public static boolean isSingleArabicOrEnglish(String str) {
         if(str == null) {

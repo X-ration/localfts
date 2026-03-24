@@ -11,4 +11,9 @@ public class StringTest {
         str = Util.reverseStr(str);
         Assert.assertTrue(str.equals("fedcba"));
     }
+    @Test
+    public void testPinyin() {
+        String fileName = "sanguoyanyi71.三國演义第七十一回 占对山黄忠逸待劳 据汉水赵云寡胜众.PDF";
+        System.out.println(Util.convertToPinyin(fileName));
+    }
 }
