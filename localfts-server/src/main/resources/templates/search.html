@@ -892,7 +892,7 @@
                             }
                         }
                     }
-                    var searchPathInputs = getElementsByName('input', 'searchPaths');
+                    var searchPathInputs = document.getElementById('searchPathsDiv').getElementsByTagName('input');
                     if(searchPathInputs) {
                         var searchPathsStr = '';
                         for(var i=0;i<searchPathInputs.length;i++) {
@@ -1553,6 +1553,13 @@
                         var searchPathInputValue = searchPathInputs[i].value;
                         if(!searchPathInputValue || searchPathInputValue === '') {
                             continue;
+                        }
+                        var matchResult = searchPathInputs[i].id.match(searchPathsInputIdRegex);
+                        if(matchResult) {
+                            var inputNumberId = Number(matchResult[1]);
+                            if(inputNumberId === numberId) {
+                                continue;
+                            }
                         }
                         if(dialogInputValue === searchPathInputValue) {
                             updateMsg(msgId, '搜索路径和已选搜索路径\'' + searchPathInputValue + '\'相同', 'red');

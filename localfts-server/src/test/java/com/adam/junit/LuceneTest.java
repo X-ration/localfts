@@ -38,6 +38,32 @@ public class LuceneTest {
     }
 
     @Test
+    public void testSearchPathQuery() throws IOException {
+        Path path = Paths.get(indexPath);
+        Assert.assertTrue(Files.isReadable(path));
+        Directory directory = FSDirectory.open(path);
+        IndexReader indexReader = DirectoryReader.open(directory);
+        IKAnalyzer analyzer = new IKAnalyzer();
+        IndexSearcher indexSearcher = new IndexSearcher(indexReader);
+        BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+        Term term = new Term("parentRelativePath", "/");
+        PrefixQuery prefixQuery = new PrefixQuery(term);
+        queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
+        term = new Term("parentRelativePath", "/localfts_zip");
+        prefixQuery = new PrefixQuery(term);
+        queryBuilder.add(prefixQuery, BooleanClause.Occur.SHOULD);
+        Query prpQuery = queryBuilder.build();
+        term = new Term("fileName", "cloud");
+        TermQuery termQuery = new TermQuery(term);
+        BooleanQuery.Builder rootQueryBuilder = new BooleanQuery.Builder();
+        rootQueryBuilder.add(prpQuery, BooleanClause.Occur.MUST);
+        rootQueryBuilder.add(termQuery, BooleanClause.Occur.MUST);
+        TopDocs topDocs = indexSearcher.search(rootQueryBuilder.build(), 100);
+        System.out.println("totalHits=" + topDocs.totalHits);
+        Assert.assertTrue(topDocs.totalHits > 0);
+    }
+
+    @Test
     public void testQuery() throws IOException, ParseException {
         Path path = Paths.get(indexPath);
         Assert.assertTrue(Files.isReadable(path));
