@@ -16,6 +16,9 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class FileMonitorThread extends Thread{
 
@@ -23,8 +26,9 @@ public class FileMonitorThread extends Thread{
     private String rootPath;
     private WatchService watchService;
     private boolean indexHiddenFiles;
-    private final ConcurrentHashMap<String, Long> lastModifiedMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, WatchKey> watchKeyMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ScheduledFuture<?>> scheduledFutureMap = new ConcurrentHashMap<>();
+    private final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
     private final FileVisitor<? super java.nio.file.Path> registerFileVisitor = new SimpleFileVisitor<Path>() {
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
@@ -57,6 +61,7 @@ public class FileMonitorThread extends Thread{
         Assert.isTrue(rootPathFile.exists(), "Root path " + rootPath + "does not exist!");
         Assert.isTrue(rootPathFile.isDirectory(), "Root path " + rootPath + "is not a directory!");
         LOGGER.info("Prepare to monitor files in {}", rootPath);
+        scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
         this.watchService = FileSystems.getDefault().newWatchService();
         Path rootPathPath = Paths.get(rootPath);
         //遍历所有子目录并注册
@@ -122,6 +127,7 @@ public class FileMonitorThread extends Thread{
 
     public void tryStop() {
         this.interrupt();
+        scheduledThreadPoolExecutor.shutdownNow();
     }
 
     private void handleFileEvent(WatchEvent.Kind<?> kind, File file) {
@@ -153,11 +159,12 @@ public class FileMonitorThread extends Thread{
                         }
                         createIndex(file);
                     }
+                    ftsService.convertAndApplySearchFileModel(file,
+                            model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
                 } else if(!indexHiddenFiles && file.isHidden()) {
                     deleteIndex(file);
                 } else {
-                    ftsService.convertAndApplySearchFileModel(file,
-                            model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                    handleModifyFile(file);
                 }
                 break;
             case "ENTRY_DELETE":
@@ -166,6 +173,22 @@ public class FileMonitorThread extends Thread{
             default:
                 LOGGER.warn("Invalid state of kind {}", kind.name());
         }
+    }
+
+    private void handleModifyFile(File file) {
+        String absolutePath = file.getAbsolutePath();
+        scheduledFutureMap.compute(absolutePath,(k, oldFuture) -> {
+            if(oldFuture != null && !oldFuture.isDone()) {
+                boolean cancel = oldFuture.cancel(true);
+//                LOGGER.debug("Cancel {}, work queue count={}", cancel ? "success" : "fail", scheduledThreadPoolExecutor.getQueue().size());
+            }
+            return scheduledThreadPoolExecutor.schedule(() -> {
+                LOGGER.debug("Scheduled update file model {}", absolutePath);
+                ftsService.convertAndApplySearchFileModel(file,
+                        model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                scheduledFutureMap.remove(absolutePath);
+            }, 500, TimeUnit.MILLISECONDS);
+        });
     }
 
     private void createIndex(File file) {

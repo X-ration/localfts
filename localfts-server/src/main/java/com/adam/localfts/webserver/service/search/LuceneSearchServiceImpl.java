@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.io.IOException;
@@ -292,14 +293,22 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
         if(lowerCaseEnglish) {
             field = field + "_lowercase";
         }
+        String fieldText = document.get(field);
+        if(StringUtils.isEmpty(fieldText)) {
+            return null;
+        }
+        String originalFieldText = document.get(originalField);
+        if(StringUtils.isEmpty(originalFieldText)) {
+            return null;
+        }
         try {
             QueryScorer queryScorer = new QueryScorer(query, field);
-            RecoverableSimpleHTMLFormatter simpleHTMLFormatter = new RecoverableSimpleHTMLFormatter("<span style=\"color:red;\">", "</span>", document.get(originalField));
+            RecoverableSimpleHTMLFormatter simpleHTMLFormatter = new RecoverableSimpleHTMLFormatter("<span style=\"color:red;\">", "</span>", originalFieldText);
             RecoverableHighlighter highlighter = new RecoverableHighlighter(simpleHTMLFormatter, new EscapeHTMLCharsEncoder(), queryScorer);
             TokenStream tokenStream = TokenSources.getAnyTokenStream(indexReader, docId, field, analyzer);
             Fragmenter fragmenter = new SimpleSpanFragmenter(queryScorer);
             highlighter.setTextFragmenter(fragmenter);
-            TextFragment[] textFragments = highlighter.getOriginalBestTextFragments(tokenStream, document.get(field), document.get(originalField), true, 1);
+            TextFragment[] textFragments = highlighter.getOriginalBestTextFragments(tokenStream, fieldText, originalFieldText, true, 1);
             if(textFragments == null || textFragments.length == 0) {
                 return null;
             }

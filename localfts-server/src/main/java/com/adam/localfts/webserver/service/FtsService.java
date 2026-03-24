@@ -3,6 +3,7 @@ package com.adam.localfts.webserver.service;
 import com.adam.localfts.webserver.common.*;
 import com.adam.localfts.webserver.common.compress.*;
 import com.adam.localfts.webserver.common.search.FileIndexCounter;
+import com.adam.localfts.webserver.common.search.IndexType;
 import com.adam.localfts.webserver.common.search.SearchFileModel;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
@@ -10,6 +11,7 @@ import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.config.properties.IndexFileContentProperties;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import com.adam.localfts.webserver.task.LuceneIndexThread;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.apache.catalina.connector.ClientAbortException;
@@ -727,6 +729,8 @@ public class FtsService {
                         needCompress = true;
                         FolderCompressingContextHolder folderCompressingContextHolder = new FolderCompressingContextHolder(-1L);
                         folderCompressingContextHolderMap.put(folderAbsolutePath, folderCompressingContextHolder);
+                        convertAndApplySearchFileModel(folderFile,
+                                model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
                         IOUtil.compressFolderAsZip(folderAbsolutePath, zipFolderFile.getAbsolutePath(), zipFileName);
                         folderCompressingContextHolder.setCompressSize(zipFile.length());
                         folderCompressingContextHolder.setExecuteThread(null);
@@ -735,6 +739,8 @@ public class FtsService {
                             LOGGER.warn("FolderCompressingContextHolder {} has been removed", zipFileAbsolutePath);
                             folderCompressingContextHolderMap.put(folderAbsolutePath, folderCompressingContextHolder);
                         }
+                        convertAndApplySearchFileModel(folderFile,
+                                model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
                     }
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) {
@@ -752,6 +758,8 @@ public class FtsService {
                         LOGGER.info("successfully deleted zip file:{}", zipFileAbsolutePath);
                     }
                     folderCompressingContextHolderMap.remove(folderAbsolutePath);
+                    convertAndApplySearchFileModel(folderFile,
+                            model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
                 } finally {
                     zipFileLock.unlock();
                 }
@@ -814,6 +822,8 @@ public class FtsService {
         FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
         if(folderCompressingContextHolder == null) {
             LOGGER.warn("FolderCompressingInfo not found for {}, no need to cancel", folderAbsolutePath);
+            convertAndApplySearchFileModel(folderFile,
+                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
             return ReturnObject.success();
         }
 
@@ -826,6 +836,8 @@ public class FtsService {
             switch (folderCompressStatus) {
                 case NOT_COMPRESSED:
                     message = "文件夹未压缩";
+                    convertAndApplySearchFileModel(folderFile,
+                            model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
                     break;
                 case COMPRESSING:
                     message = "文件夹正在压缩，请重试";
@@ -855,8 +867,16 @@ public class FtsService {
         File zipFile = new File(rootPathFile, zipFileRelativePath);
         FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
         if(folderCompressingContextHolder == null) {
-            LOGGER.warn("folder {} zip task does not exist, no need to delete", folderAbsolutePath);
-            return ReturnObject.success();
+            if(zipFile.exists()) {
+                boolean deletes = zipFile.delete();
+                convertAndApplySearchFileModel(folderFile,
+                        model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                if (deletes) {
+                    return ReturnObject.success();
+                } else {
+                    return ReturnObject.fail("文件可能正在被占用");
+                }
+            }
         }
 
         FolderCompressStatus folderCompressStatus = getFolderCompressStatus(relativePath, false);
@@ -870,14 +890,20 @@ public class FtsService {
 
         if(!zipFile.exists()) {
             LOGGER.warn("(folder={})zip file {} does not exist, no need to delete", folderAbsolutePath, zipFile.getAbsolutePath());
+            convertAndApplySearchFileModel(folderFile,
+                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
             return ReturnObject.success();
         }
 
         boolean deletes = zipFile.delete();
         if(deletes) {
             folderCompressingContextHolderMap.remove(folderAbsolutePath);
+            convertAndApplySearchFileModel(folderFile,
+                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
             return ReturnObject.success();
         } else {
+            convertAndApplySearchFileModel(folderFile,
+                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
             return ReturnObject.fail("文件可能正在被占用");
         }
     }
@@ -946,11 +972,11 @@ public class FtsService {
         File zipFile = new File(rootPathFile, zipFileRelativePath);
         boolean zipFileExists = zipFile.exists();
 
-        if(!zipFileExists) {
-            return FolderCompressStatus.NOT_COMPRESSED;
-        } else {
-            FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
-            if(folderCompressingContextHolder != null) {
+        FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
+        if(folderCompressingContextHolder != null) {
+            if(!zipFileExists) {
+                return FolderCompressStatus.COMPRESSING;
+            } else {
                 long recordSize = folderCompressingContextHolder.getCompressSize();
                 long zipFileSize = zipFile.length();
                 if (recordSize == zipFileSize) {
@@ -958,9 +984,9 @@ public class FtsService {
                 } else {
                     return FolderCompressStatus.COMPRESSING;
                 }
-            } else {
-                return FolderCompressStatus.COMPRESSED;
             }
+        } else {
+            return zipFileExists ? FolderCompressStatus.COMPRESSED : FolderCompressStatus.NOT_COMPRESSED;
         }
     }
 

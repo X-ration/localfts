@@ -373,6 +373,10 @@ public class Util {
         return Thread.currentThread().isInterrupted();
     }
 
+    public static boolean checkAndClearInterrupted() {
+        return Thread.interrupted();
+    }
+
     public static void clearInterruptedAndThrowException() throws InterruptedException{
         if(Thread.interrupted()) {
             throw new InterruptedException();
