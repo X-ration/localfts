@@ -405,12 +405,16 @@
                 document.getElementById('directoryRadio3').disabled = 'disabled';
             });
             bindEventListener(document.getElementById('searchTypeRadio1'),'click', function () {
-                document.getElementById('directoryRadio1').disabled = '';
-                document.getElementById('directoryRadio3').disabled = '';
+                if(!filterFileType) {
+                    document.getElementById('directoryRadio1').disabled = '';
+                    document.getElementById('directoryRadio3').disabled = '';
+                }
             });
             bindEventListener(document.getElementById('searchTypeRadio3'),'click', function () {
-                document.getElementById('directoryRadio1').disabled = '';
-                document.getElementById('directoryRadio3').disabled = '';
+                if(!filterFileType) {
+                    document.getElementById('directoryRadio1').disabled = '';
+                    document.getElementById('directoryRadio3').disabled = '';
+                }
             });
         }
 
@@ -418,8 +422,15 @@
         var filterFileType = false;
         bindEventListener(document.getElementById('filterFileTypeRadio1'),'click', function () {
             document.getElementById('fileTypesDiv').style.display = 'none';
-            document.getElementById('directoryRadio1').disabled = '';
-            document.getElementById('directoryRadio3').disabled = '';
+            var searchTypeValue = getCheckedValue('searchType');
+            if(searchMode === 'INDEXED' && indexFileContent && searchTypeValue === 'FILE_CONTENT_ONLY') {
+                document.getElementById('directoryRadio2').click();
+                document.getElementById('directoryRadio1').disabled = 'disabled';
+                document.getElementById('directoryRadio3').disabled = 'disabled';
+            } else {
+                document.getElementById('directoryRadio1').disabled = '';
+                document.getElementById('directoryRadio3').disabled = '';
+            }
             filterFileType = false;
         });
         bindEventListener(document.getElementById('filterFileTypeRadio2'),'click', function () {

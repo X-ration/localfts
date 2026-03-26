@@ -373,12 +373,16 @@ public class WebController {
             pageSize = 20;
         }
         if(sortColumn != null) {
-            boolean checkSortColumn = checkSearchSortColumn(sortColumn, advancedSearchCondition, zipEnabled, searchMode, indexFileContent);
-            if(!checkSortColumn) {
+            if(sortColumn == SearchColumn.DEFAULT) {
                 sortColumn = null;
+            } else {
+                boolean checkSortColumn = checkSearchSortColumn(sortColumn, advancedSearchCondition, zipEnabled, searchMode, indexFileContent);
+                if (!checkSortColumn) {
+                    sortColumn = null;
+                }
             }
         }
-        if(sortColumn != null && sortColumn != SearchColumn.DEFAULT && sortOrder == null) {
+        if(sortColumn != null && sortOrder == null) {
             sortOrder = SortOrder.ASC;
         }
         return ftsSearchService.search(keyword, searchId, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
