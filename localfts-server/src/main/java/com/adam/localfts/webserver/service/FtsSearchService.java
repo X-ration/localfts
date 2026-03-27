@@ -262,6 +262,21 @@ public class FtsSearchService implements DisposableBean {
                 }
             }
         }
+        if(!advancedSearchCondition.emptyResult()) {
+            if(advancedSearchCondition.fileSizeLower() != null || advancedSearchCondition.fileSizeUpper() != null) {
+                advancedSearchCondition.setDirectory(false);
+            }
+            if(advancedSearchCondition.getFolderCompressStatus() != null
+                    || advancedSearchCondition.compressedFileSizeLower() != null || advancedSearchCondition.compressedFileSizeUpper() != null
+                    || advancedSearchCondition.compressedFileLastModifiedLower() != null || advancedSearchCondition.compressedFileLastModifiedUpper() != null
+            ) {
+                if(advancedSearchCondition.getDirectory() != null && !advancedSearchCondition.getDirectory()) {
+                    advancedSearchCondition.setEmptyResult(true);
+                } else {
+                    advancedSearchCondition.setDirectory(true);
+                }
+            }
+        }
         advancedSearchCondition.clean();
     }
 
