@@ -110,8 +110,18 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
                 }
                 if(advancedSearchCondition.getFilterFileType() != null && advancedSearchCondition.getFilterFileType()) {
                     BooleanQuery.Builder fileTypeQueryBuilder = new BooleanQuery.Builder();
+                    boolean isLinux = Util.isSystemLinux();
                     for(String suffix: advancedSearchCondition.getFileTypes()) {
-                        Term term = new Term("fileName_simple_reversed", Util.reverseStr(suffix));
+                        String field = "fileName_simple_suffix";
+                        String text = Util.reverseStr(suffix.toLowerCase());
+                        if(isLinux) {
+                            if(advancedSearchCondition.getFilterFileTypeCaseSensitive() != null && advancedSearchCondition.getFilterFileTypeCaseSensitive()) {
+                                text = Util.reverseStr(suffix);
+                            } else {
+                                field = "fileName_simple_lowercase_suffix";
+                            }
+                        }
+                        Term term = new Term(field, text);
                         PrefixQuery query = new PrefixQuery(term);
                         fileTypeQueryBuilder.add(query, BooleanClause.Occur.SHOULD);
                     }

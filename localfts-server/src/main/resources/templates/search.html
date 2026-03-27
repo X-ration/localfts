@@ -85,6 +85,8 @@
             <label for="filterFileTypeRadio1">不过滤</label>
             <input type="radio" id="filterFileTypeRadio2" value="true" name="filterFileType">
             <label for="filterFileTypeRadio2">过滤</label>
+            <input type="checkbox" id="filterFileTypeCSCheckbox" th:if="${showFileTypeCSCheckbox}">
+            <label for="filterFileTypeCSCheckbox" th:if="${showFileTypeCSCheckbox}">后缀名区分大小写</label>
             <input type="checkbox" id="filterFileTypeCheckbox">
             <label for="filterFileTypeCheckbox">显示说明</label>
             <span class="inline" style="color:red; display:none" id="filterFileTypeMsg"></span>
@@ -901,6 +903,10 @@
                             if(fileTypesStr !== '') {
                                 ascObject['fileTypes'] = fileTypesStr.substring(1);
                             }
+                        }
+                        var filterFileTypeCSCheckbox = document.getElementById('filterFileTypeCSCheckbox');
+                        if(filterFileTypeCSCheckbox && getElementChecked(filterFileTypeCSCheckbox)) {
+                            ascObject['filterFileTypeCaseSensitive'] = true;
                         }
                     }
                     var searchPathInputs = document.getElementById('searchPathsDiv').getElementsByTagName('input');

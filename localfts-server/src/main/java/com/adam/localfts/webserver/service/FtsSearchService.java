@@ -305,7 +305,7 @@ public class FtsSearchService implements DisposableBean {
                 logger.warn("[Performance warning]LuceneIndexThread takes only 1 available physical processor! Requests may wait long.");
             }
             String indexPath = searchProperties.getIndexPath();
-            boolean indexHiddenFiles = searchProperties.getIndexHiddenFiles();
+            boolean indexHiddenFiles = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
             LuceneIndexThread.constructOnce(indexPath, searchProperties.getIndexFileContent().getMaxStringLength(), searchProperties.getUseExistingIndex());
             LuceneIndexThread.getInstance().start();
             FileMonitorThread.constructOnce(ftsService, rootPath, indexHiddenFiles);

@@ -141,7 +141,7 @@ public class RecoverableHighlighter extends Highlighter {
                 String markedUpText=formatter.highlightTerm(encoder.encodeText(tokenText), tokenGroup);
                 //store any whitespace etc from between this and last group
                 if (startOffset > lastEndOffset)
-                    newText.append(encoder.encodeText(fieldText.substring(lastEndOffset, startOffset)));
+                    newText.append(encoder.encodeText(originalText.substring(lastEndOffset, startOffset)));
                 newText.append(markedUpText);
                 lastEndOffset=Math.max(lastEndOffset,endOffset);
             }
@@ -156,7 +156,7 @@ public class RecoverableHighlighter extends Highlighter {
             )
             {
                 //append it to the last fragment
-                newText.append(encoder.encodeText(fieldText.substring(lastEndOffset)));
+                newText.append(encoder.encodeText(originalText.substring(lastEndOffset)));
             }
 
             currentFrag.textEndPos = newText.length();

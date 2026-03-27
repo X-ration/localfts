@@ -60,8 +60,22 @@ public class LuceneIndexThread extends Thread{
         indexWriterConfig.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
         Path path = Paths.get(indexPath);
         if(!Files.isReadable(path)) {
-            logger.error("索引路径无法读取：{}", indexPath);
-            throw new LocalFtsStartupException("索引路径无法读取：" + indexPath);
+            if(!Files.exists(path)) {
+                try {
+                    boolean mkdirs = path.toFile().mkdirs();
+                    com.adam.localfts.webserver.util.Assert.isTrue(mkdirs, "创建索引路径" + indexPath + "失败", LocalFtsStartupException.class);
+                    if(!Files.isReadable(path)) {
+                        logger.error("索引路径无法读取：{}", indexPath);
+                        throw new LocalFtsStartupException("索引路径无法读取：" + indexPath);
+                    }
+                } catch (SecurityException e) {
+                    logger.error("无法创建索引路径：{}", indexPath, e);
+                    throw new LocalFtsStartupException("索引路径无法创建：" + indexPath + ", msg:" + e.getMessage());
+                }
+            } else {
+                logger.error("索引路径无法读取：{}", indexPath);
+                throw new LocalFtsStartupException("索引路径无法读取：" + indexPath);
+            }
         }
         try {
             this.directory = FSDirectory.open(path);
@@ -229,7 +243,17 @@ public class LuceneIndexThread extends Thread{
         document.add(new Field("fileName", model.getFileName(), fullFieldType));
         document.add(new Field("fileName_lowercase", Util.toLowerCaseAndSC(model.getFileName()), fullFieldType));
         document.add(new Field("fileName_simple", model.getFileName(), simpleFieldType));
-        document.add(new Field("fileName_simple_reversed", Util.reverseStr(model.getFileName()), simpleFieldType));
+        String reversedFileName;
+        if(Util.isSystemWindows() || Util.isSystemMacOS()) {
+            reversedFileName = Util.reverseStr(model.getFileName().toLowerCase());
+        } else if(Util.isSystemLinux()){
+            reversedFileName = Util.reverseStr(model.getFileName());
+            String reversedLowercaseFileName = Util.reverseStr(model.getFileName().toLowerCase());
+            document.add(new Field("fileName_simple_lowercase_suffix", reversedLowercaseFileName, simpleFieldType));
+        } else {
+            throw new LocalFtsRuntimeException("Unknown system:" + Util.getOsName());
+        }
+        document.add(new Field("fileName_simple_suffix", reversedFileName, simpleFieldType));
         document.add(new SortedDocValuesField("fileName_sort", new BytesRef(Util.convertToPinyin(model.getFileName(), true))));
         if(model.getFileContent() != null) {
             String fileContent = model.getFileContent();

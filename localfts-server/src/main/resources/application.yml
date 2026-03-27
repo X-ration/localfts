@@ -26,7 +26,7 @@ spring:
       #file-size-threshold: 0
 localfts:
   root_path: D:\Users\Adam\Documents  #服务器根路径映射地址
-  show_hidden: false  #是否显示隐藏文件和文件夹
+  show_hidden: false  #是否显示隐藏文件和文件夹，同步影响索引行为
   zip:
     enabled: true  #文件夹压缩功能开关
     path: localfts_zip  #文件夹压缩文件存储路径，对根路径的相对路径
@@ -49,7 +49,6 @@ localfts:
     active-task-threshold-str: 0.5p  #活跃搜索任务阈值，格式为正整数或正数+p(代表乘以物理核心数)，不能超过物理核心数。默认值：物理核心数/2
     index-path: index-dir  #索引相对路径
     index-before-start: true #是否在启动Web服务器前创建索引
-    index-hidden-files: false #是否索引隐藏的文件和文件夹,建议关闭
     use-existing-index: false  #是否使用已有的索引，不使用则在启动时删除已有索引并重新创建
     index-file-content:
       enabled: true  #!!是否对文件内容进行索引（索引耗时更长）

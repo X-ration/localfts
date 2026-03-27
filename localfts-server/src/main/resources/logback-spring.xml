@@ -11,7 +11,7 @@
         <!-- encoders are assigned the type
              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <encoder>
-            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%-5level) %clr(${PID:- }){magenta} %clr([%thread]){cyan} %clr(%logger{50}){cyan} - %msg%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%-5level) %clr(${PID:- }){magenta} %clr([%thread]){cyan} %clr(%logger{50}){cyan} - %msg%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}</pattern>
         </encoder>
     </appender>
 

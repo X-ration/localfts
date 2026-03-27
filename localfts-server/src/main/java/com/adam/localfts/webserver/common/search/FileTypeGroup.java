@@ -19,7 +19,7 @@ public enum FileTypeGroup {
             FileType.ISO),
     EXECUTABLE_FILE("可执行文件", FileType.EXE, FileType.BAT, FileType.DLL, FileType.SH, FileType.JAR, FileType.CLASS),
     PROGRAMMING_FILE("编程文件", FileType.HTML, FileType.HTM, FileType.CSS, FileType.JS, FileType.MIN_JS, FileType.PHP,
-            FileType.JAVA, FileType.PY, FileType.SQL, FileType.YML),
+            FileType.JAVA, FileType.PY, FileType.SQL, FileType.YML, FileType.JSON),
     ;
 
     private String desc;

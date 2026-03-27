@@ -48,7 +48,7 @@ public enum FileType {
     HTML("超文本标记语言"),HTM("超文本标记语言"),CSS("层叠样式表"),
     JS("JavaScript源代码文件"), MIN_JS(".min.js", "压缩的JavaScript源代码文件"),
     PHP("PHP脚本文件"), JAVA("Java源代码文件"), PY("Python源代码文件"),
-    SQL("结构化查询语言"), YML("YML标记语言"),
+    SQL("结构化查询语言"), YML("YML标记语言"), JSON("JavaScript对象表示法文件"),
     ;
 
     private String suffix;

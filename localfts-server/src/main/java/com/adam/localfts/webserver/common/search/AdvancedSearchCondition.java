@@ -34,6 +34,7 @@ public class AdvancedSearchCondition implements Cloneable{
     @Getter(AccessLevel.NONE)
     private List<String> fileTypeList;
     private Boolean filterFileType;
+    private Boolean filterFileTypeCaseSensitive;
     private SearchType searchType;
     /**
      * 是否区分大小写和简繁体

@@ -216,9 +216,21 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 boolean matchSuffix = false;
                 if(!CollectionUtils.isEmpty(advancedSearchCondition.getFileTypes())) {
                     for (String suffix : advancedSearchCondition.getFileTypes()) {
-                        if (absolutePath.endsWith(suffix)) {
+                        if ((Util.isSystemWindows() || Util.isSystemMacOS()) && absolutePath.toLowerCase().endsWith(suffix.toLowerCase())) {
                             matchSuffix = true;
                             break;
+                        } else if(Util.isSystemLinux()) {
+                            if(advancedSearchCondition.getFilterFileTypeCaseSensitive() != null && advancedSearchCondition.getFilterFileTypeCaseSensitive()) {
+                                if (absolutePath.endsWith(suffix)) {
+                                    matchSuffix = true;
+                                    break;
+                                }
+                            } else {
+                                if (absolutePath.toLowerCase().endsWith(suffix.toLowerCase())) {
+                                    matchSuffix = true;
+                                    break;
+                                }
+                            }
                         }
                     }
                 }

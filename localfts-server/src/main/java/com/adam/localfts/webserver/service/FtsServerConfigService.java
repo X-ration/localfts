@@ -304,7 +304,6 @@ public class FtsServerConfigService implements DisposableBean {
             if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
                 stringBuilder.append("[Search index path]").append(localFtsProperties.getSearch().getIndexPath()).append(System.lineSeparator())
                         .append("[Search index before start]").append(localFtsProperties.getSearch().getIndexBeforeStart()).append(System.lineSeparator())
-                        .append("[Search index hidden files]").append(localFtsProperties.getSearch().getIndexHiddenFiles()).append(System.lineSeparator())
                         .append("[Search use existing index]").append(localFtsProperties.getSearch().getUseExistingIndex()).append(System.lineSeparator())
                         .append("[Search index file content enabled]").append(localFtsProperties.getSearch().getIndexFileContent().getEnabled()).append(System.lineSeparator());
                 if(localFtsProperties.getSearch().getIndexFileContent().getEnabled()) {
@@ -375,7 +374,6 @@ public class FtsServerConfigService implements DisposableBean {
         if(localFtsProperties.getSearch().getEnabled()) {
             if(localFtsProperties.getSearch().getMode() == SearchMode.INDEXED) {
                 setIndexBeforeStartIfNull();
-                setIndexHiddenFilesIfNull();
                 setUseExistingIndexIfNull();
                 setIndexFileContentIfNull();
             }
@@ -416,13 +414,6 @@ public class FtsServerConfigService implements DisposableBean {
         Boolean indexBeforeStart = localFtsProperties.getSearch().getIndexBeforeStart();
         if(indexBeforeStart == null) {
             localFtsProperties.getSearch().setIndexBeforeStart(false);
-        }
-    }
-
-    private void setIndexHiddenFilesIfNull() {
-        Boolean indexHiddenFiles = localFtsProperties.getSearch().getIndexHiddenFiles();
-        if(indexHiddenFiles == null) {
-            localFtsProperties.getSearch().setIndexHiddenFiles(false);
         }
     }
 

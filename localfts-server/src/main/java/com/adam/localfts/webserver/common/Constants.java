@@ -25,11 +25,11 @@ public class Constants {
     public static final Pattern PATTERN_ACTIVE_TASK_THRESHOLD = Pattern.compile("(0|[1-9][0-9]*)(\\.[0-9]*[1-9]+p)?");
     public static final String[] READABLE_FILE_EXTS = {".doc", ".docx", ".pdf", ".xls", ".xlsx", ".ppt", ".pptx",
             ".txt", ".md", ".csv", ".xml", ".log", ".lrc", ".svg", ".bat", ".sh", ".class", ".html", ".htm", ".css", ".js",
-            ".min.js", ".php", ".java", ".py", ".sql", ".yml"
+            ".min.js", ".php", ".java", ".py", ".sql", ".yml", ".json"
     };
     public static final List<String> READABLE_FILE_EXTS_LIST = Arrays.asList(READABLE_FILE_EXTS);
     public static final String[] PLAIN_READABLE_FILE_EXTS = {".txt", ".md", ".csv", ".xml", ".log", ".lrc", ".svg", ".bat", ".sh", ".html", ".htm", ".css", ".js", ".min.js",
-            ".php", ".java", ".py", ".sql", ".yml"};
+            ".php", ".java", ".py", ".sql", ".yml", ".json"};
 
     public static final String CRLF = "\r\n";
     public static final String CR = "\r";

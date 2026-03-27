@@ -17,7 +17,6 @@ public class SearchProperties {
     @Getter(AccessLevel.NONE)
     private String activeTaskThresholdStr;
     private Boolean indexBeforeStart;
-    private Boolean indexHiddenFiles;
     private String indexPath;
     private Boolean useExistingIndex;
     private IndexFileContentProperties indexFileContent;

@@ -415,6 +415,8 @@ public class WebController {
         model.addAttribute("fileTypeGroups", fileTypeGroups);
         String searchId = Util.getRandomUUIDString();
         model.addAttribute("searchId", searchId);
+        boolean isLinux = Util.isSystemLinux();
+        model.addAttribute("showFileTypeCSCheckbox", isLinux);
         return "search";
     }
 
