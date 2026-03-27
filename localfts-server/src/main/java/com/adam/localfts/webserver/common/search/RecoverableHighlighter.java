@@ -101,7 +101,7 @@ public class RecoverableHighlighter extends Highlighter {
                     // markup the cached token group info
                     startOffset = tokenGroup.getStartOffset();
                     endOffset = tokenGroup.getEndOffset();
-                    tokenText = fieldText.substring(startOffset, endOffset);
+                    tokenText = originalText.substring(startOffset, endOffset);
                     String markedUpText=formatter.highlightTerm(encoder.encodeText(tokenText), tokenGroup);
                     //store any whitespace etc from between this and last group
                     if (startOffset > lastEndOffset)
@@ -137,7 +137,7 @@ public class RecoverableHighlighter extends Highlighter {
                 //flush the accumulated fieldText (same code as in above loop)
                 startOffset = tokenGroup.getStartOffset();
                 endOffset = tokenGroup.getEndOffset();
-                tokenText = fieldText.substring(startOffset, endOffset);
+                tokenText = originalText.substring(startOffset, endOffset);
                 String markedUpText=formatter.highlightTerm(encoder.encodeText(tokenText), tokenGroup);
                 //store any whitespace etc from between this and last group
                 if (startOffset > lastEndOffset)

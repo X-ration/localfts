@@ -9,8 +9,12 @@ import org.apache.lucene.search.highlight.TokenGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 2026-03-27: 通过RecoverableHighlighter还原原文，已经不再需要扩展SimpleHTMLFormatter了。
+ */
+@Deprecated
 public class RecoverableSimpleHTMLFormatter extends SimpleHTMLFormatter {
-    private String originalFullText;
+    private final String originalFullText;
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public RecoverableSimpleHTMLFormatter(String originalFullText) {

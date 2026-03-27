@@ -313,7 +313,7 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
         }
         try {
             QueryScorer queryScorer = new QueryScorer(query, field);
-            RecoverableSimpleHTMLFormatter simpleHTMLFormatter = new RecoverableSimpleHTMLFormatter("<span style=\"color:red;\">", "</span>", originalFieldText);
+            SimpleHTMLFormatter simpleHTMLFormatter = new SimpleHTMLFormatter("<span style=\"color:red;\">", "</span>");
             RecoverableHighlighter highlighter = new RecoverableHighlighter(simpleHTMLFormatter, new EscapeHTMLCharsEncoder(), queryScorer);
             TokenStream tokenStream = TokenSources.getAnyTokenStream(indexReader, docId, field, analyzer);
             Fragmenter fragmenter = new SimpleSpanFragmenter(queryScorer);
