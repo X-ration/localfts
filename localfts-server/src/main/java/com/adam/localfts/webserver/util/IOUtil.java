@@ -12,6 +12,7 @@ import org.springframework.util.Assert;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -22,10 +23,17 @@ public class IOUtil {
     private static final String[] SELECTED_HTTP_REQUEST_HEADERS = new String[]{"range", "if-range", "user-agent"};
     private static final Logger LOGGER = LoggerFactory.getLogger(IOUtil.class);
 
-    public static String getFileContentPlain(File file, int maxStringLength) throws IOException {
+    public static String getFileContentPlain(File file, String defaultEncoding, int maxStringLength) throws IOException {
         String charset = detectCharset(file);
+        if(charset == null) {
+            charset = Charset.isSupported(defaultEncoding) ? defaultEncoding : "UTF-8";
+        }
+        return getFileContentPlainForceEncoding(file, charset, maxStringLength);
+    }
+
+    public static String getFileContentPlainForceEncoding(File file, String encoding, int maxStringLength) throws IOException{
         try(InputStream inputStream = new FileInputStream(file);
-                InputStreamReader reader = new InputStreamReader(inputStream, charset)) {
+            InputStreamReader reader = new InputStreamReader(inputStream, encoding)) {
             StringBuilder stringBuilder = new StringBuilder();
             char[] bufferArr = new char[BUFFER_SIZE];
             int len;
@@ -54,7 +62,7 @@ public class IOUtil {
     /**
      * 检测文件编码
      * @param file
-     * @return 编码格式字符串，默认为UTF-8
+     * @return 编码格式字符串，检测失败返回null
      */
     public static String detectCharset(File file) {
         byte[] buf = new byte[BUFFER_SIZE];
@@ -67,9 +75,10 @@ public class IOUtil {
             detector.dataEnd();
             String encoding = detector.getDetectedCharset();
             detector.reset();
-            return encoding == null ? "UTF-8" : encoding;
+            return encoding;
         } catch (Exception e) {
-            return "UTF-8";
+            LOGGER.warn("Exception occurred detecting charset of file '{}',ex.type={},ex.message={}", file.getAbsolutePath(), e.getClass().getName(), e.getMessage());
+            return null;
         }
     }
 

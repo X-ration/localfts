@@ -14,6 +14,7 @@ public class IndexFileContentProperties {
     private String maxStringLengthMemoryStr;
     private Integer maxStringLength;
     private Boolean tryReadAllFiles;
+    private String defaultEncoding;
 
     public String maxStringLengthMemoryStr() {
         return maxStringLengthMemoryStr;

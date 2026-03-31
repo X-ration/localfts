@@ -54,5 +54,6 @@ localfts:
       enabled: true  #!!是否对文件内容进行索引（索引耗时更长）
       max-string-length-memory-str: 20MB  #!!限制文件内容字符串所占据的最大内存空间，-1表示无限制。建议不超过20MB,对应10,485,760长度的字符串，值过大时既消耗内存也消耗CPU。
       try-read-all-files: false  #!!是否尝试读取所有类型的文件，影响性能
+      default-encoding: UTF-8  #当无法检测文件编码时默认使用的编码格式
   test_language:
     Simplified_Chinese: true  #测试终端输出文字是否乱码(简体中文)

@@ -5,6 +5,7 @@ import com.adam.localfts.webserver.common.compress.*;
 import com.adam.localfts.webserver.common.search.FileIndexCounter;
 import com.adam.localfts.webserver.common.search.IndexType;
 import com.adam.localfts.webserver.common.search.SearchFileModel;
+import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
@@ -271,15 +272,16 @@ public class FtsService {
         Integer maxStringLength = indexFileContentProperties.getMaxStringLength();
         boolean requireFileContent = indexFileContentProperties.getEnabled();
         boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
+        String defaultEncoding = indexFileContentProperties.getDefaultEncoding();
         FileIndexCounter fileIndexCounter = new FileIndexCounter();
-        scanAndApplySearchFileModel(directory, zipDirectory, function, rootPath, zipFileParentRelativePath, indexHiddenFiles, requireFileContent, maxStringLength, tryReadAllFiles, directory != rootDirectory, fileIndexCounter);
+        scanAndApplySearchFileModel(directory, zipDirectory, function, rootPath, zipFileParentRelativePath, indexHiddenFiles, requireFileContent, maxStringLength, tryReadAllFiles, defaultEncoding, directory != rootDirectory, fileIndexCounter);
         LOGGER.info("Scan and apply function complete, counter={}", fileIndexCounter);
     }
 
     private void scanAndApplySearchFileModel(File directory, File zipDirectory, VoidFunction<SearchFileModel> function,
                                              String rootPath, String zipFileParentRelativePath, boolean indexHiddenFiles,
                                              boolean requireFileContent, Integer maxStringLength, boolean tryReadAllFiles,
-                                             boolean indexDirectory, FileIndexCounter fileIndexCounter) {
+                                             String defaultEncoding, boolean indexDirectory, FileIndexCounter fileIndexCounter) {
         if(!directory.exists()) {
             return;
         }
@@ -318,7 +320,7 @@ public class FtsService {
                     setParentRelativePath(model, item, rootPath);
                     if (requireFileContent && item.length() > 0) {
                         LOGGER.debug("Prepare to get file content of {}", item.getAbsolutePath());
-                        String fileContent = getFileContent(item, tryReadAllFiles, maxStringLength);
+                        String fileContent = getFileContent(item, tryReadAllFiles, defaultEncoding, maxStringLength);
                         model.setFileContent(fileContent);
                     }
                     model.setFileSize(item.length());
@@ -328,7 +330,7 @@ public class FtsService {
                 }
             } else {
                 scanAndApplySearchFileModel(item, zipDirectory, function, rootPath, zipFileParentRelativePath, indexHiddenFiles,
-                        requireFileContent, maxStringLength, tryReadAllFiles, true, fileIndexCounter);
+                        requireFileContent, maxStringLength, tryReadAllFiles, defaultEncoding, true, fileIndexCounter);
             }
         }
     }
@@ -347,6 +349,7 @@ public class FtsService {
         Integer maxStringLength = indexFileContentProperties.getMaxStringLength();
         boolean requireFileContent = indexFileContentProperties.getEnabled();
         boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
+        String defaultEncoding = indexFileContentProperties.getDefaultEncoding();
 
         if(file.isDirectory()) {
             SearchFileModel model = new SearchFileModel();
@@ -363,7 +366,7 @@ public class FtsService {
             model.setDirectory(false);
             setParentRelativePath(model, file, rootPath);
             if(requireFileContent && file.length() > 0) {
-                String fileContent = getFileContent(file, tryReadAllFiles, maxStringLength);
+                String fileContent = getFileContent(file, tryReadAllFiles, defaultEncoding, maxStringLength);
                 model.setFileContent(fileContent);
             }
             model.setFileSize(file.length());
@@ -372,14 +375,14 @@ public class FtsService {
         }
     }
 
-    private String getFileContent(File file, boolean tryReadAllFiles, int maxStringLength) {
+    private String getFileContent(File file, boolean tryReadAllFiles, String defaultEncoding, int maxStringLength) {
         try {
             String fileContent = null;
             if(file.getName().toLowerCase().endsWith(".class")) {
                 fileContent = IOUtil.getClassFileContent(file);
             } else if(tryReadAllFiles || isFileReadable(file.getName())) {
                 if(isFilePlainReadable(file.getName())) {
-                    fileContent = IOUtil.getFileContentPlain(file, maxStringLength);
+                    fileContent = IOUtil.getFileContentPlain(file, defaultEncoding, maxStringLength);
                 } else {
                     fileContent = IOUtil.getFileContentTika(file, maxStringLength);
                 }
@@ -686,6 +689,7 @@ public class FtsService {
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         String zipMaxFolderSizeStr = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize();
         boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         long start = System.currentTimeMillis();
         String actualFolderPath = rootPath + relativePath;
         File folderFile = new File(actualFolderPath);
@@ -729,8 +733,10 @@ public class FtsService {
                         needCompress = true;
                         FolderCompressingContextHolder folderCompressingContextHolder = new FolderCompressingContextHolder(-1L);
                         folderCompressingContextHolderMap.put(folderAbsolutePath, folderCompressingContextHolder);
-                        convertAndApplySearchFileModel(folderFile,
-                                model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                        if(searchMode == SearchMode.INDEXED) {
+                            convertAndApplySearchFileModel(folderFile,
+                                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                        }
                         IOUtil.compressFolderAsZip(folderAbsolutePath, zipFolderFile.getAbsolutePath(), zipFileName);
                         folderCompressingContextHolder.setCompressSize(zipFile.length());
                         folderCompressingContextHolder.setExecuteThread(null);
@@ -739,8 +745,10 @@ public class FtsService {
                             LOGGER.warn("FolderCompressingContextHolder {} has been removed", zipFileAbsolutePath);
                             folderCompressingContextHolderMap.put(folderAbsolutePath, folderCompressingContextHolder);
                         }
-                        convertAndApplySearchFileModel(folderFile,
-                                model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                        if(searchMode == SearchMode.INDEXED) {
+                            convertAndApplySearchFileModel(folderFile,
+                                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                        }
                     }
                 } catch (Exception e) {
                     if (e instanceof InterruptedException) {
@@ -758,8 +766,10 @@ public class FtsService {
                         LOGGER.info("successfully deleted zip file:{}", zipFileAbsolutePath);
                     }
                     folderCompressingContextHolderMap.remove(folderAbsolutePath);
-                    convertAndApplySearchFileModel(folderFile,
-                            model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                    if(searchMode == SearchMode.INDEXED) {
+                        convertAndApplySearchFileModel(folderFile,
+                                model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                    }
                 } finally {
                     zipFileLock.unlock();
                 }
@@ -815,6 +825,7 @@ public class FtsService {
 
     public ReturnObject<Void> cancelCompress(String relativePath) {
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         String actualFolderPath = rootPath + relativePath;
         File folderFile = new File(actualFolderPath);
         String folderAbsolutePath = folderFile.getAbsolutePath();
@@ -822,8 +833,10 @@ public class FtsService {
         FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
         if(folderCompressingContextHolder == null) {
             LOGGER.warn("FolderCompressingInfo not found for {}, no need to cancel", folderAbsolutePath);
-            convertAndApplySearchFileModel(folderFile,
-                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+            if(searchMode == SearchMode.INDEXED) {
+                convertAndApplySearchFileModel(folderFile,
+                        model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+            }
             return ReturnObject.success();
         }
 
@@ -836,8 +849,10 @@ public class FtsService {
             switch (folderCompressStatus) {
                 case NOT_COMPRESSED:
                     message = "文件夹未压缩";
-                    convertAndApplySearchFileModel(folderFile,
-                            model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                    if(searchMode == SearchMode.INDEXED) {
+                        convertAndApplySearchFileModel(folderFile,
+                                model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                    }
                     break;
                 case COMPRESSING:
                     message = "文件夹正在压缩，请重试";
@@ -856,6 +871,7 @@ public class FtsService {
     public ReturnObject<Void> deleteCompressFile(String relativePath) {
         String zipFolderPath = ftsServerConfigService.getLocalFtsProperties().getZip().getPath();
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         String actualFolderPath = rootPath + relativePath;
         File folderFile = new File(actualFolderPath);
         String folderAbsolutePath = folderFile.getAbsolutePath();
@@ -869,8 +885,10 @@ public class FtsService {
         if(folderCompressingContextHolder == null) {
             if(zipFile.exists()) {
                 boolean deletes = zipFile.delete();
-                convertAndApplySearchFileModel(folderFile,
-                        model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                if(searchMode == SearchMode.INDEXED) {
+                    convertAndApplySearchFileModel(folderFile,
+                            model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+                }
                 if (deletes) {
                     return ReturnObject.success();
                 } else {
@@ -890,20 +908,26 @@ public class FtsService {
 
         if(!zipFile.exists()) {
             LOGGER.warn("(folder={})zip file {} does not exist, no need to delete", folderAbsolutePath, zipFile.getAbsolutePath());
-            convertAndApplySearchFileModel(folderFile,
-                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+            if(searchMode == SearchMode.INDEXED) {
+                convertAndApplySearchFileModel(folderFile,
+                        model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+            }
             return ReturnObject.success();
         }
 
         boolean deletes = zipFile.delete();
         if(deletes) {
             folderCompressingContextHolderMap.remove(folderAbsolutePath);
-            convertAndApplySearchFileModel(folderFile,
-                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+            if(searchMode == SearchMode.INDEXED) {
+                convertAndApplySearchFileModel(folderFile,
+                        model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+            }
             return ReturnObject.success();
         } else {
-            convertAndApplySearchFileModel(folderFile,
-                    model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+            if(searchMode == SearchMode.INDEXED) {
+                convertAndApplySearchFileModel(folderFile,
+                        model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+            }
             return ReturnObject.fail("文件可能正在被占用");
         }
     }

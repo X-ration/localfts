@@ -39,6 +39,7 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                                         int pageNo, int pageSize, SearchColumn sortColumn, SortOrder sortOrder) throws InterruptedException {
         List<File> searchPathFileList;
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
         File rootDirectory = IOUtil.getFile(rootPath);
         if (advancedSearchCondition != null && !CollectionUtils.isEmpty(advancedSearchCondition.getSearchPaths())) {
             searchPathFileList = advancedSearchCondition.getSearchPaths().stream()
@@ -51,7 +52,7 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
         long startMills = System.currentTimeMillis();
         SimpleDateFormat simpleDateFormat = Util.getSimpleDateFormat();
         List<SearchDTO> searchDTOList = searchPathFileList.stream()
-                .flatMap(searchPathFile -> searchAllUnderPath(searchPathFile, keyword, advancedSearchCondition, rootPath).stream())
+                .flatMap(searchPathFile -> searchAllUnderPath(searchPathFile, keyword, advancedSearchCondition, rootPath, showHidden).stream())
                 .map(file -> mapToDTO(file, simpleDateFormat, rootPath))
                 .collect(Collectors.toList());
         long endMills = System.currentTimeMillis();
@@ -156,15 +157,15 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
         }
         return searchDTO;
     }
-    private List<File> searchAllUnderPath(File searchPathFile, String keyword, AdvancedSearchCondition advancedSearchCondition, String rootPath) {
+    private List<File> searchAllUnderPath(File searchPathFile, String keyword, AdvancedSearchCondition advancedSearchCondition, String rootPath, boolean showHidden) {
         List<File> resultList = new LinkedList<>();
-        searchAllUnderPath(searchPathFile, keyword, advancedSearchCondition, resultList, rootPath);
+        searchAllUnderPath(searchPathFile, keyword, advancedSearchCondition, resultList, rootPath, showHidden);
         if(Thread.currentThread().isInterrupted()) {
             return new ArrayList<>();
         }
         return resultList;
     }
-    private void searchAllUnderPath(File searchPathFile, String keyword, AdvancedSearchCondition advancedSearchCondition, List<File> resultList, String rootPath) {
+    private void searchAllUnderPath(File searchPathFile, String keyword, AdvancedSearchCondition advancedSearchCondition, List<File> resultList, String rootPath, boolean showHidden) {
         if(Thread.currentThread().isInterrupted()) {
             return;
         }
@@ -191,13 +192,16 @@ public class PlainSearchServiceImpl implements SearchServiceInterface{
                 boolean keywordMatches = advancedSearchCondition.getCaseAndSTCSensitive() ? filename.contains(keyword) :
                         Util.toLowerCaseAndSC(filename).contains(Util.toLowerCaseAndSC(keyword));
                 if(keywordMatches) {
-                    boolean checkSearchCondition = checkSearchCondition(file, advancedSearchCondition);
-                    if(checkSearchCondition) {
-                        resultList.add(file);
+                    boolean showFile = showHidden || !file.isHidden();
+                    if(showFile) {
+                        boolean checkSearchCondition = checkSearchCondition(file, advancedSearchCondition);
+                        if (checkSearchCondition) {
+                            resultList.add(file);
+                        }
                     }
                 }
                 if(file.isDirectory()) {
-                    searchAllUnderPath(file, keyword, advancedSearchCondition, resultList, rootPath);
+                    searchAllUnderPath(file, keyword, advancedSearchCondition, resultList, rootPath, showHidden);
                 }
             }
         }

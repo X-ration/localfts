@@ -28,6 +28,7 @@ import org.yaml.snakeyaml.Yaml;
 import javax.annotation.PostConstruct;
 import java.io.*;
 import java.net.*;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -313,6 +314,9 @@ public class FtsServerConfigService implements DisposableBean {
                     if(localFtsProperties.getSearch().getIndexFileContent().getTryReadAllFiles() != null) {
                         stringBuilder.append("[Search index file content try read all files]").append(localFtsProperties.getSearch().getIndexFileContent().getTryReadAllFiles()).append(System.lineSeparator());
                     }
+                    if(!StringUtils.isEmpty(localFtsProperties.getSearch().getIndexFileContent().getDefaultEncoding())) {
+                        stringBuilder.append("[Search index file content default encoding]").append(localFtsProperties.getSearch().getIndexFileContent().getDefaultEncoding()).append(System.lineSeparator());
+                    }
                 }
             }
         }
@@ -399,6 +403,9 @@ public class FtsServerConfigService implements DisposableBean {
         if(indexFileContentProperties.getEnabled()) {
             if(indexFileContentProperties.getTryReadAllFiles() == null) {
                 indexFileContentProperties.setTryReadAllFiles(false);
+            }
+            if(StringUtils.isEmpty(indexFileContentProperties.getDefaultEncoding())) {
+                indexFileContentProperties.setDefaultEncoding("UTF-8");
             }
         }
     }
@@ -632,6 +639,14 @@ public class FtsServerConfigService implements DisposableBean {
                     } else {
                         return false;
                     }
+                }
+            }
+            String defaultEncoding = indexFileContentProperties.getDefaultEncoding();
+            if(!StringUtils.isEmpty(defaultEncoding) && !Charset.isSupported(defaultEncoding)) {
+                if(exClass != null) {
+                    Util.throwException(exClass, "Charset '" + defaultEncoding + "' not supported!");
+                } else {
+                    return false;
                 }
             }
         }
