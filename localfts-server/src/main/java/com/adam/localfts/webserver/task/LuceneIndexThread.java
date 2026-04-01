@@ -263,6 +263,11 @@ public class LuceneIndexThread extends Thread{
             //文件内容过长时无法创建排序字段
             //document.add(new SortedDocValuesField("fileContent_sort", new BytesRef(model.getFileContent())));
         }
+        if(model.getFileEncoding() != null) {
+            String encoding = model.getFileEncoding();
+            document.add(new Field("fileEncoding", encoding, simpleFieldType));
+            document.add(new SortedDocValuesField("fileEncoding_sort", new BytesRef(encoding)));
+        }
         document.add(new Field("parentRelativePath", model.getParentRelativePath(), simpleFieldType));
 //        document.add(new StringField("parentRelativePath", model.getParentRelativePath(), Field.Store.YES));
         document.add(new SortedDocValuesField("parentRelativePath_sort", new BytesRef(Util.convertToPinyin(model.getParentRelativePath(), true))));

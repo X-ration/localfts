@@ -11,6 +11,7 @@ import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.ShutdownListener;
+import com.adam.localfts.webserver.config.properties.IndexFileContentProperties;
 import com.adam.localfts.webserver.service.FtsSearchService;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
@@ -401,7 +402,7 @@ public class WebController {
         model.addAttribute("urlRelativePathPattern", urlRelativePathPattern);
         String fileSuffixPattern = ftsServerConfigService.getFileSuffixPattern().pattern();
         model.addAttribute("fileSuffixPattern", fileSuffixPattern);
-        String [] fileInvalidCharacters = ftsServerConfigService.getFileInvalidCharacters();
+        String[] fileInvalidCharacters = ftsServerConfigService.getFileInvalidCharacters();
         model.addAttribute("fileInvalidCharacters", fileInvalidCharacters);
         SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         model.addAttribute("searchMode", searchMode);
@@ -418,6 +419,22 @@ public class WebController {
         boolean isLinux = Util.isSystemLinux();
         model.addAttribute("showFileTypeCSCheckbox", isLinux);
         return "search";
+    }
+
+    @PostMapping("changeFileEncoding")
+    @ResponseBody
+    public ReturnObject<Void> changeEncoding(@RequestParam(name = "path") String relativePath, @RequestParam String encoding) {
+        if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() != SearchMode.INDEXED) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        IndexFileContentProperties indexFileContentProperties = ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent();
+        boolean indexFileContent = indexFileContentProperties.getEnabled();
+        if(indexFileContent) {
+            Assert.isTrue(null != relativePath && relativePath.startsWith("/") && encoding != null, "非法请求参数");
+            return ftsService.changeEncoding(relativePath, encoding);
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
     }
 
     private boolean checkSearchSortColumn(SearchColumn sortColumn, AdvancedSearchCondition advancedSearchCondition,

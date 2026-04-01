@@ -72,26 +72,36 @@ public class FtsSearchService implements DisposableBean {
         Assert.isTrue(pageNo > 0, "非法的页数：" + pageNo);
         Assert.isTrue(pageSize > 0, "非法的每页数量：" + pageSize);
         Assert.isTrue(sortColumn == null || sortColumn == SearchColumn.DEFAULT || sortOrder != null, "排序顺序为null");
-        AdvancedSearchCondition advancedSearchConditionCopy = null;
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
+        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled() : false;
         if(advancedSearchCondition != null) {
             try {
-                advancedSearchConditionCopy = advancedSearchCondition.copy();
+                advancedSearchCondition = advancedSearchCondition.copy();
             } catch (CloneNotSupportedException e) {
                 logger.error("克隆高级高级搜索条件时发生异常", e);
                 throw new LocalFtsRuntimeException("搜索时发生" + CloneNotSupportedException.class.getName() + "异常", e);
             }
-            preHandleAdvancedSearchCondition(advancedSearchConditionCopy);
+            preHandleAdvancedSearchCondition(advancedSearchCondition);
+            if(searchMode == SearchMode.PLAIN || (searchMode == SearchMode.INDEXED && indexFileContent &&
+                    advancedSearchCondition.getSearchType() == SearchType.FILENAME_ONLY)) {
+                String[] fileInvalidCharacters = ftsServerConfigService.getFileInvalidCharacters();
+                for(String fic: fileInvalidCharacters) {
+                    if(keyword.contains(fic)) {
+                        advancedSearchCondition.setEmptyResult(true);
+                        break;
+                    }
+                }
+            }
         }
         logger.debug("Actual search parameters: keyword={},searchId={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
-                keyword, searchId, pageNo, pageSize, sortColumn, sortOrder, advancedSearchConditionCopy);
-        if(advancedSearchConditionCopy != null && advancedSearchConditionCopy.emptyResult()) {
+                keyword, searchId, pageNo, pageSize, sortColumn, sortOrder, advancedSearchCondition);
+        if(advancedSearchCondition != null && advancedSearchCondition.emptyResult()) {
             return ReturnObject.success(new PageObject<>(pageNo, pageSize, null));
         }
-        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
         if(shutdownListener.isShuttingDown()) {
             return ReturnObject.fail("应用正在关闭");
         }
-        final AdvancedSearchCondition finalAdvancedSearchCondition = advancedSearchConditionCopy;
+        final AdvancedSearchCondition finalAdvancedSearchCondition = advancedSearchCondition;
         /*int activeTaskThreshold = -1;
         if(ftsServerConfigService.getLocalFtsProperties().getSearch().getActiveTaskThreshold() != null) {
             activeTaskThreshold = ftsServerConfigService.getLocalFtsProperties().getSearch().getActiveTaskThreshold();

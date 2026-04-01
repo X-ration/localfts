@@ -37,6 +37,7 @@
         <br><br>
         <button id="switchAdvancedSearchButton" type="button" onclick="switchAdvancedSearch(this)">使用高级搜索</button>
         <button type="button" onclick="search()">搜索</button>
+        <button type="button" onclick="refreshSearch()">刷新搜索结果</button>
         <div id="dateTimeDialogDiv" class="hidden" style="text-align: center">
             <div class="dialogTitle">手动输入日期和时间</div>
             <p>格式：yyyy-MM-dd|yyyy-MM-dd HH:mm:ss。<br>
@@ -60,6 +61,26 @@
             <button type="button" onclick="refreshSearchPathDialog()">刷新</button>
             <button id="searchPathConfirmButton" type="button">确认</button>
             <button type="button" onclick="hideSearchPathDialog()">取消</button><br><br>
+        </div>
+        <div id="changeEncodingDialogDiv" th:if="${searchMode.name() == 'INDEXED' and indexFileContent}" class="hidden" style="text-align: center">
+            <div class="dialogTitle">文件编码校正</div>
+            要修改的文件：<span id="changeEncodingRelativePath"></span><br><br>
+            目标编码格式：<select id="encodingSelect">
+                <option>UTF-8</option>
+                <option>GBK</option>
+                <option>GB2312</option>
+                <option>BIG5</option>
+                <option>ISO-8859-1</option>
+                <option>UTF-16</option>
+                <option>UTF-16BE</option>
+                <option>UTF-16LE</option>
+                <option>US-ASCII</option>
+                <option>GB18030</option>
+                <option>自定义</option>
+            </select>
+            <input type="text" id="customEncodingInput" style="display:none"><br><br>
+            <h5 id="changeEncodingHint" class="margin-0" style="display:none"></h5><br id="changeEncodingBr1" style="display:none">
+            <button id="changeEncodingButton" type="button">校正编码</button><button type="button" onclick="hideChangeEncodingDialog()">取消</button><br><br>
         </div>
         <br>
         <div id="advanced-condition-div" style="display: none">
@@ -418,6 +439,14 @@
                     document.getElementById('directoryRadio3').disabled = '';
                 }
             });
+            bindEventListener(document.getElementById('encodingSelect'),'change', function () {
+                var selectedEncoding = getSelectedOptionValue(this, false);
+                if(selectedEncoding === '自定义') {
+                    document.getElementById('customEncodingInput').style.display = '';
+                } else {
+                    document.getElementById('customEncodingInput').style.display = 'none';
+                }
+            });
         }
 
         //文件后缀Radio选中事件
@@ -536,13 +565,15 @@
                 updateMsg('keywordMsg', '搜索关键字为空', 'red');
             } else {
                 var ics = [];
-                for(var i=0;i<keywordInputValue.length;i++) {
-                    var char = keywordInputValue.charAt(i);
-                    for(var j=0;j<fileInvalidCharacters.length;j++) {
-                        if(char === fileInvalidCharacters[j]) {
-                            hasError = true;
-                            if(ics.indexOf(char) === -1) {
-                                ics[ics.length] = char;
+                if(!advancedSearchSwitch || searchMode === 'PLAIN' || getCheckedValue('searchType') === 'FILENAME_ONLY') {
+                    for(var i=0;i<keywordInputValue.length;i++) {
+                        var char = keywordInputValue.charAt(i);
+                        for(var j=0;j<fileInvalidCharacters.length;j++) {
+                            if(char === fileInvalidCharacters[j]) {
+                                hasError = true;
+                                if(ics.indexOf(char) === -1) {
+                                    ics[ics.length] = char;
+                                }
                             }
                         }
                     }
@@ -1083,6 +1114,22 @@
                 }
             );
         }
+        function refreshSearch() {
+            if(prevKeyword !== null) {
+                var pageNo = Number(document.getElementById('current-page').innerText);
+                var pageSize = Number(getSelectedOptionValue(document.getElementById("page-size-select")));
+                if(!pageNo) {
+                    updateMsg('keywordMsg', '非法的页数', 'red');
+                    return;
+                }
+                if(!pageSize) {
+                    updateMsg('keywordMsg', '非法的每页数量', 'red');
+                    return;
+                }
+                hideElementById('keywordMsg');
+                submitSearch(prevKeyword, prevAscObject, pageNo, pageSize, prevSortColumn, prevSortOrder);
+            }
+        }
         function handleErrorMessage(errorMessage) {
             var searchMessage = document.getElementById('searchMessage');
             if(errorMessage) {
@@ -1167,21 +1214,26 @@
             };
             if(dataArr) {
                 for(var i=0;i<dataArr.length;i++) {
+                    var subDiv = document.createElement('div');
+                    subDiv.id = 'subDiv' + (i+1);
                     var item = dataArr[i];
                     var div = document.createElement('div');
                     var strong = document.createElement('strong');
                     strong.innerHTML = '#' + item.id + ' ' + (item.directory ? '文件夹名称：' : '文件名称：') + item.filenameFormatted;
                     div.appendChild(strong);
-                    resultDiv.appendChild(div);
+                    subDiv.appendChild(div);
                     
                     div = document.createElement('div');
                     div.innerText = '所在路径：' + item.parentRelativePath;
-                    resultDiv.appendChild(div);
+                    subDiv.appendChild(div);
                     
-                    if(searchMode === 'INDEXED' && indexFileContent && !item.directory) {
+                    if(searchMode === 'INDEXED' && indexFileContent && !item.directory && item.fileContent) {
                         div = document.createElement('div');
-                        div.innerHTML = '文件内容：' + (item.fileContent ? '<br/>' + item.fileContent : '空');
-                        resultDiv.appendChild(div);
+                        div.innerHTML = '文件内容：' + '<br/>' + item.fileContent;
+                        if(item.fileEncoding) {
+                            div.innerHTML = '编码格式：' + item.fileEncoding + ' ' + div.innerHTML;
+                        }
+                        subDiv.appendChild(div);
                     }
                     
                     div = document.createElement('div');
@@ -1201,7 +1253,7 @@
                     span = document.createElement('span');
                     span.innerText =  '修改时间：' + item.lastModifiedStr;
                     div.appendChild(span);
-                    resultDiv.appendChild(div);
+                    subDiv.appendChild(div);
                     
                     if(zipEnabled && item.directory) {
                         div = document.createElement('div');
@@ -1220,7 +1272,7 @@
                             span.innerText =  '压缩文件修改时间：' + item.compressedFileLastModifiedStr;
                             div.appendChild(span); 
                         }
-                        resultDiv.appendChild(div);
+                        subDiv.appendChild(div);
                     }
                     
                     div = document.createElement('div');
@@ -1258,12 +1310,31 @@
                         a.setAttribute('href', concatUrlDownload(item.parentRelativePath + (item.parentRelativePath === '/' ? '' : '/') + item.filename));
                         div.appendChild(a);
                     }
-                    resultDiv.appendChild(div); 
+                    subDiv.appendChild(div);
+
+                    if(searchMode === 'INDEXED' && indexFileContent && !item.directory && item.fileContent && item.fileEncoding) {
+                        div = document.createElement('div');
+                        div.innerText = '操作：';
+                        var button = document.createElement('button');
+                        button.type = 'button';
+                        button.innerText = '编码校正';
+                        var relativePath = item.parentRelativePath + (item.parentRelativePath === '/' ? '' : '/') + item.filename;
+                        button.onclick = showChangeEncodingDialogFactoryFunc(relativePath, item.fileEncoding);
+
+                        div.appendChild(button);
+                        subDiv.appendChild(div);
+                    }
                     
                     var br = document.createElement('br');
-                    resultDiv.appendChild(br);
+                    subDiv.appendChild(br);
+                    resultDiv.appendChild(subDiv);
                 }
             }
+        }
+        function showChangeEncodingDialogFactoryFunc(relativePath,encoding) {
+            return function() {
+                showChangeEncodingDialog(relativePath, encoding);
+            };
         }
         function handleSortSelect(sortColumnSelect, advancedSearchCondition, sortColumn, sortOrder) {
             clearChildren(sortColumnSelect);
@@ -1468,6 +1539,114 @@
             removeElementById(deleteButtonId, 'searchPathsDiv');
             removeElementById(msgId, 'searchPathsDiv');
             removeElementById(brId, 'searchPathsDiv');
+        }
+        function showChangeEncodingDialog(relativePath, srcEncoding) {
+            if(!relativePath || !srcEncoding) {
+                return;
+            }
+            var matchResult = relativePath.match(urlRelativePathRegex);
+            if(!matchResult) {
+                return;
+            }
+            document.getElementById('changeEncodingRelativePath').innerText = relativePath;
+            var encodingSelect = document.getElementById('encodingSelect');
+            var encodingOptions = encodingSelect.children;
+            if(encodingOptions) {
+                var foundOption = false;
+                for(var i=0;i<encodingOptions.length;i++) {
+                    if(encodingOptions[i].innerText === srcEncoding) {
+                        foundOption = true;
+                        setOptionSelected(encodingOptions[i]);
+                        break;
+                    }
+                }
+                var customEncodingInput = document.getElementById('customEncodingInput');
+                if(!foundOption) {
+                    setOptionSelected(encodingOptions[encodingOptions.length - 1]);
+                    customEncodingInput.value = srcEncoding;
+                    customEncodingInput.style.display = '';
+                } else {
+                    customEncodingInput.style.display = 'none';
+                    customEncodingInput.value = '';
+                }
+            }
+            document.getElementById('changeEncodingButton').onclick = function() {
+                confirmChangeEncoding(srcEncoding);
+            };
+            hideChangeEncodingHint();
+            showDialog('changeEncodingDialogDiv');
+        }
+        function hideChangeEncodingDialog() {
+            hideDialog('changeEncodingDialogDiv');
+        }
+        var changeEncodingLastRelativePath = null, changeEncodingLastEncoding = null;
+        function confirmChangeEncoding(srcEncoding) {
+            var relativePath = document.getElementById('changeEncodingRelativePath').innerText;
+            var matchResult = relativePath.match(urlRelativePathRegex);
+            if(!matchResult) {
+                updateChangeEncodingHint('文件相对路径不符合格式', 'red');
+                return;
+            }
+            var encodingSelect = document.getElementById('encodingSelect');
+            var selectedEncoding = getSelectedOptionValue(encodingSelect);
+            var isCustom = false;
+            if(selectedEncoding === '自定义') {
+                isCustom = true;
+                selectedEncoding = document.getElementById('customEncodingInput').value;
+            }
+            if(!selectedEncoding) {
+                updateChangeEncodingHint('未' + (isCustom ? '填写' : '选择') + '目标编码格式', 'red');
+                return;
+            }
+            if(selectedEncoding === srcEncoding) {
+                updateChangeEncodingHint('编码格式与原编码格式相同', 'red');
+                return;
+            }
+            if(changeEncodingLastRelativePath === relativePath && changeEncodingLastEncoding === selectedEncoding) {
+                updateChangeEncodingHint('重复的请求', 'red');
+                return;
+            }
+            sendPostFormRequest(
+                contextPath + '/changeFileEncoding',
+                'path=' + encodeURIComponent(relativePath) + '&encoding=' + selectedEncoding,
+                true,
+                'changeEncoding',
+                function (xhr) {
+                    if (xhr.status === 200) {
+                        var returnObject = JSON.parse(xhr.responseText);
+                        if(returnObject.success) {
+                            changeEncodingLastRelativePath = relativePath;
+                            changeEncodingLastEncoding = selectedEncoding;
+                            updateChangeEncodingHint('校正编码成功！请刷新搜索结果以查看效果。', 'green');
+                        } else {
+                            updateChangeEncodingHint('校正编码失败，原因：' + returnObject.message, 'red');
+                        }
+                    } else {
+                        updateChangeEncodingHint('校正编码失败，状态码：' + xhr.status, 'red');
+                    }
+                }, function(e) {
+                    var errorMsg = '校正编码失败:连接服务器失败';
+                    if(e) {
+                        if(e.name) {
+                            errorMsg = errorMsg + '(' + e.name + ')';
+                        } else if(e.message) {
+                            errorMsg = errorMsg + '(' + e.message + ')';
+                        }
+                    }
+                    updateChangeEncodingHint(errorMsg, 'red');
+                }, 10000, function() {
+                    var errorMsg = '获取文件列表失败:接口超时';
+                    updateChangeEncodingHint(errorMsg, 'red');
+                }
+            );
+        }
+        function updateChangeEncodingHint(msg, color) {
+            updateMsg('changeEncodingHint', msg, color);
+            document.getElementById('changeEncodingBr1').style.display = '';
+        }
+        function hideChangeEncodingHint() {
+            hideElementById('changeEncodingHint');
+            document.getElementById('changeEncodingBr1').style.display = 'none';
         }
         function showSearchPathDialog(numberId) {
             document.getElementById('searchPathCheckHint').style.display = 'none';

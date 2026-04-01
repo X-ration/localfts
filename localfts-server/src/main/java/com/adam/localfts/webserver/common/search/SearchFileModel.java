@@ -10,6 +10,7 @@ import lombok.Setter;
 public class SearchFileModel implements CompressedColumns {
     private String fileName;
     private String fileContent;
+    private String fileEncoding;
     private String parentRelativePath;
     private boolean isDirectory;
     private long lastModified;

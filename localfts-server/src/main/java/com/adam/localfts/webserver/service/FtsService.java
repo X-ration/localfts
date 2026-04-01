@@ -35,6 +35,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.Collator;
 import java.text.SimpleDateFormat;
@@ -244,6 +245,27 @@ public class FtsService {
         model.setSubModelList(subModelList);
     }
 
+    public ReturnObject<Void> changeEncoding(String relativePath, String encoding) {
+        Assert.notNull(relativePath, "relativePath is null!");
+        Assert.notNull(encoding, "encoding is null!");
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        File rootDirectory = new File(rootPath);
+        Assert.isTrue(rootDirectory.exists() && rootDirectory.isDirectory(), "根路径不存在或不是文件夹");
+        File file = new File(rootDirectory, relativePath);
+        if(!file.exists()) {
+            return ReturnObject.fail("文件不存在");
+        } else if(file.isDirectory()) {
+            return ReturnObject.fail("路径参数指向文件夹");
+        }
+        encoding = encoding.toUpperCase();
+        if(!Charset.isSupported(encoding)) {
+            return ReturnObject.fail("不支持该编码格式");
+        }
+        convertAndApplySearchFileModel(file, encoding, true, model ->
+                LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
+        return ReturnObject.success();
+    }
+
     /**
      * 只在应用启动时调用一次，遍历根路径的文件。不应暴露给用户
      * @param function
@@ -319,9 +341,9 @@ public class FtsService {
                     model.setDirectory(false);
                     setParentRelativePath(model, item, rootPath);
                     if (requireFileContent && item.length() > 0) {
-                        LOGGER.debug("Prepare to get file content of {}", item.getAbsolutePath());
-                        String fileContent = getFileContent(item, tryReadAllFiles, defaultEncoding, maxStringLength);
-                        model.setFileContent(fileContent);
+                        Pair<String, String> pair = getFileContent(item, tryReadAllFiles, defaultEncoding, false, maxStringLength);
+                        model.setFileContent(pair.getL());
+                        model.setFileEncoding(pair.getR());
                     }
                     model.setFileSize(item.length());
                     model.setLastModified(item.lastModified());
@@ -336,6 +358,12 @@ public class FtsService {
     }
 
     public void convertAndApplySearchFileModel(File file, VoidFunction<SearchFileModel> function) {
+        IndexFileContentProperties indexFileContentProperties = ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent();
+        String defaultEncoding = indexFileContentProperties.getDefaultEncoding();
+        convertAndApplySearchFileModel(file, defaultEncoding, false, function);
+    }
+
+    public void convertAndApplySearchFileModel(File file, String encoding, boolean forceEncoding, VoidFunction<SearchFileModel> function) {
         if(!file.exists()) {
             return;
         }
@@ -349,7 +377,6 @@ public class FtsService {
         Integer maxStringLength = indexFileContentProperties.getMaxStringLength();
         boolean requireFileContent = indexFileContentProperties.getEnabled();
         boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
-        String defaultEncoding = indexFileContentProperties.getDefaultEncoding();
 
         if(file.isDirectory()) {
             SearchFileModel model = new SearchFileModel();
@@ -366,8 +393,9 @@ public class FtsService {
             model.setDirectory(false);
             setParentRelativePath(model, file, rootPath);
             if(requireFileContent && file.length() > 0) {
-                String fileContent = getFileContent(file, tryReadAllFiles, defaultEncoding, maxStringLength);
-                model.setFileContent(fileContent);
+                Pair<String, String> pair = getFileContent(file, tryReadAllFiles, encoding, forceEncoding, maxStringLength);
+                model.setFileContent(pair.getL());
+                model.setFileEncoding(pair.getR());
             }
             model.setFileSize(file.length());
             model.setLastModified(file.lastModified());
@@ -375,15 +403,25 @@ public class FtsService {
         }
     }
 
-    private String getFileContent(File file, boolean tryReadAllFiles, String defaultEncoding, int maxStringLength) {
+    private Pair<String, String> getFileContent(File file, boolean tryReadAllFiles, String defaultEncoding, boolean forceEncoding, int maxStringLength) {
         try {
+            String encoding = null;
             String fileContent = null;
             if(file.getName().toLowerCase().endsWith(".class")) {
+                LOGGER.debug("Prepare to get class file content of {}", file.getAbsolutePath());
                 fileContent = IOUtil.getClassFileContent(file);
             } else if(tryReadAllFiles || isFileReadable(file.getName())) {
                 if(isFilePlainReadable(file.getName())) {
-                    fileContent = IOUtil.getFileContentPlain(file, defaultEncoding, maxStringLength);
+                    if(!forceEncoding) {
+                        encoding = IOUtil.detectCharset(file);
+                    }
+                    if(encoding == null) {
+                        encoding = Charset.isSupported(defaultEncoding) ? defaultEncoding : "UTF-8";
+                    }
+                    LOGGER.debug("Prepare to get file content of {} using {}", file.getAbsolutePath(), encoding);
+                    fileContent = IOUtil.getFileContentPlainForceEncoding(file, encoding, maxStringLength);
                 } else {
+                    LOGGER.debug("Prepare to get file content of {} by Tika", file.getAbsolutePath());
                     fileContent = IOUtil.getFileContentTika(file, maxStringLength);
                 }
                 if(fileContent != null) {
@@ -394,11 +432,11 @@ public class FtsService {
                     fileContent = fileContent.trim();
                 }
             }
-            return fileContent;
+            return new Pair<>(fileContent, encoding);
         } catch (Throwable e) {
             LOGGER.warn("Exception occured getting file content of {}, ex type:{}, msg:{}",
                     file.getAbsolutePath(), e.getClass().getName(), e.getMessage());
-            return null;
+            return new Pair<>();
         }
     }
 

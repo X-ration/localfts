@@ -13,6 +13,7 @@ public class SearchDTO implements CompressedColumns {
     private String filenameFormatted;
     private String parentRelativePath;
     private String fileContent;
+    private String fileEncoding;
     private Boolean directory;
     private long fileSize;
     private String fileSizeStr;

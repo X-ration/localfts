@@ -77,6 +77,7 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
                     keywordField = keywordField + "_lowercase";
                     keyword = keyword.toLowerCase();
                 }
+                keyword = QueryParser.escape(keyword);
                 QueryParser keywordQueryParser = new QueryParser(keywordField, analyzer);
                 Query keywordQuery = keywordQueryParser.parse(keyword);
                 rootQueryBuilder.add(keywordQuery, BooleanClause.Occur.MUST);
@@ -87,6 +88,7 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
                     fileContentField = fileContentField + "_lowercase";
                     keyword = keyword.toLowerCase();
                 }
+                keyword = QueryParser.escape(keyword);
                 QueryParser fileNameQueryParser = new QueryParser(fileNameField, analyzer);
                 Query fileNameQuery = fileNameQueryParser.parse(keyword);
                 QueryParser fileContentQueryParser = new QueryParser(fileContentField, analyzer);
@@ -250,6 +252,8 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
         searchDTO.setParentRelativePath(document.get("parentRelativePath"));
         String fileContent = document.get("fileContent");
         searchDTO.setFileContent(fileContent);
+        String fileEncoding = document.get("fileEncoding");
+        searchDTO.setFileEncoding(fileEncoding);
         boolean isDirectory = Boolean.parseBoolean(document.get("isDirectory"));
         searchDTO.setDirectory(isDirectory);
         long lastModified = Long.parseLong(document.get("lastModified_value"));
