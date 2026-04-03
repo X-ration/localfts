@@ -149,9 +149,9 @@ var sortColumn = [[${sortColumn}]];
 var sortOrder = [[${sortOrder}]];
 var pagedList = [[${pagedList.data}]];
 var directoryExistsObject = {};
-registerIcon('sort', 'sort_32px', 'png');
-registerIcon('sort_asc', 'sort_asc_32px', 'png');
-registerIcon('sort_desc', 'sort_desc_32px', 'png');
+registerIcon('sort', 'ic_fluent_arrow_sort_32_regular', 'png');
+registerIcon('sort_asc', 'ic_fluent_arrow_sort_up_32_regular', 'png');
+registerIcon('sort_desc', 'ic_fluent_arrow_sort_down_24_regular', 'png');
 if(pagedList) {
     for(var i=0;i<pagedList.length;i++) {
         var item = pagedList[i];
@@ -191,14 +191,14 @@ for(var i=0;i<sortLinks.length;i++) {
     var eSortOrder = null, imgSrc = null;
     if(!sortColumn || sortColumn !== eSortColumn) {
         eSortOrder = 'ASC';
-        imgSrc = getIconSrc(contextPath, 'sort', 'black');
+        imgSrc = getIconSrc(contextPath, 'sort');
     } else if(sortColumn && sortOrder === 'ASC') {
         eSortOrder = 'DESC';
-        imgSrc = getIconSrc(contextPath, 'sort_asc', 'black');
+        imgSrc = getIconSrc(contextPath, 'sort_asc');
     } else if(sortColumn && sortOrder === 'DESC') {
         eSortColumn = undefined;
         eSortOrder = undefined;
-        imgSrc = getIconSrc(contextPath, 'sort_desc', 'black');
+        imgSrc = getIconSrc(contextPath, 'sort_desc');
     } else {
         if(window.console) {
             console.error('非法状态，sortColumn=' + sortColumn + ',sortOrder=' + sortOrder);

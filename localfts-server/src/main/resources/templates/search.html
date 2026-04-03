@@ -332,11 +332,11 @@
         var keyboardButtonIds = [];
         var fileSizeRegex = /^(\d+)([KMGT]?B)$/;
         var fileSizeNumberRegex = /^\d+$/;
-        registerIcon('keyboard', 'keyboard_32px', 'png');
-        registerIcon('add', 'add_32px', 'png');
-        registerIcon('delete', 'delete_32px', 'png');
-        registerIcon('expand', 'up_down_32px', 'png');
-        registerIcon('fold', 'down_up_32px', 'png');
+        registerIcon('keyboard', 'ic_fluent_keyboard_32_regular', 'png');
+        registerIcon('add', 'ic_fluent_add_32_regular', 'png');
+        registerIcon('delete', 'ic_fluent_delete_32_regular', 'png');
+        registerIcon('expand', 'ic_fluent_chevron_up_down_32_regular', 'png');
+        registerIcon('fold', 'ic_fluent_chevron_down_up_32_regular', 'png');
         var searchPathsKeyboardButtonIdRegex = /^searchPathsKeyboardButton(\d+)$/;
         var searchPathsInputIdRegex = /^searchPaths(\d+)$/;
         var fileTypesInputIdRegex = /^fileType(\d+)$/;
@@ -377,7 +377,7 @@
             }
         }
         var fileTypesAddButton = document.getElementById('fileTypesAddButton');
-        setButtonImgSrc(fileTypesAddButton, getIconSrc(contextPath, 'add', 'black'));
+        setButtonImgSrc(fileTypesAddButton, getIconSrc(contextPath, 'add'));
 
         if(dateAndTimeInputSupported) {
             //日期时间input支持的情况下移除相关按钮
@@ -397,11 +397,11 @@
             }
             for(var i=0;i<keyboardButtonIds.length;i++) {
                 var keyboardButton = document.getElementById(keyboardButtonIds[i]);
-                setButtonImgSrc(keyboardButton, getIconSrc(contextPath, 'keyboard', 'black'));
+                setButtonImgSrc(keyboardButton, getIconSrc(contextPath, 'keyboard'));
             }
         }
         var searchPathsAddButton = document.getElementById('searchPathsAddButton');
-        setButtonImgSrc(searchPathsAddButton, getIconSrc(contextPath, 'add', 'black'));
+        setButtonImgSrc(searchPathsAddButton, getIconSrc(contextPath, 'add'));
 
         //搜索关键字匹配类型Radio选中事件
         if(searchMode === 'INDEXED' && indexFileContent) {
@@ -505,10 +505,10 @@
         for(var i=0;i<allSearchButtons.length;i++) {
             var matchResult = allSearchButtons[i].id.match(searchPathsKeyboardButtonIdRegex);
             if(matchResult) {
-                setButtonImgSrc(allSearchButtons[i], getIconSrc(contextPath, 'keyboard', 'black'));
+                setButtonImgSrc(allSearchButtons[i], getIconSrc(contextPath, 'keyboard'));
                 var number = Number(matchResult[1]);
                 var deleteButton = document.getElementById('searchPathsDeleteButton' + number);
-                setButtonImgSrc(deleteButton, getIconSrc(contextPath, 'delete', 'black'));
+                setButtonImgSrc(deleteButton, getIconSrc(contextPath, 'delete'));
             }
         }
 
@@ -1491,11 +1491,11 @@
             input.style.width = '50%';
             input.style.textAlign = 'center';
             div.appendChild(input);
-            var keyboardButton = createImgButton(getIconSrc(contextPath, 'keyboard', 'black'),'选择路径','searchPathsKeyboardButton' + newNumberId,function() {
+            var keyboardButton = createImgButton(getIconSrc(contextPath, 'keyboard'),'选择路径','searchPathsKeyboardButton' + newNumberId,function() {
                 showSearchPathDialog(newNumberId);
             });
             div.appendChild(keyboardButton);
-            var deleteButton = createImgButton(getIconSrc(contextPath, 'delete', 'black'),'删除路径','searchPathsDeleteButton' + newNumberId,function() {
+            var deleteButton = createImgButton(getIconSrc(contextPath, 'delete'),'删除路径','searchPathsDeleteButton' + newNumberId,function() {
                 deleteSearchPathElement(newNumberId);
             });
             div.appendChild(deleteButton);
@@ -1807,7 +1807,7 @@
                                 for(var i=0;i<searchPathLiChildren.length;i++) {
                                     if(searchPathLiChildren[i].tagName.toLowerCase() === 'button') {
                                         var button = searchPathLiChildren[i];
-                                        setButtonImgSrc(button, getIconSrc(contextPath, 'fold', 'black'), '折叠');
+                                        setButtonImgSrc(button, getIconSrc(contextPath, 'fold'), '折叠');
                                         button.onclick = foldButtonClickFunc;
                                         break;
                                     }
@@ -1851,7 +1851,7 @@
             var relativePath = data.relativePath;
             li.setAttribute('relative-path', relativePath);
             li.onclick = chooseSearchPath;
-            var foldButton = createImgButton(getIconSrc(contextPath, 'fold', 'black'),'折叠',null,foldButtonClickFunc);
+            var foldButton = createImgButton(getIconSrc(contextPath, 'fold'),'折叠',null,foldButtonClickFunc);
             li.appendChild(foldButton);
             if(data.subModelList !== null) {
                 var liUl = document.createElement('ul');
@@ -1878,7 +1878,7 @@
                 li.setAttribute('relative-path', relativePath);
                 li.onclick = chooseSearchPath;
                 if(model.subModelList !== null) {
-                    var foldButton = createImgButton(getIconSrc(contextPath, 'fold', 'black'),'折叠',null,foldButtonClickFunc);
+                    var foldButton = createImgButton(getIconSrc(contextPath, 'fold'),'折叠',null,foldButtonClickFunc);
                     li.appendChild(foldButton);
                     var liUl = document.createElement('ul');
                     if(model.subModelList.length > 0) {
@@ -1889,7 +1889,7 @@
                     }
                     li.appendChild(liUl);
                 } else {
-                    var expandButton = createImgButton(getIconSrc(contextPath, 'expand', 'black'),'展开',null,expandButtonClickFunc);
+                    var expandButton = createImgButton(getIconSrc(contextPath, 'expand'),'展开',null,expandButtonClickFunc);
                     li.appendChild(expandButton);
                 }
                 parentUl.appendChild(li);
@@ -1909,7 +1909,7 @@
                     children[i].style.display = 'none';
                 }
             }
-            setButtonImgSrcBOW(this, getIconSrc(contextPath, 'expand', 'black'), getIconSrc(contextPath, 'expand', 'white'), '展开');
+            setButtonImgSrcBOW(this, 'expand', '展开');
             this.onclick = expandButtonClickFunc;
         }
         function expandButtonClickFunc(e) {
@@ -1974,7 +1974,7 @@
                     }
                 );
             }
-            setButtonImgSrcBOW(this, getIconSrc(contextPath, 'fold', 'black'), getIconSrc(contextPath, 'fold', 'white'), '折叠');
+            setButtonImgSrcBOW(this, 'fold', '折叠');
             this.onclick = foldButtonClickFunc;
         }
         function createImgButton(imgSrc,imgAlt,buttonId,clickFunc) {
@@ -2017,9 +2017,9 @@
                             button.setAttribute('localfts-selected', 'false');
                             var buttonImgSrc = getButtonImgSrc(button);
                             if(buttonImgSrc.endsWith(getIconSrc(contextPath, 'fold', 'white'))) {
-                                setButtonImgSrc(button, getIconSrc(contextPath, 'fold', 'black'), '折叠');
+                                setButtonImgSrc(button, getIconSrc(contextPath, 'fold'), '折叠');
                             } else {
-                                setButtonImgSrc(button, getIconSrc(contextPath, 'expand', 'black'), '展开');
+                                setButtonImgSrc(button, getIconSrc(contextPath, 'expand'), '展开');
                             }
                             break;
                         }
@@ -2036,7 +2036,7 @@
                         var button = children[j];
                         button.setAttribute('localfts-selected', 'true');
                         var buttonImgSrc = getButtonImgSrc(button);
-                        if(buttonImgSrc.endsWith(getIconSrc(contextPath, 'fold', 'black'))) {
+                        if(buttonImgSrc.endsWith(getIconSrc(contextPath, 'fold'))) {
                             setButtonImgSrc(button, getIconSrc(contextPath, 'fold', 'white'), '折叠');
                         } else {
                             setButtonImgSrc(button, getIconSrc(contextPath, 'expand', 'white'), '展开');
@@ -2063,14 +2063,16 @@
             }
             return null;
         }
-        function setButtonImgSrcBOW(element,blackSrc,whiteSrc,alt) {
-            if(!element || !blackSrc || !whiteSrc) {
+        function setButtonImgSrcBOW(element,iconName,alt) {
+            if(!element || !iconName) {
                 return;
             }
             var mode = element.getAttribute('localfts-selected');
-            var src = blackSrc;
+            var src;
             if(mode && mode === 'true') {
-                src = whiteSrc;
+                src = getIconSrc(contextPath, iconName, 'white');
+            } else {
+                src = getIconSrc(contextPath, iconName);
             }
             setButtonImgSrc(element,src,alt);
         }
@@ -2192,7 +2194,7 @@
             input.style.textAlign = 'center';
             input.setAttribute('custom-flag', 'true');
             div.appendChild(input);
-            var deleteButton = createImgButton(getIconSrc(contextPath, 'delete', 'black'), '删除', 'fileTypesDeleteButton' + newNumberId, function() {
+            var deleteButton = createImgButton(getIconSrc(contextPath, 'delete'), '删除', 'fileTypesDeleteButton' + newNumberId, function() {
                 deleteFileTypeInput(newNumberId);
             });
             div.appendChild(deleteButton);
