@@ -83,10 +83,9 @@ img.buttonImg {
     background: white;
     color: black;
     margin: 0;
-    padding-left: 40px;
+    _padding-left: 50px;
 }
 .bg-black ul li {
     background: white;
     color: black;
-    list-style-position: inside;
 }
