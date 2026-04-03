@@ -41,7 +41,7 @@ function sendPostFormRequest(url, data, isAsync, func, errorFunc, timeout, timeo
         }
         return;
       }
-      if(IE_VERSION && IE_VERSION < 7 && isAsync && timeout) {
+      if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 7 && isAsync && timeout) {
         if(ie6TimeoutTimer) {
           clearTimeout(ie6TimeoutTimer);
           ie6TimeoutTimer = null;
@@ -55,7 +55,7 @@ function sendPostFormRequest(url, data, isAsync, func, errorFunc, timeout, timeo
   // 初始化请求（POST 方法，目标 URL，异步请求）
   xhr.open("POST", url, isAsync);
 
-  if(!IE_VERSION || IE_VERSION > 6) {
+  if(!GLOBAL_IE_VERSION || GLOBAL_IE_VERSION > 6) {
     if(errorFunc) {
       xhr.onerror = errorFunc;
     }

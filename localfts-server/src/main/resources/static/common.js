@@ -151,7 +151,7 @@ function bindEventListener(element,eventName,func) {
 
 function stopPropagationFunction(e, func) {
     e = e || window.event;
-    if(IE_VERSION && IE_VERSION < 9) {
+    if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 9) {
         e.cancelBubble = true;
     } else {
         e.stopPropagation();
@@ -165,7 +165,7 @@ function isOptionSelected(option) {
     if(!option) {
         return;
     }
-    if(IE_VERSION && IE_VERSION < 7) {
+    if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 7) {
         return option.getAttribute("selected");
     } else {
         return option.selected;
@@ -184,7 +184,7 @@ function selectOption(select,value,isValue) {
         var option = options[i];
         var shouldSelect = (isValue && option.value === value) || (!isValue && option.innerText === value);
         if(shouldSelect) {
-            if(IE_VERSION && IE_VERSION < 7) {
+            if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 7) {
                 option.setAttribute("selected", "selected");
             } else {
                 option.selected = true;
@@ -319,7 +319,7 @@ function isIE6() {
     }
 }
 
-var IE_VERSION = getIEVersion();
+var GLOBAL_IE_VERSION = getIEVersion();
 
 function getIEVersion() {
   var userAgent = navigator.userAgent.toLowerCase();

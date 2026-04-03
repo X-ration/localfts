@@ -180,6 +180,7 @@
         该路径不存在！
     </div>
     <script th:src="${#request.contextPath} + '/static/common.js'"></script>
+    <script th:src="${#request.contextPath} + '/static/icon_management.js'"></script>
     <script th:src="${#request.contextPath} + '/static/dialog.js'"></script>
     <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/json2.min.js'"></script>
     <script th:if="${directoryExists} and ${mkdirEnabled}" th:src="${#request.contextPath} + '/static/xhr_si.js'"></script>
@@ -189,6 +190,9 @@
         var ftsPageSize = Number(document.getElementById("page-size").value);
         var sortColumn = [[${sortColumn}]];
         var sortOrder = [[${sortOrder}]];
+        registerIcon('sort', 'sort_32px', 'png');
+        registerIcon('sort_asc', 'sort_asc_32px', 'png');
+        registerIcon('sort_desc', 'sort_desc_32px', 'png');
         /*var URL_LIST = "/localfts/list";
         var URL_DOWNLOAD = "/localfts/downloadFile";
         var URL_UPLOAD = "/localfts/uploadFile";*/
@@ -236,12 +240,12 @@
             if(dividingTds && dividingTds.length > 0) {
                 var bb = '0.1em';
                 var chromiumVersion = getChromiumVersion();
-                if(isFirefox() || (chromiumVersion && chromiumVersion < 71) || (IE_VERSION && IE_VERSION < 7)) {
+                if(isFirefox() || (chromiumVersion && chromiumVersion < 71) || (GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 7)) {
                     bb = '2px';
                 }
                 bb = bb + ' solid #000';
                 for(var i=0;i<dividingTds.length;i++) {
-                    if(IE_VERSION && IE_VERSION < 7) {
+                    if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 7) {
                         dividingTds[i].style.borderBottom = bb;
                     } else {
                         setStyle(dividingTds[i],'border-bottom',bb);
@@ -276,14 +280,14 @@
                 var eSortOrder = null, imgSrc = null;
                 if(!sortColumn || sortColumn !== eSortColumn) {
                     eSortOrder = 'ASC';
-                    imgSrc = contextPath + '/static/icon/sort_32px_black';
+                    imgSrc = getIconSrc(contextPath, 'sort', 'black');
                 } else if(sortColumn && sortOrder === 'ASC') {
                     eSortOrder = 'DESC';
-                    imgSrc = contextPath + '/static/icon/sort_asc_32px_black';
+                    imgSrc = getIconSrc(contextPath, 'sort_asc', 'black');
                 } else if(sortColumn && sortOrder === 'DESC') {
                     eSortColumn = undefined;
                     eSortOrder = undefined;
-                    imgSrc = contextPath + '/static/icon/sort_desc_32px_black';
+                    imgSrc = getIconSrc(contextPath, 'sort_desc', 'black');
                 } else {
                     if(window.console) {
                         console.error('非法状态，sortColumn=' + sortColumn + ',sortOrder=' + sortOrder);
@@ -292,10 +296,6 @@
                     eSortOrder = undefined;
                 }
                 if(imgSrc) {
-                    if(IE_VERSION && IE_VERSION < 8) {
-                        imgSrc = imgSrc + '_png8';
-                    }
-                    imgSrc = imgSrc + '.png';
                     //sortLinks[i].children[0].setAttribute('src', imgSrc);
                     var sortLinkChildren = sortLinks[i].children;
                     if(sortLinkChildren) {

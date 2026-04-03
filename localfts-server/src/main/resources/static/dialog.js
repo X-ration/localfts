@@ -14,7 +14,7 @@ function showDialog(id) {
             zIndex++;
         }
         setClassById(id, 'show');
-        if(IE_VERSION && IE_VERSION < 8) {
+        if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 8) {
             var allSelect = document.getElementsByTagName('select');
             if(allSelect) {
                 for(var i=0;i<allSelect.length;i++) {
@@ -43,7 +43,7 @@ function hideDialog(id) {
             }
         }
         setClassById(id, 'hidden');
-        if(IE_VERSION && IE_VERSION < 8) {
+        if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 8) {
             if(hasKey) {
                 var hziDialog = getHighestZIndexDialog(true);
                 var elementSelect = hziDialog.getElementsByTagName('select');
