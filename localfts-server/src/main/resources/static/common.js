@@ -194,6 +194,14 @@ function selectOption(select,value,isValue) {
     }
 }
 
+function isElementShowById(id) {
+    var element = document.getElementById(id);
+    if(!element) {
+        return false;
+    }
+    return element.style.display !== 'none';
+}
+
 function getSelectedOptionValue(select,isValue) {
     if(select === undefined) {
         return;
