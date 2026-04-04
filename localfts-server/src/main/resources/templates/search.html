@@ -1641,6 +1641,9 @@
                         if(returnObject.success) {
                             changeEncodingLastRelativePath = relativePath;
                             changeEncodingLastEncoding = selectedEncoding;
+                            document.getElementById('changeEncodingButton').onclick = function() {
+                                confirmChangeEncoding(selectedEncoding);
+                            };
                             updateChangeEncodingHint('校正编码成功！请刷新搜索结果以查看效果。', 'green');
                         } else {
                             updateChangeEncodingHint('校正编码失败，原因：' + returnObject.message, 'red');
