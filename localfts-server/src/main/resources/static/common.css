@@ -58,7 +58,13 @@ button.imgButton {
     padding: 0;
     margin: 0;
     width: auto;
-    height: 2em;
+    cursor: pointer;
+}
+button.imgTextButtonKS {
+    vertical-align: middle;
+    padding: 0;
+    margin: 0;
+    width: auto;
     cursor: pointer;
 }
 img.buttonImg {

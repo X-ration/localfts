@@ -35,9 +35,9 @@
         <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="width:80%; text-align:center">
         <span class="inline" style="color:red; display:none" id="keywordMsg"></span>
         <br><br>
-        <button id="switchAdvancedSearchButton" type="button" onclick="switchAdvancedSearch(this)">使用高级搜索</button>
-        <button type="button" onclick="search()">搜索</button>
-        <button type="button" onclick="refreshSearch()">刷新搜索结果</button>
+        <button id="switchAdvancedSearchButton" type="button" class="imgTextButtonKS" style="font-size:20px" onclick="switchAdvancedSearch(this)"><img class="buttonImg" style="height:20px">使用高级搜索</button>
+        <button id="searchButton" type="button" class="imgTextButtonKS" style="font-size:20px" onclick="search()"><img class="buttonImg" style="height:20px">搜索</button>
+        <button id="refreshSearchButton" type="button" class="imgTextButtonKS" style="font-size:20px" onclick="refreshSearch()"><img class="buttonImg" style="height:20px">刷新搜索结果</button>
         <div id="dateTimeDialogDiv" class="hidden" style="text-align: center">
             <div class="dialogTitle">手动输入日期和时间</div>
             <p>格式：yyyy-MM-dd|yyyy-MM-dd HH:mm:ss。<br>
@@ -333,11 +333,6 @@
         var keyboardButtonIds = [];
         var fileSizeRegex = /^(\d+)([KMGT]?B)$/;
         var fileSizeNumberRegex = /^\d+$/;
-        registerIcon('keyboard', 'ic_fluent_keyboard_32_regular', 'png');
-        registerIcon('add', 'ic_fluent_add_32_regular', 'png');
-        registerIcon('delete', 'ic_fluent_delete_32_regular', 'png');
-        registerIcon('expand', 'ic_fluent_chevron_up_down_32_regular', 'png');
-        registerIcon('fold', 'ic_fluent_chevron_down_up_32_regular', 'png');
         var searchPathsKeyboardButtonIdRegex = /^searchPathsKeyboardButton(\d+)$/;
         var searchPathsInputIdRegex = /^searchPaths(\d+)$/;
         var fileTypesInputIdRegex = /^fileType(\d+)$/;
@@ -353,6 +348,27 @@
             var buttonId = inputId + 'Button';
             keyboardButtonIds[keyboardButtonIds.length] = buttonId;
         }
+
+        //注册图标和设置按钮图片
+        registerIcon('keyboard', 'ic_fluent_keyboard_32_regular', 'png');
+        registerIcon('add', 'ic_fluent_add_32_regular', 'png');
+        registerIcon('delete', 'ic_fluent_delete_32_regular', 'png');
+        registerIcon('expand', 'ic_fluent_chevron_up_down_32_regular', 'png');
+        registerIcon('fold', 'ic_fluent_chevron_down_up_32_regular', 'png');
+        registerIcon('filter', 'ic_fluent_filter_32_regular', 'png');
+        registerIcon('filter_dismiss', 'ic_fluent_filter_dismiss_32_regular', 'png');
+        registerIcon('search', 'ic_fluent_search_32_regular', 'png');
+        registerIcon('refresh', 'ic_fluent_arrow_clockwise_32_regular', 'png');
+        var fileTypesAddButton = document.getElementById('fileTypesAddButton');
+        setButtonImgSrc(fileTypesAddButton, getIconSrc(contextPath, 'add'));
+        var searchPathsAddButton = document.getElementById('searchPathsAddButton');
+        setButtonImgSrc(searchPathsAddButton, getIconSrc(contextPath, 'add'));
+        var switchAdvancedSearchButton = document.getElementById('switchAdvancedSearchButton');
+        setButtonImgSrc(switchAdvancedSearchButton, getIconSrc(contextPath, 'filter'));
+        var searchButton = document.getElementById('searchButton');
+        setButtonImgSrc(searchButton, getIconSrc(contextPath, 'search'));
+        var refreshSearchButton = document.getElementById('refreshSearchButton');
+        setButtonImgSrc(refreshSearchButton, getIconSrc(contextPath, 'refresh'));
 
         var fileTypesDiv = document.getElementById('fileTypesDiv');
         if(fileTypesDiv.children) {
@@ -377,8 +393,6 @@
                 }
             }
         }
-        var fileTypesAddButton = document.getElementById('fileTypesAddButton');
-        setButtonImgSrc(fileTypesAddButton, getIconSrc(contextPath, 'add'));
 
         if(dateAndTimeInputSupported) {
             //日期时间input支持的情况下移除相关按钮
@@ -401,8 +415,6 @@
                 setButtonImgSrc(keyboardButton, getIconSrc(contextPath, 'keyboard'));
             }
         }
-        var searchPathsAddButton = document.getElementById('searchPathsAddButton');
-        setButtonImgSrc(searchPathsAddButton, getIconSrc(contextPath, 'add'));
 
         //搜索关键字匹配类型Radio选中事件
         if(searchMode === 'INDEXED' && indexFileContent) {
@@ -532,12 +544,13 @@
             } else {
                 advancedSearchSwitch = !advancedSearchSwitch;
             }
+            var switchAdvancedSearchButton = document.getElementById('switchAdvancedSearchButton');
             if(advancedSearchSwitch) {
                 document.getElementById('advanced-condition-div').style.display = 'block';
-                button.innerText = '不使用高级搜索';
+                setImgTextButton(switchAdvancedSearchButton,'不使用高级搜索',getIconSrc(contextPath,'filter_dismiss'));
             } else {
                 document.getElementById('advanced-condition-div').style.display = 'none';
-                button.innerText = '使用高级搜索';
+                setImgTextButton(switchAdvancedSearchButton,'使用高级搜索',getIconSrc(contextPath,'filter'));
             }
         }
         function search() {
@@ -2093,6 +2106,21 @@
                         firstChild.setAttribute('alt', alt);
                     }
                 }
+            }
+        }
+        function setImgTextButton(element,text,imgSrc) {
+            if(!element || (!text && !imgSrc)) {
+                return;
+            }
+            var originalText = element.innerText;
+            if(imgSrc) {
+                setButtonImgSrc(element, imgSrc);
+            }
+            if(text && text !== originalText) {
+                var idx = element.innerHTML.indexOf(originalText);
+                var imgHTML = element.innerHTML.substr(0, idx);
+                var newHTML = imgHTML + text;
+                element.innerHTML = newHTML;
             }
         }
         function pageJump() {
