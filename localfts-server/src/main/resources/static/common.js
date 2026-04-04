@@ -59,14 +59,6 @@ if (!Array.prototype.indexOf) {
     };
 }
 
-//让所有按钮鼠标指针划过时变成小手
-var allButtons = document.getElementsByTagName('button');
-if(allButtons) {
-    for(var i=0;i<allButtons.length;i++) {
-        allButtons[i].style.cursor = 'pointer';
-    }
-}
-
 var callUnloadCount = 0;
 function bindUnloadFunctionUrlEncoded(path,paramObject,condFunc) {
     if(!path) {

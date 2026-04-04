@@ -50,6 +50,10 @@ img.fontSizeImg{
     border: 0 none;
     outline: none;
 }
+/* 让所有按钮鼠标划过时变成小手 */
+button{
+    cursor: pointer;
+}
 button.imgButton {
     vertical-align: middle;
     border: 0 none;
