@@ -32,7 +32,7 @@
     <br>
     <div id="search-div"style="text-align: center">
         <span style="font-size: 30px">文件搜索</span><br><br>
-        <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="width:80%; text-align:center">
+        <input id="keyword" name="keyword" type="text" th:value="${keyword} == null ? '' : ${keyword}" style="font-size:20px; width:80%; text-align:center">
         <span class="inline" style="color:red; display:none" id="keywordMsg"></span>
         <br><br>
         <button id="switchAdvancedSearchButton" type="button" class="imgTextButtonKS" style="font-size:20px" onclick="switchAdvancedSearch(this)"><img class="buttonImg" style="height:20px">使用高级搜索</button>
@@ -444,6 +444,14 @@
                 }
             });
         }
+
+        //绑定搜索框回车事件
+        bindEventListener(document.getElementById('keyword'),'keydown', function(e) {
+            e = e || window.event;
+            if(e.keyCode === 13) {
+                search();
+            }
+        });
 
         //文件后缀Radio选中事件
         var filterFileType = false;
