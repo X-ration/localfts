@@ -37,7 +37,6 @@
         <br><br>
         <button id="switchAdvancedSearchButton" type="button" class="imgTextButtonKS" style="font-size:20px" onclick="switchAdvancedSearch(this)"><img class="buttonImg" style="height:20px">使用高级搜索</button>
         <button id="searchButton" type="button" class="imgTextButtonKS" style="font-size:20px" onclick="search()"><img class="buttonImg" style="height:20px">搜索</button>
-        <button id="refreshSearchButton" type="button" class="imgTextButtonKS" style="font-size:20px" onclick="refreshSearch()"><img class="buttonImg" style="height:20px">刷新搜索结果</button>
         <div id="dateTimeDialogDiv" class="hidden" style="text-align: center">
             <div class="dialogTitle">手动输入日期和时间</div>
             <p>格式：yyyy-MM-dd|yyyy-MM-dd HH:mm:ss。<br>
@@ -272,7 +271,8 @@
             <span id="sortOrderMsg" style="display:none;color:red"></span>
             <button type="button" onclick="sortSearch()">排序</button>
         </div>
-        <br>
+        <button id="refreshSearchButton" type="button" class="imgTextButtonKS" onclick="refreshSearch()"><img class="buttonImg" style="display:none; height: 1.2em">刷新搜索结果</button>
+        <br id="refreshSearchBr"><br>
         <div id="result-div" style="display: none">
         </div>
         <p id="pageInfo" style="display:none" class="margin-0">
@@ -1051,6 +1051,10 @@
             resultContainerDiv.style.display = '';
             var searchHint = document.getElementById('searchHint');
             searchHint.innerText = '正在搜索...';
+            var refreshSearchButton = document.getElementById('refreshSearchButton');
+            refreshSearchButton.style.display = 'none';
+            var refreshSearchBr = document.getElementById('refreshSearchBr');
+            refreshSearchBr.style.display = 'none';
             var searchMessage = document.getElementById('searchMessage');
             searchMessage.style.display = 'none';
             var searchMessageBr1 = document.getElementById('searchMessageBr1');
@@ -1101,6 +1105,9 @@
                         handleErrorMessage('搜索失败，状态码:' + xhr.status);
                     }
                     searchHint.innerText = '搜索结果';
+                    refreshSearchButton.style.display = '';
+                    refreshSearchBr.style.display = '';
+                    showButtonImg(refreshSearchButton);
                 }, function(e) {
                     var errorMsg = '搜索失败:连接服务器失败';
                     if(e) {
@@ -1111,10 +1118,16 @@
                         }
                     }
                     searchHint.innerText = '搜索结果';
+                    refreshSearchButton.style.display = '';
+                    refreshSearchBr.style.display = '';
+                    showButtonImg(refreshSearchButton);
                     handleErrorMessage(errorMsg);
                 }, timeoutMills, function() {
                     var errorMsg = '搜索失败:接口超时';
                     searchHint.innerText = '搜索结果';
+                    refreshSearchButton.style.display = '';
+                    refreshSearchBr.style.display = '';
+                    showButtonImg(refreshSearchButton);
                     handleErrorMessage(errorMsg);
                 }
             );
@@ -2113,6 +2126,21 @@
                     if(alt) {
                         firstChild.setAttribute('alt', alt);
                     }
+                }
+            }
+        }
+        function showButtonImg(element) {
+            if(!element) {
+                return;
+            }
+            if(element.tagName.toLowerCase() !== 'button') {
+                return;
+            }
+            var elementChildren = element.children;
+            if(elementChildren && elementChildren.length > 0) {
+                var firstChild = elementChildren[0];
+                if(firstChild.tagName.toLowerCase() === 'img') {
+                    firstChild.style.display = '';
                 }
             }
         }
