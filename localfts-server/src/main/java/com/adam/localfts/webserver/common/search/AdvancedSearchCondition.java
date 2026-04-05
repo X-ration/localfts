@@ -121,10 +121,13 @@ public class AdvancedSearchCondition implements Cloneable{
                         if(Util.isSystemWindows()) {
                             matcher = Constants.PATTERN_PATH_WINDOWS_STANDARD_RELATIVE.matcher(str);
                         } else {
-                            matcher = Constants.PATTERN_PATH_LINUX_MACOS_RELATIVE.matcher(str);
+                            matcher = Constants.PATTERN_PATH_LINUX_MACOS_STANDARD_RELATIVE.matcher(str);
                         }
-                        Assert.isTrue(matcher.matches(), "Search path '" + str + "' does not match rules!");
-                        return true;
+                        boolean matches = matcher.matches();
+                        if(!matches) {
+                            logger.warn("Search path '{}' does not match rules!", str);
+                        }
+                        return matches;
                     })
                     .collect(Collectors.toList());
             List<String> recordList = new LinkedList<>();
