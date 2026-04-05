@@ -44,7 +44,7 @@ localfts:
     enabled: true  #创建文件夹功能开关
   search:
     enabled: true  #搜索功能开关
-    mode: INDEXED #模式：PLAIN-直接搜索，INDEXED-索引搜索
+    mode: PLAIN #模式：PLAIN-直接搜索，INDEXED-索引搜索
     timeout: 30  #超时时间(秒)，建议配置超时时间，否则搜索任务可能会长时间不退出
     active-task-threshold-str: 0.5p  #活跃搜索任务阈值，格式为正整数或正数+p(代表乘以物理核心数)，不能超过物理核心数。默认值：物理核心数/2
     index-path: index-dir  #索引相对路径
