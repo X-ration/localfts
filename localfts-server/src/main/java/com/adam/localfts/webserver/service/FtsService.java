@@ -378,17 +378,15 @@ public class FtsService {
         boolean requireFileContent = indexFileContentProperties.getEnabled();
         boolean tryReadAllFiles = indexFileContentProperties.getTryReadAllFiles();
 
+        SearchFileModel model = new SearchFileModel();
         if(file.isDirectory()) {
-            SearchFileModel model = new SearchFileModel();
             model.setFileName(file.getName());
             model.setDirectory(true);
             model.setFileSize(0L);
             model.setLastModified(file.lastModified());
             setParentRelativePath(model, file, rootPath);
             fillSearchModelCompress(file, zipDirectory, rootPath, zipFileParentRelativePath, model);
-            function.apply(model);
         } else {
-            SearchFileModel model = new SearchFileModel();
             model.setFileName(file.getName());
             model.setDirectory(false);
             setParentRelativePath(model, file, rootPath);
@@ -399,8 +397,9 @@ public class FtsService {
             }
             model.setFileSize(file.length());
             model.setLastModified(file.lastModified());
-            function.apply(model);
         }
+        LOGGER.debug("Prepare to apply function to {}", file.getAbsolutePath());
+        function.apply(model);
     }
 
     private Pair<String, String> getFileContent(File file, boolean tryReadAllFiles, String defaultEncoding, boolean forceEncoding, int maxStringLength) {
