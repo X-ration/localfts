@@ -38,12 +38,22 @@ public class FileMonitorThread extends Thread{
             registerPath(dir);
             return FileVisitResult.CONTINUE;
         }
+        @Override
+        public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+            LOGGER.warn("监听目录{}时出现异常，异常类型：{}，异常信息：{}", file, exc.getClass().getName(), exc.getMessage());
+            return FileVisitResult.SKIP_SUBTREE;
+        }
     };
     private final FileVisitor<? super java.nio.file.Path> unRegisterFileVisitor = new SimpleFileVisitor<Path>() {
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
             unregisterPath(dir);
             return FileVisitResult.CONTINUE;
+        }
+        @Override
+        public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+            LOGGER.warn("取消监听目录{}时出现异常，异常类型：{}，异常信息：{}", file, exc.getClass().getName(), exc.getMessage());
+            return FileVisitResult.SKIP_SUBTREE;
         }
     };
 
