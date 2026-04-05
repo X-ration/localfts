@@ -299,14 +299,26 @@ public class IOUtil {
             LOGGER.trace("zipDirectory writing file entry {}", parentEntryName);
             ZipEntry entry = new ZipEntry(parentEntryName);
             zipOutputStream.putNextEntry(entry);
+            byte[] buffer = new byte[BUFFER_SIZE];
             try(FileInputStream fileInputStream = new FileInputStream(currentFile);
                 BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream)
             ) {
-                byte[] buffer = new byte[BUFFER_SIZE];
                 int bytesRead;
-                while((bytesRead = bufferedInputStream.read(buffer)) != -1) {
-                    Util.clearInterruptedAndThrowException();
-                    bufferedOutputStream.write(buffer, 0, bytesRead);
+                try {
+                    bytesRead = fileInputStream.read(buffer);
+                    if(bytesRead != -1) {
+                        Util.clearInterruptedAndThrowException();
+                        bufferedOutputStream.write(buffer, 0, bytesRead);
+                    }
+                } catch (IOException e) {
+                    LOGGER.warn("Pre-read file {} failed, e.type={}, e.msg={}, skipped", currentFile.getAbsolutePath(), e.getClass().getName(), e.getMessage());
+                    return;
+                }
+                if(bytesRead != -1) {
+                    while ((bytesRead = bufferedInputStream.read(buffer)) != -1) {
+                        Util.clearInterruptedAndThrowException();
+                        bufferedOutputStream.write(buffer, 0, bytesRead);
+                    }
                 }
                 bufferedOutputStream.flush();
             } finally {

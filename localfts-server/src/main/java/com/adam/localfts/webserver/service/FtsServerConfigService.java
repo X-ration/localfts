@@ -91,6 +91,29 @@ public class FtsServerConfigService implements DisposableBean {
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
     }
 
+    public String getAppLogDir() {
+        String workingDir = Constants.SYSTEM_WORKING_DIR;
+        File workingDirFile = new File(workingDir);
+        String logRelativePath = localFtsProperties.getLog().getFilePath();
+        File logDirFile = new File(workingDirFile, logRelativePath);
+        return logDirFile.exists() && logDirFile.isDirectory() ? logDirFile.getAbsolutePath() : null;
+    }
+
+    public String getAppSearchIndexDir() {
+        String workingDir = Constants.SYSTEM_WORKING_DIR;
+        File workingDirFile = new File(workingDir);
+        SearchProperties searchProperties = localFtsProperties.getSearch();
+        if(searchProperties.getEnabled() == null || !searchProperties.getEnabled()) {
+            return null;
+        }
+        if(searchProperties.getMode() != SearchMode.INDEXED) {
+            return null;
+        }
+        String indexPath = searchProperties.getIndexPath();
+        File indexPathFile = new File(workingDirFile, indexPath);
+        return indexPathFile.exists() && indexPathFile.isDirectory() ? indexPathFile.getAbsolutePath() : null;
+    }
+
     public String[] getFileInvalidCharacters() {
         if(Util.isSystemWindows()) {
             return Constants.FILE_INVALID_CHARACTER_WINDOWS.split(" ");

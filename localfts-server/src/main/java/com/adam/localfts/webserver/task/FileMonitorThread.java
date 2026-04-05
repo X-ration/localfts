@@ -1,10 +1,10 @@
 package com.adam.localfts.webserver.task;
 
-import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.VoidFunction;
 import com.adam.localfts.webserver.common.search.IndexType;
 import com.adam.localfts.webserver.common.search.SearchFileModel;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
 import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class FileMonitorThread extends Thread{
 
     private FtsService ftsService;
+    private FtsServerConfigService ftsServerConfigService;
     private String rootPath;
     private WatchService watchService;
     private boolean indexHiddenFiles;
@@ -60,12 +61,14 @@ public class FileMonitorThread extends Thread{
     private final static Logger LOGGER = LoggerFactory.getLogger(FileMonitorThread.class);
     private static volatile FileMonitorThread INSTANCE = null;
 
-    private FileMonitorThread(FtsService ftsService, String rootPath, boolean indexHiddenFiles) throws IOException {
+    private FileMonitorThread(FtsService ftsService, FtsServerConfigService ftsServerConfigService, String rootPath, boolean indexHiddenFiles) throws IOException {
         super("FM-Thread");
         Assert.notNull(ftsService, "ftsService is null!");
+        Assert.notNull(ftsServerConfigService, "ftsServerConfigService is null!");
         Assert.notNull(rootPath, "rootPath is null!");
         this.rootPath = rootPath;
         this.ftsService = ftsService;
+        this.ftsServerConfigService = ftsServerConfigService;
         this.indexHiddenFiles = indexHiddenFiles;
         File rootPathFile = new File(rootPath);
         Assert.isTrue(rootPathFile.exists(), "Root path " + rootPath + "does not exist!");
@@ -116,12 +119,12 @@ public class FileMonitorThread extends Thread{
         return INSTANCE != null;
     }
 
-    public static void constructOnce(FtsService ftsService, String rootPath, boolean indexHiddenFiles) {
+    public static void constructOnce(FtsService ftsService, FtsServerConfigService ftsServerConfigService, String rootPath, boolean indexHiddenFiles) {
         if(INSTANCE == null) {
             synchronized (FileMonitorThread.class) {
                 if(INSTANCE == null) {
                     try {
-                        INSTANCE = new FileMonitorThread(ftsService, rootPath, indexHiddenFiles);
+                        INSTANCE = new FileMonitorThread(ftsService, ftsServerConfigService, rootPath, indexHiddenFiles);
                     } catch (IOException e) {
                         LOGGER.error("IOException occurred when constructing FileMonitorThread instance", e);
                         throw new LocalFtsRuntimeException("IOException occurred when constructing FileMonitorThread instance, msg:" + e.getMessage());
@@ -141,17 +144,27 @@ public class FileMonitorThread extends Thread{
     }
 
     private void handleFileEvent(WatchEvent.Kind<?> kind, File file) {
+        String absolutePath = file.getAbsolutePath();
+        String appLogDir = ftsServerConfigService.getAppLogDir();
+        String appIndexDir = ftsServerConfigService.getAppSearchIndexDir();
+        if(appLogDir != null && absolutePath.startsWith(appLogDir)) {
+//            LOGGER.debug("不处理应用日志文件{}", absolutePath);
+            return;
+        } else if(appIndexDir != null && absolutePath.startsWith(appIndexDir)) {
+//            LOGGER.debug("不处理应用索引文件{}", absolutePath);
+            return;
+        }
         String fileType = file.isDirectory() ? "directory" : "file";
         fileType = (file.isHidden() ? "hidden " : "") + fileType;
-        LOGGER.debug("Monitored file event kind {} of {} {}", kind.name(), fileType, file.getAbsolutePath());
+        LOGGER.debug("Monitored file event kind {} of {} {}", kind.name(), fileType, absolutePath);
         switch (kind.name()) {
             case "ENTRY_CREATE":
                 createIndex(file);
                 break;
             case "ENTRY_MODIFY":
                 if(file.isDirectory()) {
-                    WatchKey watchKey = watchKeyMap.get(file.getAbsolutePath());
-                    Path path = Paths.get(file.getAbsolutePath());
+                    WatchKey watchKey = watchKeyMap.get(absolutePath);
+                    Path path = Paths.get(absolutePath);
                     if(!indexHiddenFiles && file.isHidden() && watchKey != null) {
                         try {
                             Files.walkFileTree(path, unRegisterFileVisitor);
@@ -235,7 +248,13 @@ public class FileMonitorThread extends Thread{
     }
 
     private void registerPath(Path path) {
-        if(!path.startsWith(Constants.SYSTEM_WORKING_DIR)) {
+        String appLogDir = ftsServerConfigService.getAppLogDir();
+        String appIndexDir = ftsServerConfigService.getAppSearchIndexDir();
+        if(appLogDir != null && path.startsWith(appLogDir)) {
+            LOGGER.debug("不监听应用日志目录{}", appLogDir);
+        } else if(appIndexDir != null && path.startsWith(appIndexDir)) {
+            LOGGER.debug("不监听应用索引目录{}", appIndexDir);
+        } else {
             try {
                 WatchKey watchKey = path.register(watchService,
                         StandardWatchEventKinds.ENTRY_CREATE,

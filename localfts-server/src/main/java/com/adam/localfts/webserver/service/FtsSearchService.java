@@ -318,7 +318,7 @@ public class FtsSearchService implements DisposableBean {
             boolean indexHiddenFiles = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
             LuceneIndexThread.constructOnce(indexPath, searchProperties.getIndexFileContent().getMaxStringLength(), searchProperties.getUseExistingIndex());
             LuceneIndexThread.getInstance().start();
-            FileMonitorThread.constructOnce(ftsService, rootPath, indexHiddenFiles);
+            FileMonitorThread.constructOnce(ftsService, ftsServerConfigService, rootPath, indexHiddenFiles);
             FileMonitorThread.getInstance().start();
             luceneSearchService.setIndexPath(indexPath);
             if(!searchProperties.getUseExistingIndex()) {

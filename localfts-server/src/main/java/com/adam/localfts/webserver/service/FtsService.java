@@ -311,6 +311,16 @@ public class FtsService {
             LOGGER.warn("Path {} is not a directory!", directory.getAbsolutePath());
             return;
         }
+        String appLogDir = ftsServerConfigService.getAppLogDir();
+        if(appLogDir != null && directory.getAbsolutePath().startsWith(appLogDir)) {
+//            LOGGER.debug("Skipped app log directory {}", appLogDir);
+            return;
+        }
+        String appIndexDir = ftsServerConfigService.getAppSearchIndexDir();
+        if(appIndexDir != null && directory.getAbsolutePath().startsWith(appIndexDir)) {
+//            LOGGER.debug("Skipped app index directory {}", appIndexDir);
+            return;
+        }
         if(directory.isHidden() && !indexHiddenFiles) {
             fileIndexCounter.count(directory,false);
             return;
@@ -365,6 +375,16 @@ public class FtsService {
 
     public void convertAndApplySearchFileModel(File file, String encoding, boolean forceEncoding, VoidFunction<SearchFileModel> function) {
         if(!file.exists()) {
+            return;
+        }
+        String appLogDir = ftsServerConfigService.getAppLogDir();
+        if(appLogDir != null && file.getAbsolutePath().startsWith(appLogDir)) {
+//            LOGGER.debug("Skipped app log directory {}", appLogDir);
+            return;
+        }
+        String appIndexDir = ftsServerConfigService.getAppSearchIndexDir();
+        if(appIndexDir != null && file.getAbsolutePath().startsWith(appIndexDir)) {
+//            LOGGER.debug("Skipped app index directory {}", appIndexDir);
             return;
         }
         String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
@@ -451,6 +471,10 @@ public class FtsService {
     }
 
     private void setParentRelativePath(SearchFileModel model, File file, String rootPath) {
+        if(file.getAbsolutePath().equals(rootPath)) {
+            model.setParentRelativePath("/");
+            return;
+        }
         String parentRelativePath = file.getAbsolutePath().substring(rootPath.length())
                 .replace(File.separator, "/");
         parentRelativePath = parentRelativePath.substring(0, parentRelativePath.length() - file.getName().length());
@@ -648,13 +672,17 @@ public class FtsService {
                 .map(entry -> {
                     String folderAbsolutePath = entry.getKey();
                     FolderCompressingContextHolder folderCompressingContextHolder = entry.getValue();
-                    String relativePath = folderAbsolutePath.substring(rootPath.length());
-                    if(Util.isSystemWindows()) {
-                        relativePath = relativePath.replaceAll("\\\\", "/");
+                    FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
+                    if(folderAbsolutePath.equals(rootPath)) {
+                        folderCompressDTO.setPath("/");
+                    } else {
+                        String relativePath = folderAbsolutePath.substring(rootPath.length());
+                        if (Util.isSystemWindows()) {
+                            relativePath = relativePath.replaceAll("\\\\", "/");
+                        }
+                        folderCompressDTO.setPath(relativePath);
                     }
                     boolean directoryExists = checkDirectoryExists(folderAbsolutePath, true);
-                    FolderCompressDTO folderCompressDTO = new FolderCompressDTO();
-                    folderCompressDTO.setPath(relativePath);
                     if(directoryExists) {
                         File directory = new File(folderAbsolutePath);
                         if(!showHidden && directory.isHidden()) {
@@ -1138,6 +1166,9 @@ public class FtsService {
         OutputStream outputStream = null;
         RandomAccessFile randomAccessFile = null;
         try {
+            if(fileName.startsWith(".")) {
+                fileName = "未命名" + fileName;
+            }
             String encodedFileName = UriUtils.encode(fileName, "UTF-8");
 //            if(userAgentHeader != null && userAgentHeader.contains("MSIE")) {
 //                encodedFileName = UriUtils.encode(fileName.replaceAll("：", " "), "UTF-8");
@@ -1260,6 +1291,9 @@ public class FtsService {
     }
 
     private String folderPathToZipFileName(String folderPath, String rootPath) {
+        if(folderPath.equals(rootPath)) {
+            return "根路径.zip";
+        }
         String processedPath = folderPath;
         if(processedPath.startsWith(rootPath)) {
             processedPath = processedPath.substring(rootPath.length());
