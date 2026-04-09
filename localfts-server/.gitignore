@@ -10,3 +10,4 @@ temp_dir/
 src/test/resources/
 index-dir/
 src/test/**/private_test/
+.run

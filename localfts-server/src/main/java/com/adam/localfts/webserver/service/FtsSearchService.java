@@ -14,7 +14,6 @@ import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
-import com.adam.localfts.webserver.task.FileMonitorThread;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
 import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
@@ -308,7 +307,6 @@ public class FtsSearchService implements DisposableBean {
     @PostConstruct
     public void postConstruct() {
         SearchProperties searchProperties = ftsServerConfigService.getLocalFtsProperties().getSearch();
-        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
         if(searchProperties.getEnabled() && searchProperties.getMode() == SearchMode.INDEXED) {
             int physicalAvailableProcessors = Constants.PHYSICAL_AVAILABLE_PROCESSORS;
             if(physicalAvailableProcessors == 1) {
@@ -318,8 +316,6 @@ public class FtsSearchService implements DisposableBean {
             boolean indexHiddenFiles = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
             LuceneIndexThread.constructOnce(indexPath, searchProperties.getIndexFileContent().getMaxStringLength(), searchProperties.getUseExistingIndex());
             LuceneIndexThread.getInstance().start();
-            FileMonitorThread.constructOnce(ftsService, ftsServerConfigService, rootPath, indexHiddenFiles);
-            FileMonitorThread.getInstance().start();
             luceneSearchService.setIndexPath(indexPath);
             if(!searchProperties.getUseExistingIndex()) {
                 if (searchProperties.getIndexBeforeStart()) {
@@ -337,9 +333,6 @@ public class FtsSearchService implements DisposableBean {
     public void destroy() throws Exception {
         if(LuceneIndexThread.constructed()) {
             LuceneIndexThread.getInstance().tryStop();
-        }
-        if(FileMonitorThread.constructed()) {
-            FileMonitorThread.getInstance().tryStop();
         }
     }
 }

@@ -306,19 +306,15 @@ public class IOUtil {
                 int bytesRead;
                 try {
                     bytesRead = fileInputStream.read(buffer);
-                    if(bytesRead != -1) {
-                        Util.clearInterruptedAndThrowException();
-                        bufferedOutputStream.write(buffer, 0, bytesRead);
-                    }
                 } catch (IOException e) {
                     LOGGER.warn("Pre-read file {} failed, e.type={}, e.msg={}, skipped", currentFile.getAbsolutePath(), e.getClass().getName(), e.getMessage());
                     return;
                 }
                 if(bytesRead != -1) {
-                    while ((bytesRead = bufferedInputStream.read(buffer)) != -1) {
+                    do {
                         Util.clearInterruptedAndThrowException();
                         bufferedOutputStream.write(buffer, 0, bytesRead);
-                    }
+                    } while ((bytesRead = bufferedInputStream.read(buffer)) != -1);
                 }
                 bufferedOutputStream.flush();
             } finally {

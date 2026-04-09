@@ -36,7 +36,7 @@ public class ShutdownListener implements ApplicationListener<ContextClosedEvent>
     public void onApplicationEvent(ContextClosedEvent event) {
         this.shuttingDown = true;
 
-        logger.debug("Preparing force shutdown executorService={}", searchThreadPool);
+        logger.debug("Preparing force shutdown searchThreadPool={}", searchThreadPool);
         searchThreadPool.shutdownNow();
 
         if(webServerStartListener.isWebServerStarted()) {

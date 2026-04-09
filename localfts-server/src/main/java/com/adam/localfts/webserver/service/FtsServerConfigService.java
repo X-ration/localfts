@@ -91,6 +91,18 @@ public class FtsServerConfigService implements DisposableBean {
         this.ftsServerIpInfoModel = getServerIpInfoModelImpl();
     }
 
+    public String getZipDir() {
+        if(localFtsProperties.getZip().getEnabled() != null && localFtsProperties.getZip().getEnabled()) {
+            String rootPath = localFtsProperties.getRootPath();
+            File rootDirectory = new File(rootPath);
+            String zipRelativePath = localFtsProperties.getZip().getPath();
+            File zipDirectory = new File(rootDirectory, zipRelativePath);
+            return zipDirectory.exists() && zipDirectory.isDirectory() ? zipDirectory.getAbsolutePath() : null;
+        } else {
+            return null;
+        }
+    }
+
     public String getAppLogDir() {
         String workingDir = Constants.SYSTEM_WORKING_DIR;
         File workingDirFile = new File(workingDir);

@@ -30,6 +30,8 @@ public class Constants {
     public static final List<String> READABLE_FILE_EXTS_LIST = Arrays.asList(READABLE_FILE_EXTS);
     public static final String[] PLAIN_READABLE_FILE_EXTS = {".txt", ".md", ".csv", ".xml", ".log", ".lrc", ".svg", ".bat", ".sh", ".html", ".htm", ".css", ".js", ".min.js",
             ".php", ".java", ".py", ".sql", ".yml", ".json"};
+    public static final String ROOT_PATH_COMPRESSED_FILE_NAME = "根路径.zip";
+    public static final String DEFAULT_FILE_NAME_PREFIX_FOR_NO_NAME_FILE = "未命名";
 
     public static final String CRLF = "\r\n";
     public static final String CR = "\r";

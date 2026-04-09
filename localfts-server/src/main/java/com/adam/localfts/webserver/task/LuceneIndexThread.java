@@ -154,6 +154,7 @@ public class LuceneIndexThread extends Thread{
         } catch (IOException e) {
         }
         this.analyzer.close();
+        logger.info("Thread is terminating...");
     }
 
     public void addOperation(IndexType indexType, SearchFileModel model) {

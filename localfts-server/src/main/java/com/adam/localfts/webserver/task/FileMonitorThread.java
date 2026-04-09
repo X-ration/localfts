@@ -27,9 +27,10 @@ public class FileMonitorThread extends Thread{
     private String rootPath;
     private WatchService watchService;
     private boolean indexHiddenFiles;
+    private final boolean workForIndex;
     private final ConcurrentHashMap<String, WatchKey> watchKeyMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ScheduledFuture<?>> scheduledFutureMap = new ConcurrentHashMap<>();
-    private final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+    private final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
     private final FileVisitor<? super java.nio.file.Path> registerFileVisitor = new SimpleFileVisitor<Path>() {
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
@@ -61,24 +62,37 @@ public class FileMonitorThread extends Thread{
     private final static Logger LOGGER = LoggerFactory.getLogger(FileMonitorThread.class);
     private static volatile FileMonitorThread INSTANCE = null;
 
-    private FileMonitorThread(FtsService ftsService, FtsServerConfigService ftsServerConfigService, String rootPath, boolean indexHiddenFiles) throws IOException {
+    private FileMonitorThread(FtsService ftsService, FtsServerConfigService ftsServerConfigService, boolean workForIndex) throws IOException {
         super("FM-Thread");
         Assert.notNull(ftsService, "ftsService is null!");
         Assert.notNull(ftsServerConfigService, "ftsServerConfigService is null!");
-        Assert.notNull(rootPath, "rootPath is null!");
-        this.rootPath = rootPath;
         this.ftsService = ftsService;
         this.ftsServerConfigService = ftsServerConfigService;
-        this.indexHiddenFiles = indexHiddenFiles;
+        this.rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        this.indexHiddenFiles = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        this.workForIndex = workForIndex;
         File rootPathFile = new File(rootPath);
         Assert.isTrue(rootPathFile.exists(), "Root path " + rootPath + "does not exist!");
         Assert.isTrue(rootPathFile.isDirectory(), "Root path " + rootPath + "is not a directory!");
-        LOGGER.info("Prepare to monitor files in {}", rootPath);
-        scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
         this.watchService = FileSystems.getDefault().newWatchService();
-        Path rootPathPath = Paths.get(rootPath);
-        //遍历所有子目录并注册
-        Files.walkFileTree(rootPathPath, registerFileVisitor);
+        if(workForIndex) {
+            scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
+            scheduledThreadPoolExecutor.setRemoveOnCancelPolicy(true);
+            LOGGER.info("Prepare to monitor files in {}", rootPath);
+            Path rootPathPath = Paths.get(rootPath);
+            //遍历所有子目录并注册
+            Files.walkFileTree(rootPathPath, registerFileVisitor);
+        } else {
+            scheduledThreadPoolExecutor = null;
+            String zipDir = ftsServerConfigService.getZipDir();
+            Path zipPath = Paths.get(zipDir);
+            try {
+                zipPath.register(watchService, StandardWatchEventKinds.ENTRY_DELETE);
+                LOGGER.debug("已监控压缩文件目录{}", zipPath);
+            } catch (IOException e) {
+                LOGGER.error("监控压缩文件目录{}失败", zipPath, e);
+            }
+        }
     }
 
     @Override
@@ -96,7 +110,11 @@ public class FileMonitorThread extends Thread{
                     Path fileName = (Path) event.context();
                     File targetFile = parentDir.resolve(fileName).toFile();
 
-                    handleFileEvent(kind, targetFile);
+                    if(workForIndex) {
+                        handleFileEvent(kind, targetFile);
+                    } else {
+                        handleDeleteZipFileEvent(kind, targetFile);
+                    }
 
                     boolean reset = watchKey.reset();
                     if(!reset) {
@@ -113,18 +131,19 @@ public class FileMonitorThread extends Thread{
         } catch (IOException e) {
             LOGGER.error("Error closing watchService, message:{}", e.getMessage());
         }
+        LOGGER.info("Thread is terminating...");
     }
 
     public static boolean constructed() {
         return INSTANCE != null;
     }
 
-    public static void constructOnce(FtsService ftsService, FtsServerConfigService ftsServerConfigService, String rootPath, boolean indexHiddenFiles) {
+    public static void constructOnce(FtsService ftsService, FtsServerConfigService ftsServerConfigService, boolean workForIndex) {
         if(INSTANCE == null) {
             synchronized (FileMonitorThread.class) {
                 if(INSTANCE == null) {
                     try {
-                        INSTANCE = new FileMonitorThread(ftsService, ftsServerConfigService, rootPath, indexHiddenFiles);
+                        INSTANCE = new FileMonitorThread(ftsService, ftsServerConfigService, workForIndex);
                     } catch (IOException e) {
                         LOGGER.error("IOException occurred when constructing FileMonitorThread instance", e);
                         throw new LocalFtsRuntimeException("IOException occurred when constructing FileMonitorThread instance, msg:" + e.getMessage());
@@ -140,7 +159,19 @@ public class FileMonitorThread extends Thread{
 
     public void tryStop() {
         this.interrupt();
-        scheduledThreadPoolExecutor.shutdownNow();
+        if(scheduledThreadPoolExecutor != null) {
+            scheduledThreadPoolExecutor.shutdownNow();
+        }
+    }
+
+    private void handleDeleteZipFileEvent(WatchEvent.Kind<?> kind, File file) {
+        String absolutePath = file.getAbsolutePath();
+        String fileType = file.isDirectory() ? "directory" : "file";
+        fileType = (file.isHidden() ? "hidden " : "") + fileType;
+        LOGGER.debug("Monitored file event kind {} of {} {}", kind.name(), fileType, absolutePath);
+        if("ENTRY_DELETE".equals(kind.name())) {
+            handleDeleteZipFile(absolutePath, file);
+        }
     }
 
     private void handleFileEvent(WatchEvent.Kind<?> kind, File file) {
@@ -192,9 +223,19 @@ public class FileMonitorThread extends Thread{
                 break;
             case "ENTRY_DELETE":
                 deleteIndex(file);
+                handleDeleteZipFile(absolutePath, file);
                 break;
             default:
                 LOGGER.warn("Invalid state of kind {}", kind.name());
+        }
+    }
+
+    private void handleDeleteZipFile(String absolutePath, File file) {
+        if(absolutePath == null) {
+            absolutePath = file.getAbsolutePath();
+        }
+        if(absolutePath.startsWith(ftsServerConfigService.getZipDir()) && absolutePath.endsWith(".zip")) {
+            ftsService.clearFolderCompressingContextHolder(file);
         }
     }
 

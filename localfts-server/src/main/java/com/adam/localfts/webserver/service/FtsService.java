@@ -10,14 +10,17 @@ import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.config.properties.IndexFileContentProperties;
+import com.adam.localfts.webserver.config.properties.SearchProperties;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import com.adam.localfts.webserver.task.FileMonitorThread;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
 import com.adam.localfts.webserver.util.IOUtil;
 import com.adam.localfts.webserver.util.Util;
 import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -53,7 +56,7 @@ import java.util.stream.Stream;
 import static com.adam.localfts.webserver.common.Constants.CRLF;
 
 @Service
-public class FtsService {
+public class FtsService implements DisposableBean {
 
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
@@ -193,6 +196,17 @@ public class FtsService {
         setSubDirectoryModel(relativePathToUse, directoryToUse, model, pathList, 0, false, fromRoot, showHidden);
 
         return ReturnObject.success(model);
+    }
+
+    public void clearFolderCompressingContextHolder(File zipFile) {
+        Assert.notNull(zipFile, "zipFilePath is null!");
+        String zipFileName = zipFile.getName();
+        String rootPath = ftsServerConfigService.getLocalFtsProperties().getRootPath();
+        String folderPath = zipFileNameToFolderPath(zipFileName, rootPath);
+        if(folderCompressingContextHolderMap.containsKey(folderPath)) {
+            LOGGER.debug("Preparing to clear FolderCompressingContextHolder for {}, zipFileName:{}, rootPath:{}", folderPath, zipFileName, rootPath);
+            folderCompressingContextHolderMap.remove(folderPath);
+        }
     }
 
     private void setSubDirectoryModel(final String relativePath, final File directory, final FtsSubDirectoryModel model,
@@ -1167,7 +1181,7 @@ public class FtsService {
         RandomAccessFile randomAccessFile = null;
         try {
             if(fileName.startsWith(".")) {
-                fileName = "未命名" + fileName;
+                fileName = Constants.DEFAULT_FILE_NAME_PREFIX_FOR_NO_NAME_FILE + fileName;
             }
             String encodedFileName = UriUtils.encode(fileName, "UTF-8");
 //            if(userAgentHeader != null && userAgentHeader.contains("MSIE")) {
@@ -1290,9 +1304,38 @@ public class FtsService {
         return ReturnObject.success(returnObjectMessage, returnObjectList);
     }
 
+    private String zipFileNameToFolderPath(String zipFileName, String rootPath) {
+        if(zipFileName.equals(Constants.ROOT_PATH_COMPRESSED_FILE_NAME)) {
+            return rootPath;
+        }
+        String zipFileNamePrefix = zipFileName.substring(0, zipFileName.lastIndexOf(".zip"));
+        if(!zipFileName.contains("_")) {
+            return rootPath + File.separator + zipFileNamePrefix;
+        }
+        if(zipFileNamePrefix.startsWith("_") || zipFileNamePrefix.endsWith("_")) {
+            LOGGER.warn("Skipped invalid zip file name {}", zipFileName);
+            return null;
+        }
+        StringBuilder stringBuilder = new StringBuilder(rootPath).append(File.separator);
+        for(int i=0;i<zipFileNamePrefix.length();i++) {
+            char c = zipFileNamePrefix.charAt(i);
+            if(c == '_') {
+                if(zipFileNamePrefix.charAt(i+1) == '_') {
+                    stringBuilder.append("_");
+                    i++;
+                } else {
+                    stringBuilder.append(File.separator);
+                }
+            } else {
+                stringBuilder.append(c);
+            }
+        }
+        return stringBuilder.toString();
+    }
+
     private String folderPathToZipFileName(String folderPath, String rootPath) {
         if(folderPath.equals(rootPath)) {
-            return "根路径.zip";
+            return Constants.ROOT_PATH_COMPRESSED_FILE_NAME;
         }
         String processedPath = folderPath;
         if(processedPath.startsWith(rootPath)) {
@@ -1437,6 +1480,10 @@ public class FtsService {
 
     @PostConstruct
     public void postConstruct() {
+        SearchProperties searchProperties = ftsServerConfigService.getLocalFtsProperties().getSearch();
+        boolean workForIndex = searchProperties != null && searchProperties.getEnabled() && searchProperties.getMode() == SearchMode.INDEXED;
+        FileMonitorThread.constructOnce(this, ftsServerConfigService, workForIndex);
+        FileMonitorThread.getInstance().start();
         listTableComparatorMap.put(ListTableColumn.FILENAME, (fm1, fm2) ->
                 CHINESE_COLLATOR.compare(fm1.getFileName(), fm2.getFileName()));
         listTableComparatorMap.put(ListTableColumn.TYPE, (fm1, fm2) -> {
@@ -1473,6 +1520,13 @@ public class FtsService {
                 Comparator.comparing(FolderCompressDTO::getCompressFinishTime));
         compressManagementComparatorMap.put(CompressManagementColumn.COMPRESS_COST_TIME,
                 Comparator.comparing(FolderCompressDTO::getCompressCostTime));
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        if(FileMonitorThread.constructed()) {
+            FileMonitorThread.getInstance().tryStop();
+        }
     }
 
     public int compareCompressedFileSize(CompressedColumns cc1, CompressedColumns cc2) {
