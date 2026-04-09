@@ -1,5 +1,7 @@
 package com.adam.localfts.webserver.common;
 
+import com.adam.localfts.webserver.util.Util;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -12,8 +14,24 @@ public class Constants {
     public static final Pattern PATTERN_PATH_LINUX_MACOS_ABSOLUTE = Pattern.compile("/|(/[^/]+)+?");
     public static final Pattern PATTERN_PATH_WINDOWS_RELATIVE = Pattern.compile("[^\\\\]+(\\\\[^\\\\/:*?\"<>|]+)*?");
     public static final Pattern PATTERN_PATH_LINUX_MACOS_RELATIVE = Pattern.compile("[^/]+(/[^/]+)*?");
+    public static final Pattern PATTERN_PATH_WINDOWS_STANDARD_RELATIVE = Pattern.compile("/|(/[^\\\\/:*?\"<>|]+)+?");
+    public static final Pattern PATTERN_PATH_LINUX_MACOS_STANDARD_RELATIVE = Pattern.compile("/|(/[^/]+)+?");
+    public static final Pattern PATTERN_FILE_SUFFIX_WINDOWS = Pattern.compile("(\\.[^\\\\/:*?\"<>|]+)+");
+    public static final Pattern PATTERN_FILE_SUFFIX_LINUX_MACOS = Pattern.compile("(\\.[^/]+)+");
     public static final String ROOT_PATH_DEFAULT_WINDOWS = "C:";
     public static final String ROOT_PATH_DEFAULT_LINUX_MACOS = "/home";
+    public static final int RUNTIME_AVAILABLE_PROCESSORS = Util.getAvailableProcessors();
+    public static final int PHYSICAL_AVAILABLE_PROCESSORS = Util.getPhysicalProcessors();
+    public static final Pattern PATTERN_ACTIVE_TASK_THRESHOLD = Pattern.compile("(0|[1-9][0-9]*)(\\.[0-9]*[1-9]+p)?");
+    public static final String[] READABLE_FILE_EXTS = {".doc", ".docx", ".pdf", ".xls", ".xlsx", ".ppt", ".pptx",
+            ".txt", ".md", ".csv", ".xml", ".log", ".lrc", ".svg", ".bat", ".sh", ".class", ".html", ".htm", ".css", ".js",
+            ".min.js", ".php", ".java", ".py", ".sql", ".yml", ".json"
+    };
+    public static final List<String> READABLE_FILE_EXTS_LIST = Arrays.asList(READABLE_FILE_EXTS);
+    public static final String[] PLAIN_READABLE_FILE_EXTS = {".txt", ".md", ".csv", ".xml", ".log", ".lrc", ".svg", ".bat", ".sh", ".html", ".htm", ".css", ".js", ".min.js",
+            ".php", ".java", ".py", ".sql", ".yml", ".json"};
+    public static final String ROOT_PATH_COMPRESSED_FILE_NAME = "根路径.zip";
+    public static final String DEFAULT_FILE_NAME_PREFIX_FOR_NO_NAME_FILE = "未命名";
 
     public static final String CRLF = "\r\n";
     public static final String CR = "\r";
@@ -23,6 +41,8 @@ public class Constants {
     public static final String DATE_FORMAT_FILE_STANDARD = "yyyy-MM-dd HH:mm:ss";
     public static final String FILE_INVALID_CHARACTER_WINDOWS = "\\ / : * ? \" < > |";
     public static final String FILE_INVALID_CHARACTER_LINUX_MACOS = "/";
+
+    public static final String SYSTEM_WORKING_DIR = Util.getWorkingDir();
 
     public static final String FOLDER_DELETE_ON_EXIT_HINT_FILE_NAME = "【删除文件夹提示】此文件夹将在局域网文件传输服务器应用(pid-${pid})退出后删除，请及时保存重要文件！";
     public static final String FOLDER_DELETE_ON_EXIT_HINT_FILE_CONTENT = "【删除文件夹提示】此文件夹将在局域网文件传输服务器应用(pid-${pid})退出后删除，请及时保存重要文件！" + System.lineSeparator()

@@ -5,41 +5,42 @@ import org.apache.catalina.connector.Connector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.context.WebServerInitializedEvent;
 import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
-import org.springframework.boot.web.server.WebServer;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Component
 public class ShutdownListener implements ApplicationListener<ContextClosedEvent> {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private WebServer webServer;
     @Autowired
     private FtsService ftsService;
+    @Autowired
+    private WebServerStartListener webServerStartListener;
+    @Autowired
+    private ThreadPoolExecutor searchThreadPool;
 
-    @EventListener
-    public void setWebServer(WebServerInitializedEvent event) {
-        this.webServer = event.getWebServer();
-        logger.debug("Injected WebServer {}", this.webServer);
-    }
+    private boolean shuttingDown;
 
-    public WebServer getWebServer() {
-        return webServer;
+    public boolean isShuttingDown() {
+        return shuttingDown;
     }
 
     @Override
     public void onApplicationEvent(ContextClosedEvent event) {
-        if(webServer != null) {
-            logger.debug("Preparing shutdown");
-            TomcatWebServer tomcatWebServer = (TomcatWebServer) webServer;
+        this.shuttingDown = true;
+
+        logger.debug("Preparing force shutdown searchThreadPool={}", searchThreadPool);
+        searchThreadPool.shutdownNow();
+
+        if(webServerStartListener.isWebServerStarted()) {
+            TomcatWebServer tomcatWebServer = (TomcatWebServer) webServerStartListener.getWebServer();
             for (Connector connector : tomcatWebServer.getTomcat().getService().findConnectors()) {
                 Executor executor = connector.getProtocolHandler().getExecutor();
                 if (executor instanceof ExecutorService) {

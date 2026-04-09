@@ -21,6 +21,21 @@ public class PageObject<T> {
     protected int totalSize;
     protected List<T> data;
 
+    public PageObject(int pageNo, int pageSize, int totalSize, List<T> data) {
+        this.currentPage = pageNo;
+        this.pageSize = pageSize;
+        this.totalSize = totalSize;
+        this.totalPage = totalSize / pageSize + (totalSize % pageSize > 0 ? 1 : 0);
+        if(pageNo > totalPage) {
+            this.currentSize = 0;
+            this.data = null;
+            return;
+        }
+        int actualPageSize = pageNo == totalPage ? (totalSize - pageSize * (pageNo - 1)) : pageSize;
+        this.currentSize = actualPageSize;
+        this.data = data;
+    }
+
     public PageObject(int pageNo, int pageSize, List<T> allData) {
         this.currentPage = pageNo;
         this.pageSize = pageSize;

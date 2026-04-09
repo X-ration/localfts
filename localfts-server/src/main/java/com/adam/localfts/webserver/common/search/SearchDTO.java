@@ -1,0 +1,28 @@
+package com.adam.localfts.webserver.common.search;
+
+import com.adam.localfts.webserver.common.compress.CompressedColumns;
+import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class SearchDTO implements CompressedColumns {
+    private long id;
+    private String filename;
+    private String filenameFormatted;
+    private String parentRelativePath;
+    private String fileContent;
+    private String fileEncoding;
+    private Boolean directory;
+    private long fileSize;
+    private String fileSizeStr;
+    private long lastModified;
+    private String lastModifiedStr;
+    private FolderCompressStatus compressStatus;
+    private Long compressedFileSize;
+    private String compressedFileSizeStr;
+    private Long compressedFileLastModified;
+    private String compressedFileLastModifiedStr;
+    private String compressedFilePath;
+}

@@ -4,8 +4,9 @@
 适用于网页版客户端的文件传输服务器。
 
 测试用浏览器：
-- win10/11 Edge/Chrome
+- win11 Edge/Chrome
 - ubuntu18.04/22.04 Firefox
+- MacOS Big Sur Edge
 - win7 IE9、世界之窗浏览器5、qq浏览器、360安全浏览器、Opera浏览器
 - winxp IE6、世界之窗浏览器5、qq浏览器、360安全浏览器
 - 安卓/iPadOS浏览器
@@ -24,6 +25,45 @@
 注：路径带空格时需要用双引号包裹，如`java
 -jar localfts-server-1.1.0.jar --localfts.root_path="C:\Documents and Settings\Administrator\My Documents"`
 
+限制堆内存占用：
+`java -jar localfts-server-1.2.0.jar -Xms128m -Xmx512m`
+
+## v1.2.0
+### 功能更新
+* 自定义控制台Banner
+* 支持文件搜索，包括简单搜索和高级搜索，直接搜索和索引搜索（Lucene）。
+  ![localfts-server-1.2.0-search.png](readme/localfts-server-1.2.0-search.png)
+* 支持控制隐藏文件的显示(`localfts.show-hidden`控制)，包括列表页
+### 优化 & 修复
+* 每次请求都会对根路径检查；当压缩功能开关开启时也会对压缩文件存储路径检查。当检查不通过时会抛出异常。
+* 对通过XMLHttpRequest发送的请求，添加请求头以在出现异常时给出JSON响应
+* 修复了对压缩文件存储路径配置的检查问题
+* ErrorController对Controller参数绑定可能抛出的BindException、MethodArgumentTypeMismatchException进行特别的处理，简化输出、不展示调用堆栈
+* XHR请求支持处理网络异常、异步接口超时的情况
+* 优化修复了对根路径的压缩处理，根路径压缩文件名：根路径.zip。
+* 优化修复了无名文件（文件名以.开头）的下载文件名设置，由于浏览器可能将.截断，因此在.前面加上"未命名"三个字。
+* 修复了日志文件编码问题，强制使用UTF-8
+### 提示
+* 当服务停止时，部分XHR请求调用在IE6/9中会提示状态码12029，代表连接服务器失败。在其他浏览器中一般会捕捉到网络连接错误并直接提示连接服务器失败。
+* 文件索引提示1：如果不限制堆内存占用，读取大文件时可能会向系统申请较多的内存，例如读取一个300MB的日志文件就可能申请数GB的内存，且JVM不会主动释放多余的内存。如果介意可以在启动参数中限制堆内存占用如`java -jar localfts-server-1.2.0.jar -Xms128m -Xmx512m`。
+* 文件索引提示2：应用读取pdf,doc(x),ppt(x),xls(x)等文件会严格遵循原排版格式，对于一个句子有很多行的情况，应用读取时会保留换行符。也就是说如果使用跨越换行符的短语作为关键词进行搜索是搜索不到文件的。支持索引文件内容的文件格式定义在Constants类中：
+  ```java
+  public static final String[] READABLE_FILE_EXTS = {".doc", ".docx", ".pdf", ".xls", ".xlsx", ".ppt", ".pptx",
+            ".txt", ".md", ".csv", ".xml", ".log", ".svg", ".bat", ".sh", ".class", ".html", ".htm", ".css", ".js",
+            ".min.js", ".php", ".java", ".py", ".sql", ".yml"
+  };
+  ```
+* 文件索引提示3：实测中性能的笔记本在控制堆内存最大为512MB时，索引一个1GB+的文件夹，其中有20+个pdf文件索引时间约为130s；索引一个170MB的文件夹，其中需要索引1200个代码文件和600个文件夹，索引时间约为65s；索引一个37M的文件夹，其中有27个各种类型的可读取文件内容的文件，索引时间约为13s。
+* 文件索引提示4：读取pdf文件内容时可能会报错：
+  ```log
+  o.a.pdfbox.pdmodel.font.FileSystemFontProvider - Could not load font file: C:\WINDOWS\FONTS\mstmc.ttf
+  java.io.EOFException: null
+      ...(StackTrace)
+  ```
+  可以尝试删除C:\WINDOWS\FONTS\mstmc.ttf文件（建议备份）再重新启动应用。
+* 文件搜索提示1：在Windows/MacOS系统中，文件后缀名不区分大小写；在Linux中区分大小写。本项目对于文件后缀的过滤做了相应处理，当服务在Linux启动时，搜索页面会增加一个后缀名区分大小写的复选框。
+* 文件搜索提示2：建议搜索关键字不使用英文特殊字符。在直接搜索(`localfts.search.mode=PLAIN`)的情况下，根据操作系统的不同会有不同的禁止字符，搜索时会检查；在索引搜索(`localfts.search.mode=INDEXED`)的情况下，虽然可以提交搜索，服务端也会对特殊字符做转义，但是几乎不参与匹配。
+
 ## v1.1.1
 ### 功能更新
 * 列表页/压缩管理/全局压缩管理页面增加展示压缩文件大小、修改时间
@@ -31,9 +71,10 @@
   ![localfts-server-1.1.1-compress-page.png](readme/localfts-server-1.1.1-compress-page.png)
 * 支持列表页、全局压缩管理页面的排序
   ![localfts-server-1.1.1-list-page.png](readme/localfts-server-1.1.1-list-page.png)
+  全局压缩管理页面
+  ![localfts-server-1.1.1-global-cm-page.png](readme/localfts-server-1.1.1-global-cm-page.png)
   禁用压缩功能时的列表页
   ![localfts-server-1.1.1-list-page-zip-disabled.png](readme/localfts-server-1.1.1-list-page-zip-disabled.png)
-  ![localfts-server-1.1.1-global-cm-page.png](readme/localfts-server-1.1.1-global-cm-page.png)
 * 在受支持的浏览器中支持多文件上传
   ![localfts-server-1.1.1-upload-multiple.png](readme/localfts-server-1.1.1-upload-multiple.png)
 * 支持创建文件夹（功能由`localfts.mkdir.enabled`控制）。文件夹名称长度不得超过200，文件夹全路径名长度不得超过240。
@@ -43,7 +84,7 @@
 * 当压缩开关、应用退出时删除压缩文件路径开关开启时，应用启动创建压缩文件夹时自动创建文本文件提示用户退出应用时删除
 * 优化了压缩状态获取条件，不再限制文件夹存在（不存在的文件夹如果进行过压缩也会在压缩页面保留展示，但会给出提示）
 * 修复getElementsByName方法
-* 当根路径不存在时，默认设置根路径为用户主文件夹
+* 当根路径不存在或格式不对时，默认设置根路径为用户主文件夹
 - Windows 11
 
   Root path 'null' does not match rules, changed to default 'C:\Users\Adam'
@@ -80,7 +121,7 @@
 * 配置压缩功能开关(`localfts.zip.enabled`控制)
 * 配置压缩文件存储路径(`localfts.zip.path`控制)
 * 当应用关闭时自动清理压缩文件所在文件夹(`localfts.zip.delete_on_exit`控制)
-* 支持在压缩文件夹前检查文件夹大小是否小于指定值(`localfts.zip.max-folder-size`控制)，若小于则不进行压缩（存在性能问题）
+* 支持在压缩文件夹前检查文件夹大小是否达到指定值(`localfts.zip.max-folder-size`控制)，若达到则不进行压缩（检查操作可能耗时较长）
 * 后台压缩开关(`localfts.zip.background-enabled`控制)，开启时：允许在退出压缩页面后继续压缩操作，更消耗服务器性能
 * 对伪支持上传文件夹的浏览器进行提示(`localfts.upload.directory.pseudo-ua-contains`控制)
 * 对不触发页面卸载事件的浏览器进行提示(`localfts.pseudo-unload-ua-contains`控制)
@@ -93,7 +134,6 @@
 * 下载文件当文件不存在时跳转到错误页面并展示404状态码
 * 支持在退出压缩页面时取消压缩操作，释放服务器资源
 * 压缩文件下载链接展示压缩文件大小
-* 限制压缩文件存储文件夹的压缩功能
 * 添加压缩压缩文件存储路径的特别处理
 * 优化对压缩文件存储路径的清理逻辑，当清理开关开启时所有创建的文件夹都会被清理
 ###  已知问题
@@ -104,7 +144,7 @@
 * Ubuntu系统使用归档管理器打开zip文件时空文件夹会被隐藏看不到，这是归档管理器的设计使然，但用unzip -l命令可以看到大小为0的空文件夹。
 
 ## v1.0.5 代码优化：
-- 将所有配置整理到Properties类中，向控制台输出信息的方法整理到Service类中：[LocalFtsProperties.java](src/main/java/com/adam/localfts/webserver/config/localfts/LocalFtsProperties.java),[FtsServerConfigService.java](src/main/java/com/adam/localfts/webserver/service/FtsServerConfigService.java)
+- 将所有配置整理到Properties类中，向控制台输出信息的方法整理到Service类中：[LocalFtsProperties.java](src/main/java/com/adam/localfts/webserver/config/properties/LocalFtsProperties.java),[FtsServerConfigService.java](src/main/java/com/adam/localfts/webserver/service/FtsServerConfigService.java)
 - 预留替换Spring Boot jar包中application.yml的方法
 
 ## v1.0.4 问题修复 & 功能更新：

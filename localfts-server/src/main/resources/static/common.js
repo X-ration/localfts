@@ -8,6 +8,23 @@ if (!String.prototype.startsWith) {
     };
 }
 
+if (!String.prototype.endsWith) {
+    String.prototype.endsWith = function(search, pos) {
+        pos = !pos || pos < 0 || isNaN(+pos) ? this.length : Math.min(+pos, this.length);
+        var startPos = Math.max(pos - search.length, 0);
+        return this.substr(startPos, search.length) === search;
+    };
+}
+
+/**
+    兼容IE6的字符串trim方法
+*/
+if (!String.prototype.trim) {
+    String.prototype.trim = function() {
+        return this.replace(/^\s+|\s+$/g, '');
+    };
+}
+
 /**
     兼容IE6的数组indexOf方法
 */
@@ -42,15 +59,237 @@ if (!Array.prototype.indexOf) {
     };
 }
 
-function setClass(id, cn) {
+var callUnloadCount = 0;
+function bindUnloadFunctionUrlEncoded(path,paramObject,condFunc) {
+    if(!path) {
+        return;
+    }
+    var paramStr = convertToUrlEncodedDataStr(paramObject);
+    var func = function(e) {
+        //确保只调用一次
+        if(callUnloadCount++ > 0) {
+            return;
+        }
+        if(condFunc && !condFunc()) {
+            return;
+        }
+        if (navigator.sendBeacon) {
+            if(paramStr) {
+                var blob = new Blob([paramStr], {type: 'application/x-www-form-urlencoded'});
+                navigator.sendBeacon(path, blob);
+            } else {
+                navigator.sendBeacon(path);
+            }
+        } else {
+            var data = paramStr ? paramStr : null;
+            sendPostFormRequest(path, data, false, function (xhr) {});
+        }
+        var start = new Date().getTime();
+        while (new Date().getTime() - start < 100) {
+            // 循环 100 毫秒，确保请求完成
+        }
+    };
+    // 监听页面关闭事件
+    if (typeof window.addEventListener !== "undefined") {
+        window.addEventListener('beforeunload', func);
+    } else {
+        window.attachEvent('onbeforeunload', func);
+    }
+}
+
+function escapeHtml(str) {
+    if(!str) {
+        return null;
+    }
+    var tempDiv = document.createElement('div');
+    tempDiv.innerText = str;
+    return tempDiv.innerHTML;
+}
+
+function convertToUrlEncodedDataStr(paramObject) {
+    if(!paramObject) {
+        return null;
+    }
+    var result = '';
+    for(var key in paramObject) {
+        if(paramObject.hasOwnProperty(key)) {
+            result = result + '&' + key + '=' + paramObject[key];
+        }
+    }
+    if(result === '') {
+        return null;
+    } else {
+        return result.substring(1);
+    }
+}
+
+function bindEventListener(element,eventName,func) {
+    if(element === undefined || eventName == undefined || func === undefined) {
+        return false;
+    }
+    if(element.addEventListener) {
+        element.addEventListener(eventName, func);
+        return true;
+    } else if(element.attachEvent) {
+        element.attachEvent('on' + eventName, func);
+        return true;
+    } else {
+        if(window.console) {
+            console.error('Cannot bind event listener,eventName:',eventName,',element:',element);
+        }
+        return false;
+    }
+}
+
+function stopPropagationFunction(e, func) {
+    e = e || window.event;
+    if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 9) {
+        e.cancelBubble = true;
+    } else {
+        e.stopPropagation();
+    }
+    if(func) {
+        func(e);
+    }
+}
+
+function isOptionSelected(option) {
+    if(!option) {
+        return;
+    }
+    if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 7) {
+        return option.getAttribute("selected");
+    } else {
+        return option.selected;
+    }
+}
+
+function selectOption(select,value,isValue) {
+    if(select === undefined || value === undefined) {
+        return;
+    }
+    if(isValue === undefined) {
+        isValue = true;
+    }
+    var options = select.children;
+    for(var i=0;i<options.length;i++) {
+        var option = options[i];
+        var shouldSelect = (isValue && option.value === value) || (!isValue && option.innerText === value);
+        if(shouldSelect) {
+            if(GLOBAL_IE_VERSION && GLOBAL_IE_VERSION < 7) {
+                option.setAttribute("selected", "selected");
+            } else {
+                option.selected = true;
+            }
+            break;
+        }
+    }
+}
+
+function isElementShowById(id) {
+    var element = document.getElementById(id);
+    if(!element) {
+        return false;
+    }
+    return element.style.display !== 'none';
+}
+
+function getSelectedOptionValue(select,isValue) {
+    if(select === undefined) {
+        return;
+    }
+    if(isValue === undefined) {
+        isValue = true;
+    }
+    var options = select.children;
+    for(var i=0;i<options.length;i++) {
+        var option = options[i];
+        if(option.selected) {
+            return isValue ? option.value : option.innerText;
+        }
+    }
+    return null;
+}
+
+function clearChildrenById(elementId) {
+    clearChildren(document.getElementById(elementId));
+}
+
+function clearChildren(element) {
+    if(element) {
+        var children = element.children;
+        if(children) {
+            for(var i=0;i<children.length;i++) {
+                element.removeChild(children[i]);
+            }
+        }
+        element.innerText = '';
+    }
+}
+
+function getElementsByName(tagName, name) {
+    if(!tagName || !name) {
+        return;
+    }
+    if(document.getElementsByName) {
+        return document.getElementsByName(name);
+    }
+    //for IE, not supporting document.getElementsByName
+    var collection = document.getElementsByTagName(tagName);
+    var result = [];
+    if(collection) {
+        for(var i=0;i<collection.length;i++) {
+            if(collection[i].name === name) {
+                result[result.length] = collection[i];
+            }
+        }
+    }
+    return result;
+}
+
+function getElementChecked(element) {
+    //兼容IE6-8传入this的情况
+    if(element === window) {
+        if(window.event) {
+            element = window.event.srcElement;
+        }
+    }
+    if(!element) {
+        return false;
+    }
+    var checked = element.checked;
+    if(checked) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function getCheckedValue(name) {
+    var elements = getElementsByName('input', name);
+    for(var i=0;i<elements.length;i++) {
+        var element = elements[i];
+        if(element.checked) {
+            return element.value;
+        }
+    }
+    return null;
+}
+
+function setClassById(id, cn) {
     //deal with IE
     var element = document.getElementById(id);
+    setClass(element, cn);
+}
+
+function setClass(element, cn) {
     if(element) {
-        if(!element.getAttribute("class")) {
+        /*if(!element.getAttribute("class")) {
             element.setAttribute('className', cn);
         } else {
             element.setAttribute('class', cn);
-        }
+        }*/
+        element.className = cn;
     }
 }
 
@@ -71,6 +310,8 @@ function isIE6() {
         return false;
     }
 }
+
+var GLOBAL_IE_VERSION = getIEVersion();
 
 function getIEVersion() {
   var userAgent = navigator.userAgent.toLowerCase();
@@ -140,6 +381,57 @@ function formatTime(date, format) {
     return format;
 }
 
+var supported_date_time_formats = ['yyyy-MM-dd', 'yyyy-MM-dd HH:mm:ss'];
+function isValidDateTime(str,format) {
+    if (typeof str !== 'string') {
+        return false;
+    }
+    format = format || 'yyyy-MM-dd HH:mm:ss';
+    if (supported_date_time_formats.indexOf(format) === -1) {
+        if(window.console) {
+            console.error("Invalid format:" + format);
+        }
+        return false;
+    }
+    var regObject = {};
+    regObject['yyyy-MM-dd'] = /^(\d{4})-(\d{2})-(\d{2})$/;
+    regObject['yyyy-MM-dd HH:mm:ss'] = /^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2}):(\d{2})$/;
+    var trimStr = str.replace(/^\s+|\s+$/g, '');
+    if (trimStr.length === 0) {
+        return false;
+    }
+    var reg = regObject[format];
+    var matchResult = trimStr.match(reg);
+    if (!matchResult) {
+        return false;
+    }
+    var year = parseInt(matchResult[1], 10);
+    var month = parseInt(matchResult[2], 10);
+    var day = parseInt(matchResult[3], 10);
+    var hour = matchResult[4] ? parseInt(matchResult[4], 10) : 0;
+    var minute = matchResult[5] ? parseInt(matchResult[5], 10) : 0;
+    var second = matchResult[6] ? parseInt(matchResult[6], 10) : 0;
+
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second <0 || second >59) {
+        return false;
+    }
+
+    var dateStr = trimStr.replace(/-/g, '/');
+    var dateObj = new Date(dateStr);
+    if (
+        dateObj.getFullYear() !== year ||
+        dateObj.getMonth() + 1 !== month ||
+        dateObj.getDate() !== day ||
+        dateObj.getHours() !== hour ||
+        dateObj.getMinutes() !== minute ||
+        dateObj.getSeconds() !== second
+    ) {
+        return false;
+    }
+
+    return true;
+}
+
 function updateTitle(id, text, color) {
     var element = document.getElementById(id);
     if(element) {
@@ -150,6 +442,107 @@ function updateTitle(id, text, color) {
         } else {
             element.style.color = 'black';
         }
+    }
+}
+
+function hideElementById(id) {
+    if(!id) {
+        return;
+    }
+    var element = document.getElementById(id);
+    hideElement(element);
+}
+
+function hideElement(element) {
+    if(!element) {
+        return;
+    }
+    element.style.display = 'none';
+}
+
+function showElementById(id) {
+    if(!id) {
+        return;
+    }
+    var element = document.getElementById(id);
+    showElement(element);
+}
+
+function showElement(element) {
+    if(!element) {
+        return;
+    }
+    element.style.display = '';
+}
+
+function updateMsg(id, text, color) {
+    var element = document.getElementById(id);
+    if(element) {
+        element.innerText = text;
+        element.style.display = '';
+        if(color !== undefined) {
+            element.style.color = color;
+        } else {
+            element.style.color = 'black';
+        }
+    }
+}
+
+function formatDateDateStr(date) {
+    if(!date) {
+        return '';
+    }
+    var year = date.getFullYear();
+    var month = date.getMonth() + 1;
+    month = (month < 10 ? '0': '') + month;
+    var day = (date.getDate() < 10 ? '0' : '') + date.getDate();
+    return year + '-' + month + '-' + day;
+}
+
+function formatDateTimeStr(date) {
+    if(!date) {
+        return '';
+    }
+    var hour = (date.getHours() < 10 ? '0' : '') + date.getHours();
+    var minute = (date.getMinutes() < 10 ? '0' : '') + date.getMinutes();
+    var second = (date.getSeconds() < 10 ? '0' : '') + date.getSeconds();
+    return hour + ':' + minute + ':' + second;
+}
+
+function formatTimeInputTimeStr(input) {
+    if(!input) {
+        return '';
+    }
+    var value = input.value;
+    if(value === '') {
+        return '';
+    }
+    if(value.split(':').length === 2) {
+        var date = input.valueAsDate;
+        var second = (date.getSeconds() < 10 ? '0' : '') + date.getSeconds();
+        value = value + ':' + second;
+    }
+    return value;
+}
+
+function formatDateFullStr(date) {
+    return formatDateDateStr(date) + ' ' + formatDateTimeStr(date);
+}
+
+function isDateAndTimeInputSupported() {
+    var div = document.createElement('div');
+    div.innerHTML = '<input type="date"><input type="time">';
+    var input1 = div.children[0], input2 = div.children[1];
+    var supportDate = input1.type !== 'text',
+        supportTime = input2.type !== 'text';
+    return supportDate && supportTime;
+}
+
+function removeElementById(id,parentId) {
+    var element = document.getElementById(id);
+    var parentElement = document.getElementById(parentId);
+    if(element && parentElement) {
+        parentElement.removeChild(element);
     }
 }
 

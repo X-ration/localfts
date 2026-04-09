@@ -1,6 +1,6 @@
 package com.adam.localfts.webserver;
 
-import com.adam.localfts.webserver.config.localfts.LocalFtsProperties;
+import com.adam.localfts.webserver.config.properties.LocalFtsProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;

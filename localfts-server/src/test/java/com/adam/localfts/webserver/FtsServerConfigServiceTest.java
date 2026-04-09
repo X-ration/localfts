@@ -1,6 +1,6 @@
 package com.adam.localfts.webserver;
 
-import com.adam.localfts.webserver.config.localfts.TestLanguageText;
+import com.adam.localfts.webserver.config.common.TestLanguageText;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 

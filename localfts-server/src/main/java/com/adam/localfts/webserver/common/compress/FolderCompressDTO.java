@@ -19,9 +19,9 @@ public class FolderCompressDTO implements CompressedColumns{
      * 文件夹压缩后的压缩文件相对路径
      */
     private String compressedFilePath;
-    private long compressedFileSize;
+    private Long compressedFileSize;
     private String compressedFileSizeStr;
-    private long compressedFileLastModified;
+    private Long compressedFileLastModified;
     private String compressedFileLastModifiedStr;
     private long compressStartTime;
     private String compressStartTimeStr;

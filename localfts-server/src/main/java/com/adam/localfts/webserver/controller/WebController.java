@@ -5,9 +5,14 @@ import com.adam.localfts.webserver.common.compress.CompressManagementPageModel;
 import com.adam.localfts.webserver.common.compress.FolderCompressDTO;
 import com.adam.localfts.webserver.common.compress.FolderCompressInfo;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
+import com.adam.localfts.webserver.common.search.*;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
+import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
+import com.adam.localfts.webserver.component.ShutdownListener;
+import com.adam.localfts.webserver.config.properties.IndexFileContentProperties;
+import com.adam.localfts.webserver.service.FtsSearchService;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
 import com.adam.localfts.webserver.service.FtsService;
 import com.adam.localfts.webserver.util.Util;
@@ -23,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriUtils;
+import org.thymeleaf.util.StringUtils;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -31,6 +37,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("")
@@ -40,6 +47,10 @@ public class WebController {
     private FtsService ftsService;
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
+    @Autowired
+    private FtsSearchService ftsSearchService;
+    @Autowired
+    private ShutdownListener shutdownListener;
 
     private final static Logger LOGGER = LoggerFactory.getLogger(WebController.class);
 
@@ -56,7 +67,13 @@ public class WebController {
                        @RequestParam(required = false) SortOrder sortOrder
                        ) {
         model.addAttribute("currentPath", relativePath);
-        boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        boolean directoryExists;
+        if(!showHidden) {
+            directoryExists = ftsService.checkDirectoryExistsNoHidden(relativePath, false);
+        } else {
+            directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        }
         model.addAttribute("directoryExists", directoryExists);
         boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
         model.addAttribute("zipEnabled", zipEnabled);
@@ -66,7 +83,7 @@ public class WebController {
         if(pageSize <= 0) {
             pageSize = 20;
         }
-        if(!zipEnabled && (sortColumn == ListTableColumn.COMPRESS_STATUS || sortColumn == ListTableColumn.COMPRESS_FILE_LAST_MODIFIED)) {
+        if(!zipEnabled && ListTableColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
             sortColumn = null;
         }
         if(sortColumn != null && sortOrder == null) {
@@ -89,6 +106,33 @@ public class WebController {
         return "list";
     }
 
+    @PostMapping("/listSubDirectory")
+    @ResponseBody
+    public ReturnObject<FtsSubDirectoryModel> listSubDirectory(@RequestParam(name = "path") String relativePath,
+                                                               @RequestParam(required = false, defaultValue = "true") boolean fromRoot
+    ) {
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        boolean directoryExists;
+        if(showHidden) {
+            directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        } else {
+            directoryExists = ftsService.checkDirectoryExistsNoHidden(relativePath, false);
+        }
+        if(!directoryExists) {
+            return ReturnObject.fail("该路径不存在");
+        }
+        return ftsService.getSubDirectoryModel(relativePath, fromRoot, showHidden);
+    }
+
+    @PostMapping("/checkPathExists")
+    @ResponseBody
+    public ReturnObject<Map<String, Boolean>> checkPathExists(@RequestParam(name = "paths") String[] relativePaths) {
+        if(relativePaths == null || relativePaths.length == 0) {
+            return ReturnObject.fail("请求参数未传入");
+        }
+        return ftsService.checkPathExists(relativePaths);
+    }
+
     /**
      * 全局压缩管理页面
      * @param model
@@ -100,10 +144,6 @@ public class WebController {
                                      @RequestParam(required = false) CompressManagementColumn sortColumn,
                                      @RequestParam(required = false) SortOrder sortOrder,
                                      Model model) {
-        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
-        if(!zipEnabled) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
         if(pageNo <= 0) {
             pageNo = 1;
         }
@@ -136,13 +176,28 @@ public class WebController {
      */
     @GetMapping("/compressFolder")
     public String compressFolder(@RequestParam(value = "path") String relativePath, @RequestHeader(required = false, value = "User-Agent")String userAgent, Model model) {
-        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
-        if(!zipEnabled) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        boolean directoryExists;
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        if(showHidden) {
+            directoryExists = ftsService.checkDirectoryExists(relativePath, false);
+        } else {
+            directoryExists = ftsService.checkDirectoryExistsNoHidden(relativePath, false);
         }
-        boolean directoryExists = ftsService.checkDirectoryExists(relativePath, false);
         model.addAttribute("directoryExists", directoryExists);
         model.addAttribute("currentPath", relativePath);
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
+        String serverTime = Util.getServerTimeFormattedString();
+        model.addAttribute("serverTime", serverTime);
+        boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
+        model.addAttribute("needSizeCheck", needSizeCheck);
+        Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
+        model.addAttribute("backgroundEnabled", backgroundEnabled);
+        boolean pseudoUnload = ftsService.isPseudoUnload(userAgent);
+        model.addAttribute("pseudoUnload", pseudoUnload);
+        if(!showHidden && !directoryExists) {
+            return "compress_folder";
+        }
         FolderCompressStatus compressStatus = ftsService.getFolderCompressStatus(relativePath, false);
         model.addAttribute("compressStatus", compressStatus.name());
 
@@ -155,8 +210,10 @@ public class WebController {
         model.addAttribute("lastModified", lastModifiedStr);
         if(compressStatus == FolderCompressStatus.COMPRESSING || compressStatus == FolderCompressStatus.COMPRESSED) {
             long compressStartTime = folderCompressInfo.getCompressStartTime();
-            String compressStartTimeStr = simpleDateFormat.format(new Date(compressStartTime));
-            model.addAttribute("compressStartTime", compressStartTimeStr);
+            if(compressStartTime != -1L) {
+                String compressStartTimeStr = simpleDateFormat.format(new Date(compressStartTime));
+                model.addAttribute("compressStartTime", compressStartTimeStr);
+            }
         }
         if(compressStatus == FolderCompressStatus.COMPRESSED) {
             model.addAttribute("compressedFilePath", folderCompressInfo.getZipFileRelativePath());
@@ -166,22 +223,14 @@ public class WebController {
             String compressedFileLastModified = simpleDateFormat.format(new Date(folderCompressInfo.getCompressedFileLastModified()));
             model.addAttribute("compressedFileLastModified", compressedFileLastModified);
             long compressFinishTime = folderCompressInfo.getCompressFinishTime();
-            String compressFinishTimeStr = simpleDateFormat.format(new Date(compressFinishTime));
-            model.addAttribute("compressFinishTime", compressFinishTimeStr);
+            if(compressFinishTime != -1L) {
+                String compressFinishTimeStr = simpleDateFormat.format(new Date(compressFinishTime));
+                model.addAttribute("compressFinishTime", compressFinishTimeStr);
+            }
             long compressCostTime = compressFinishTime - folderCompressInfo.getCompressStartTime();
             String compressCostTimeStr = Util.formatCostTime(compressCostTime);
             model.addAttribute("compressCostTime", compressCostTimeStr);
         }
-        boolean needSizeCheck = ftsServerConfigService.getLocalFtsProperties().getZip().getMaxFolderSize() != null;
-        model.addAttribute("needSizeCheck", needSizeCheck);
-        Boolean backgroundEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getBackgroundEnabled();
-        model.addAttribute("backgroundEnabled", backgroundEnabled);
-        boolean pseudoUnload = ftsService.isPseudoUnload(userAgent);
-        model.addAttribute("pseudoUnload", pseudoUnload);
-        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
-        model.addAttribute("serverIpInfo", serverIpInfoModel);
-        String serverTime = Util.getServerTimeFormattedString();
-        model.addAttribute("serverTime", serverTime);
         return "compress_folder";
     }
 
@@ -197,10 +246,6 @@ public class WebController {
     @PostMapping("/compressFolder")
     @ResponseBody
     public ReturnObject<FolderCompressDTO> compressFolder(@RequestParam(value = "path") String relativePath) {
-        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
-        if(!zipEnabled) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
         try {
             return ftsService.compressFolder(relativePath);
@@ -213,10 +258,6 @@ public class WebController {
     @PostMapping("/cancelCompress")
     @ResponseBody
     public ReturnObject<Void> cancelCompress(@RequestParam(value = "path") String relativePath) {
-        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
-        if(!zipEnabled) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
         return ftsService.cancelCompress(relativePath);
     }
@@ -224,10 +265,6 @@ public class WebController {
     @PostMapping("/deleteCompressFile")
     @ResponseBody
     public ReturnObject<Void> deleteCompressFile(@RequestParam(value = "path") String relativePath) {
-        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
-        if(!zipEnabled) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
         Assert.isTrue(null != relativePath && !"".equals(relativePath), "非法请求参数");
         return ftsService.deleteCompressFile(relativePath);
     }
@@ -247,7 +284,13 @@ public class WebController {
     @GetMapping("/uploadFile")
     public String uploadFile(Model model, @RequestParam String dirName, @RequestHeader(required = false, value = "User-Agent")String userAgent) {
         Assert.isTrue(null != dirName && dirName.startsWith("/"), "非法请求参数");
-        boolean directoryExists = ftsService.checkDirectoryExists(dirName, false);
+        boolean showHidden = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
+        boolean directoryExists;
+        if(showHidden) {
+            directoryExists = ftsService.checkDirectoryExists(dirName, false);
+        } else {
+            directoryExists = ftsService.checkDirectoryExistsNoHidden(dirName, false);
+        }
         model.addAttribute("directoryExists", directoryExists);
         boolean pseudoDirectoryUpload = ftsService.isPseudoDirectoryUpload(userAgent);
         model.addAttribute("pseudoDirectoryUpload", pseudoDirectoryUpload);
@@ -290,5 +333,160 @@ public class WebController {
         ReturnObject<List<ReturnObject<String>>> returnObject = ftsService.uploadFiles(dirName, files, true);
         redirectAttributes.addFlashAttribute("uploadDirRetObject", returnObject);
         return "redirect:/uploadFile?dirName=" + UriUtils.encode(dirName, "UTF-8");
+    }
+
+    @PostMapping("/cancelSearch")
+    @ResponseBody
+    public ReturnObject<Void> cancelSearch(@RequestParam String searchId) {
+        Assert.isTrue(!StringUtils.isEmpty(searchId), "searchId is empty!");
+        ftsSearchService.cancelSearch(searchId);
+        return ReturnObject.success();
+    }
+
+    @PostMapping("/searchApi")
+    @ResponseBody
+    public ReturnObject<PageObject<SearchDTO>> searchApi(@RequestParam String keyword,
+            @RequestParam String searchId,
+            @RequestParam(defaultValue = "1") int pageNo,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) SearchColumn sortColumn,
+            @RequestParam(required = false) SortOrder sortOrder,
+            AdvancedSearchCondition advancedSearchCondition
+    ) {
+        if(!ftsServerConfigService.getLocalFtsProperties().getSearch().getEnabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if(!StringUtils.isEmpty(searchId)) {
+            ftsSearchService.cancelSearch(searchId);
+        }
+        if(StringUtils.isEmpty(keyword)) {
+            return ReturnObject.fail("搜索关键词为空");
+        }
+        LOGGER.debug("search keyword={},searchId={},pageNo={},pageSize={},sortColumn={},sortOrder={},advancedSearchCondition={}",
+                keyword, searchId, pageNo, pageSize, sortColumn, sortOrder, advancedSearchCondition);
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
+        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled() : false;
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        if(pageNo <= 0) {
+            pageNo = 1;
+        }
+        if(pageSize <= 0) {
+            pageSize = 20;
+        }
+        if(sortColumn != null) {
+            if(sortColumn == SearchColumn.DEFAULT) {
+                sortColumn = null;
+            } else {
+                boolean checkSortColumn = checkSearchSortColumn(sortColumn, advancedSearchCondition, zipEnabled, searchMode, indexFileContent);
+                if (!checkSortColumn) {
+                    sortColumn = null;
+                }
+            }
+        }
+        if(sortColumn != null && sortOrder == null) {
+            sortOrder = SortOrder.ASC;
+        }
+        return ftsSearchService.search(keyword, searchId, advancedSearchCondition, pageNo, pageSize, sortColumn, sortOrder);
+    }
+
+    @GetMapping("/search")
+    public String search(Model model) {
+        if(!ftsServerConfigService.getLocalFtsProperties().getSearch().getEnabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        FtsServerIpInfoModel serverIpInfoModel = ftsServerConfigService.getFtsServerIpInfoModel();
+        model.addAttribute("serverIpInfo", serverIpInfoModel);
+        String serverTime = Util.getServerTimeFormattedString();
+        model.addAttribute("serverTime", serverTime);
+        String urlRelativePathPattern = ftsServerConfigService.getStandardRelativePathPattern().pattern();
+        model.addAttribute("urlRelativePathPattern", urlRelativePathPattern);
+        String fileSuffixPattern = ftsServerConfigService.getFileSuffixPattern().pattern();
+        model.addAttribute("fileSuffixPattern", fileSuffixPattern);
+        String[] fileInvalidCharacters = ftsServerConfigService.getFileInvalidCharacters();
+        model.addAttribute("fileInvalidCharacters", fileInvalidCharacters);
+        SearchMode searchMode = ftsServerConfigService.getLocalFtsProperties().getSearch().getMode();
+        model.addAttribute("searchMode", searchMode);
+        Boolean indexFileContent = searchMode == SearchMode.INDEXED ? ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent().getEnabled() : false;
+        model.addAttribute("indexFileContent", indexFileContent);
+        Integer timeout = ftsServerConfigService.getLocalFtsProperties().getSearch().getTimeout();
+        model.addAttribute("timeout", timeout);
+        boolean zipEnabled = ftsServerConfigService.getLocalFtsProperties().getZip().getEnabled();
+        model.addAttribute("zipEnabled", zipEnabled);
+        FileTypeGroup[] fileTypeGroups = FileTypeGroup.values();
+        model.addAttribute("fileTypeGroups", fileTypeGroups);
+        String searchId = Util.getRandomUUIDString();
+        model.addAttribute("searchId", searchId);
+        boolean isLinux = Util.isSystemLinux();
+        model.addAttribute("showFileTypeCSCheckbox", isLinux);
+        return "search";
+    }
+
+    @PostMapping("changeFileEncoding")
+    @ResponseBody
+    public ReturnObject<Void> changeEncoding(@RequestParam(name = "path") String relativePath, @RequestParam String encoding) {
+        if(ftsServerConfigService.getLocalFtsProperties().getSearch().getMode() != SearchMode.INDEXED) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        IndexFileContentProperties indexFileContentProperties = ftsServerConfigService.getLocalFtsProperties().getSearch().getIndexFileContent();
+        boolean indexFileContent = indexFileContentProperties.getEnabled();
+        if(indexFileContent) {
+            Assert.isTrue(null != relativePath && relativePath.startsWith("/") && encoding != null, "非法请求参数");
+            return ftsService.changeEncoding(relativePath, encoding);
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    private boolean checkSearchSortColumn(SearchColumn sortColumn, AdvancedSearchCondition advancedSearchCondition,
+                                          boolean zipEnabled, SearchMode searchMode, boolean indexFileContent) {
+        if(!zipEnabled && SearchColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
+            return false;
+        }
+        if(advancedSearchCondition == null || advancedSearchCondition.isEmpty()) {
+            return true;
+        }
+        boolean requireFile = requireFile(advancedSearchCondition);
+        boolean requireDirectory = requireDirectory(advancedSearchCondition);
+        boolean requireFileOrDirectory = requireFileOrDirectory(advancedSearchCondition);
+        if(sortColumn == SearchColumn.TYPE) {
+            if(!requireFileOrDirectory) {
+                return false;
+            }
+        }
+        if(sortColumn == SearchColumn.SIZE) {
+            if(requireDirectory) {
+                return false;
+            }
+        }
+        if(SearchColumn.COMPRESS_COLUMNS_LIST.contains(sortColumn)) {
+            if(requireFile) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean requireFileOrDirectory(AdvancedSearchCondition advancedSearchCondition) {
+        if(advancedSearchCondition.getSearchType() != null) {
+            boolean check = advancedSearchCondition.getSearchType() != SearchType.FILE_CONTENT_ONLY;
+            if(!check) {
+                return false;
+            }
+        }
+        return advancedSearchCondition.getDirectory() == null;
+    }
+
+    private boolean requireFile(AdvancedSearchCondition advancedSearchCondition) {
+        return advancedSearchCondition.getDirectory() != null && !advancedSearchCondition.getDirectory();
+    }
+
+    private boolean requireDirectory(AdvancedSearchCondition advancedSearchCondition) {
+        if(advancedSearchCondition.getSearchType() != null) {
+            boolean check = advancedSearchCondition.getSearchType() != SearchType.FILE_CONTENT_ONLY;
+            if(!check) {
+                return false;
+            }
+        }
+        return advancedSearchCondition.getDirectory() != null && advancedSearchCondition.getDirectory();
     }
 }

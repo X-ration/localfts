@@ -6,9 +6,10 @@
     <link rel="stylesheet" th:href="${#request.contextPath} + '/static/common.css'">
 </head>
 <body>
-<h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="setClass('serverIpInfo','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
+<h1>局域网文件传输服务器</h1><button id="serverIpInfoShowButton" type="button" onclick="setClassById('serverIpInfo','show')">服务器网络信息</button>&emsp;服务器时间：<span th:text="${serverTime}">server time</span>
+<br><br><a style="margin-right:1em" id="visit-directory" th:if="${directoryExists}" th:text="${currentPath}">访问目录</a><a th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/search'">文件搜索</a>
 <hr>
-<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span><a style="margin-left:1em" id="visit-directory" th:if="${directoryExists}" th:text="${currentPath}">访问目录</a><a style="margin-left:1em" th:href="${#request.contextPath} + '/compressManagement'">全局文件夹压缩管理</a><a style="margin-left:1em" th:href="${#request.contextPath}">返回首页</a><br><br>
+<br>当前路径：<span id="page-path" th:text="${currentPath}">path</span>
 <div id="serverIpInfo" class="hidden">
     <div class="dialogTitle">服务器网络信息</div>
     <table style="width:90%;margin-left:auto;margin-right:auto;text-align:center;">
@@ -27,7 +28,7 @@
         </tr>
         </tbody>
     </table>
-    <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="setClass('serverIpInfo','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
+    <div style="padding-bottom:1em;padding-top:5em;"><button id="serverIpInfoHideButton" onclick="setClassById('serverIpInfo','hidden')" style="display:block;margin-left:auto;margin-right:auto;text-align:center;font-size:1em;">确定</button></div>
 </div>
 <div id="compressingDiv">
     <h4 style="color: red" th:if="${!directoryExists}">警告！当前文件夹不存在。</h4>
@@ -66,336 +67,270 @@ var lastModified = [[${lastModified}]];
 
 var visitDirectory = document.getElementById("visit-directory");
 if(visitDirectory) {
-  visitDirectory.setAttribute('href', concatUrlList(visitDirectory.innerText));
-  visitDirectory.innerText = '访问目录';
+    visitDirectory.setAttribute('href', concatUrlList(visitDirectory.innerText));
+    visitDirectory.innerText = '访问目录';
 }
 
 if(compressStatus === 'COMPRESSED') {
-  var downloadZip = document.getElementById("download-zip");
-  downloadZip.setAttribute('href', concatUrlDownload(downloadZip.innerText));
-  downloadZip.innerText = '下载压缩文件(zip)';
-  /*var compressedFileSize = downloadZip.getAttribute("compress-file-size");
-  if(compressedFileSize !== null) {
-    var compressedFileSizeStr = "(" + compressedFileSize + ")";
-    downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
-  }*/
+    var downloadZip = document.getElementById("download-zip");
+    downloadZip.setAttribute('href', concatUrlDownload(downloadZip.innerText));
+    downloadZip.innerText = '下载压缩文件(zip)';
 }
 
 if(!backgroundEnabled) {
-  // 监听页面关闭事件
-  if (typeof window.addEventListener !== "undefined") {
-    window.addEventListener('beforeunload', unload);
-    //window.addEventListener('pagehide', unload);
-    //window.addEventListener('visibilitychange', unload);
-  } else {
-    window.attachEvent('onbeforeunload', unload);
-  }
-}
-
-var callUnloadCount = 0;
-
-function unload(e) {
-  // visibilitychange事件需要判断状态（变为hidden时才执行）
-  /*if (e.type === 'visibilitychange' && document.visibilityState !== 'hidden') {
-    return;
-  }*/
-
-  //确保只调用一次
-  if(callUnloadCount++ > 0) {
-    return;
-  }
-  if(compressStatus !== 'COMPRESSING') {
-    return;
-  }
-  //abortXhr();
-  if (navigator.sendBeacon) {
-    //在win11 edge/winxp ie,qq适用，不适用winxp 360
-    /*var data = new URLSearchParams();
-    data.append('path', currentPath);
-    navigator.sendBeacon(contextPath + "/cancelCompress", data);*/
-    var blob = new Blob(['path='+encodeURIComponent(currentPath)], {type: 'application/x-www-form-urlencoded'});
-    navigator.sendBeacon(contextPath + "/cancelCompress", blob);
-  } else {
-    sendPostFormRequest(
-      contextPath + "/cancelCompress", // 目标接口 URL
-      "path=" + encodeURIComponent(currentPath), // 表单格式数据
-      false,
-      function (xhr) {
-      }
-    );
-  }
-  var start = new Date().getTime();
-  while (new Date().getTime() - start < 100) {
-    // 循环 100 毫秒，确保请求完成
-  }
+    bindUnloadFunctionUrlEncoded(contextPath + "/cancelCompress", {'path': currentPath}, function() {
+        return compressStatus === 'COMPRESSING';
+    });
 }
 
 function deleteCompressFile() {
-  updateCompressingHint('正在删除');
-  abortXhr();
-  sendPostFormRequest(
-    contextPath + "/deleteCompressFile", // 目标接口 URL
-    "path=" + encodeURIComponent(currentPath), // 表单格式数据
-    true,
-    function (xhr) {
-      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
-      // readyState=4 表示请求完成，status=200 表示成功
-      if (xhr.readyState === 4) {
-        //兼容IE9
-        try {
-          var xhrStatus = xhr.status;
-        } catch(e) {
-          if(window.console) {
-            console.error('获取XMLHttpRequest状态码时发生异常:', e);
-          }
-          return;
-        }
-        if (xhr.status === 200) {
-          var returnObject = JSON.parse(xhr.responseText);
-          if(returnObject.success) {
-            removeElementById('deleteCompressFileButton', 'compressingDiv');
-            removeElementById('download-zip', 'compressingDiv');
-            removeChildrenByIdAndTagName('compressInfoDiv','h4');
-            if(lastModified !== null) {
-              var infoTitle = document.createElement('h4');
-              infoTitle.className = 'margin-0';
-              infoTitle.innerText = '文件夹修改时间:' + lastModified;
-              document.getElementById('compressInfoDiv').appendChild(infoTitle);
+    updateCompressingHint('正在删除');
+    abortXhr();
+    sendPostFormRequest(
+        contextPath + "/deleteCompressFile", // 目标接口 URL
+        "path=" + encodeURIComponent(currentPath), // 表单格式数据
+        true,
+        function (xhr) {
+            if (xhr.status === 200) {
+                var returnObject = JSON.parse(xhr.responseText);
+                if(returnObject.success) {
+                    removeElementById('deleteCompressFileButton', 'compressingDiv');
+                    removeElementById('download-zip', 'compressingDiv');
+                    removeChildrenByIdAndTagName('compressInfoDiv','h4');
+                    if(lastModified !== null) {
+                        var infoTitle = document.createElement('h4');
+                        infoTitle.className = 'margin-0';
+                        infoTitle.innerText = '文件夹修改时间:' + lastModified;
+                        document.getElementById('compressInfoDiv').appendChild(infoTitle);
+                    }
+                    updateCompressingHint('成功删除压缩文件');
+                    compressStatus = 'NOT_COMPRESSED';
+                } else {
+                    updateCompressingHint('删除失败，原因：' + returnObject.message);
+                }
+            } else {
+                updateCompressingHint('删除失败，状态码：' + xhr.status);
             }
-            updateCompressingHint('成功删除压缩文件');
-            compressStatus = 'NOT_COMPRESSED';
-          } else {
-            updateCompressingHint('删除失败，原因：' + returnObject.message);
-          }
-        } else {
-          updateCompressingHint('删除失败，状态码：' + xhr.status);
+        }, function(e) {
+            var errorMsg = '删除失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCompressingHint(errorMsg);
         }
-      }
-    }
-  );
+    );
 }
 
 function updateCompressingHint(text) {
-  document.getElementById('compressingHint').innerText = text;
-  document.getElementById('compressingHint').style.display = 'block';
+    document.getElementById('compressingHint').innerText = text;
+    document.getElementById('compressingHint').style.display = 'block';
 }
 
 function removeChildrenByIdAndTagName(id,tagName) {
-  var divChildren = document.getElementById(id).children;
-  for(var i=0;i<divChildren.length;i++) {
-    var childElement = divChildren[i];
-    if(childElement.tagName.toLowerCase() === tagName) {
-      document.getElementById(id).removeChild(childElement);
-      i--;
+    var divChildren = document.getElementById(id).children;
+    for(var i=0;i<divChildren.length;i++) {
+        var childElement = divChildren[i];
+        if(childElement.tagName.toLowerCase() === tagName) {
+            document.getElementById(id).removeChild(childElement);
+            i--;
+        }
     }
-  }
-}
-function removeElementById(id,parentId) {
-  var element = document.getElementById(id);
-  if(element) {
-    document.getElementById(parentId).removeChild(element);
-  }
 }
 function concatUrlForConstant(contextPath, path) {
-  return contextPath + path;
+    return contextPath + path;
 }
 function concatUrlList(path, pageNo, pageSize) {
-  var url = URL_LIST + "?path=" + encodeURIComponent(path);
-  if(pageNo !== undefined) {
-    url = url + '&pageNo=' + pageNo;
-  }
-  if(pageSize !== undefined) {
-    url = url + '&pageSize=' + pageSize;
-  }
-  return url;
+    var url = URL_LIST + "?path=" + encodeURIComponent(path);
+    if(pageNo !== undefined) {
+        url = url + '&pageNo=' + pageNo;
+    }
+    if(pageSize !== undefined) {
+        url = url + '&pageSize=' + pageSize;
+    }
+    return url;
 }
 function concatUrlDownload(fileName) {
-  return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
+    return URL_DOWNLOAD + "?fileName=" + encodeURIComponent(fileName);
 }
 </script>
 <script type="text/javascript" th:if="${directoryExists}">
 function cancelCompress() {
-  updateCompressingHint('正在取消');
-  abortXhr();
-  sendPostFormRequest(
-    contextPath + "/cancelCompress", // 目标接口 URL
-    "path=" + encodeURIComponent(currentPath), // 表单格式数据
-    true,
-    function (xhr) {
-      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
-      // readyState=4 表示请求完成，status=200 表示成功
-      if (xhr.readyState === 4) {
-        //兼容IE9
-        try {
-          var xhrStatus = xhr.status;
-        } catch(e) {
-          if(window.console) {
-            console.error('获取XMLHttpRequest状态码时发生异常:', e);
-          }
-          return;
-        }
-        if (xhr.status === 200) {
-          var returnObject = JSON.parse(xhr.responseText);
-          if(returnObject.success) {
-            updateCompressingHint('已取消');
-            removeElementById('cancelCompressButton', 'compressingDiv');
-            removeChildrenByIdAndTagName('compressInfoDiv','h4');
-            if(lastModified !== null) {
-              var infoTitle = document.createElement('h4');
-              infoTitle.className = 'margin-0';
-              infoTitle.innerText = '文件夹修改时间:' + lastModified;
-              document.getElementById('compressInfoDiv').appendChild(infoTitle);
+    updateCompressingHint('正在取消');
+    abortXhr();
+    sendPostFormRequest(
+        contextPath + "/cancelCompress", // 目标接口 URL
+        "path=" + encodeURIComponent(currentPath), // 表单格式数据
+        true,
+        function (xhr) {
+            if (xhr.status === 200) {
+                var returnObject = JSON.parse(xhr.responseText);
+                if(returnObject.success) {
+                    updateCompressingHint('已取消');
+                    removeElementById('cancelCompressButton', 'compressingDiv');
+                    removeChildrenByIdAndTagName('compressInfoDiv','h4');
+                    if(lastModified !== null) {
+                        var infoTitle = document.createElement('h4');
+                        infoTitle.className = 'margin-0';
+                        infoTitle.innerText = '文件夹修改时间:' + lastModified;
+                        document.getElementById('compressInfoDiv').appendChild(infoTitle);
+                    }
+                    compressStatus = 'NOT_COMPRESSED';
+                } else {
+                    updateCompressingHint('取消失败，原因：' + returnObject.message);
+                }
+            } else {
+                updateCompressingHint('取消失败，状态码：' + xhr.status);
             }
-            compressStatus = 'NOT_COMPRESSED';
-          } else {
-            updateCompressingHint('取消失败，原因：' + returnObject.message);
-          }
-        } else {
-          updateCompressingHint('取消失败，状态码：' + xhr.status);
+        }, function(e) {
+            var errorMsg = '取消失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCompressingHint(errorMsg);
         }
-      }
-    }
-  );
+    );
 }
 
 function compressFolder() {
-  abortXhr();
-  var compressingHintText = needSizeCheck ? '正在检查文件夹大小并压缩' : '正在压缩';
-  var compressingWaitingHintText = compressingHintText + '(等待请求完成...)';
-  updateCompressingHint(compressingWaitingHintText);
-  removeElementById('download-zip', 'compressingDiv');
-  var cancelCompressButton = document.getElementById('cancelCompressButton');
-  if(!cancelCompressButton) {
-    cancelCompressButton = document.createElement('button');
-    cancelCompressButton.innerText = '取消压缩';
-    cancelCompressButton.setAttribute('id', 'cancelCompressButton');
-    cancelCompressButton.setAttribute('type', 'button');
-    cancelCompressButton.onclick = cancelCompress;
-    document.getElementById('compressingDiv').appendChild(cancelCompressButton);
-  }
-  removeChildrenByIdAndTagName('compressInfoDiv','h4');
-  if(lastModified !== null) {
+    abortXhr();
+    var compressingHintText = needSizeCheck ? '正在检查文件夹大小并压缩' : '正在压缩';
+    var compressingWaitingHintText = compressingHintText + '(等待请求完成...)';
+    updateCompressingHint(compressingWaitingHintText);
+    removeElementById('download-zip', 'compressingDiv');
+    var cancelCompressButton = document.getElementById('cancelCompressButton');
+    if(!cancelCompressButton) {
+        cancelCompressButton = document.createElement('button');
+        cancelCompressButton.innerText = '取消压缩';
+        cancelCompressButton.setAttribute('id', 'cancelCompressButton');
+        cancelCompressButton.setAttribute('type', 'button');
+        cancelCompressButton.onclick = cancelCompress;
+        document.getElementById('compressingDiv').appendChild(cancelCompressButton);
+    }
+    removeChildrenByIdAndTagName('compressInfoDiv','h4');
+    if(lastModified !== null) {
+        var infoTitle = document.createElement('h4');
+        infoTitle.className = 'margin-0';
+        infoTitle.innerText = '文件夹修改时间:' + lastModified;
+        document.getElementById('compressInfoDiv').appendChild(infoTitle);
+    }
     var infoTitle = document.createElement('h4');
     infoTitle.className = 'margin-0';
-    infoTitle.innerText = '文件夹修改时间:' + lastModified;
+    infoTitle.innerText = '压缩请求时间:' + formatTime();
     document.getElementById('compressInfoDiv').appendChild(infoTitle);
-  }
-  var infoTitle = document.createElement('h4');
-  infoTitle.className = 'margin-0';
-  infoTitle.innerText = '压缩请求时间:' + formatTime();
-  document.getElementById('compressInfoDiv').appendChild(infoTitle);
-  compressStatus = 'COMPRESSING';
-  sendPostFormRequest(
-    contextPath + "/compressFolder", // 目标接口 URL
-    "path=" + encodeURIComponent(currentPath), // 表单格式数据
-    true,
-    function (xhr) {
-      //alert('readyState='+xhr.readyState+',status='+xhr.status+',response='+xhr.responseText);
-      // readyState=4 表示请求完成，status=200 表示成功
-      if (xhr.readyState === 4) {
-        //兼容IE9
-        try {
-          var xhrStatus = xhr.status;
-        } catch(e) {
-          if(window.console) {
-            console.error('获取XMLHttpRequest状态码时发生异常:', e);
-          }
-          return;
-        }
-        if (xhr.status === 200) {
-          var returnObject = JSON.parse(xhr.responseText);
-          if(window.console) {
-            console.log(returnObject);
-          }
-          if(returnObject.success) {
-            lastModified = returnObject.data.lastModifiedStr;
-            if(returnObject.data.compressStatus === 'COMPRESSED') {
-              compressStatus = returnObject.data.compressStatus;
-              var compressedFileSize = returnObject.data.compressedFileSizeStr;
-              var compressedFileLastModified = returnObject.data.compressedFileLastModifiedStr;
-              var compressStartTime = returnObject.data.compressStartTimeStr;
-              var compressFinishTime = returnObject.data.compressFinishTimeStr;
-              var compressCostTime = returnObject.data.compressCostTimeStr;
-              updateCompressingHint('压缩完成');
-              removeElementById('download-zip', 'compressingDiv');
-              removeElementById('deleteCompressFileButton', 'compressingDiv');
-              var downloadZip = document.createElement('a');
-              downloadZip.innerText = '下载压缩文件(zip)';
-              /*if(compressedFileSize !== null) {
-                var compressedFileSizeStr = "(" + compressedFileSize + ")";
-                downloadZip.innerText = downloadZip.innerText + compressedFileSizeStr;
-              }*/
-              downloadZip.setAttribute('id', 'download-zip');
-              downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.compressedFilePath));
-              document.getElementById('compressingDiv').appendChild(downloadZip);
-              var deleteCompressFileButton = document.createElement('button');
-              deleteCompressFileButton.innerText = '删除压缩文件';
-              deleteCompressFileButton.setAttribute('id', 'deleteCompressFileButton');
-              deleteCompressFileButton.setAttribute('type', 'button');
-              deleteCompressFileButton.onclick = deleteCompressFile;
-              document.getElementById('compressingDiv').appendChild(deleteCompressFileButton);
-              removeChildrenByIdAndTagName('compressInfoDiv','h4');
-              if(lastModified !== null) {
-                var infoTitle = document.createElement('h4');
-                infoTitle.className = 'margin-0';
-                infoTitle.innerText = '文件夹修改时间:' + lastModified;
-                document.getElementById('compressInfoDiv').appendChild(infoTitle);
-              }
-              if(compressedFileLastModified !== null && compressedFileSize !== null) {
-                var infoTitle = document.createElement('h4');
-                infoTitle.className = 'margin-0';
-                infoTitle.innerText = '压缩文件大小:' + compressedFileSize + ',修改时间:' + compressedFileLastModified;
-                document.getElementById('compressInfoDiv').appendChild(infoTitle);
-              }
-              if(compressStartTime !== null && compressFinishTime !== null) {
-                var infoTitle = document.createElement('h4');
-                infoTitle.className = 'margin-0';
-                infoTitle.innerText = '压缩任务开始时间:' + compressStartTime + ',压缩任务完成时间:' + compressFinishTime;
-                document.getElementById('compressInfoDiv').appendChild(infoTitle);
-              }
-              if(compressCostTime !== null) {
-                var infoTitle = document.createElement('h4');
-                infoTitle.className = 'margin-0';
-                infoTitle.innerText = '压缩任务耗时:' + compressCostTime;
-                document.getElementById('compressInfoDiv').appendChild(infoTitle);
-              }
-              removeElementById('cancelCompressButton', 'compressingDiv');
-            } else if(returnObject.data.compressStatus === 'COMPRESSING') {
-              updateCompressingHint(compressingHintText);
-              compressStatus = returnObject.data.compressStatus;
-              removeChildrenByIdAndTagName('compressInfoDiv','h4');
-              if(lastModified !== null) {
-                var infoTitle = document.createElement('h4');
-                infoTitle.className = 'margin-0';
-                infoTitle.innerText = '文件夹修改时间:' + lastModified;
-                document.getElementById('compressInfoDiv').appendChild(infoTitle);
-              }
-              var compressStartTime = returnObject.data.compressStartTimeStr;
-              if(compressStartTime !== null) {
-                var infoTitle = document.createElement('h4');
-                infoTitle.className = 'margin-0';
-                infoTitle.innerText = '压缩任务开始时间:' + compressStartTime;
-                document.getElementById('compressInfoDiv').appendChild(infoTitle);
-              }
+    compressStatus = 'COMPRESSING';
+    sendPostFormRequest(
+        contextPath + "/compressFolder", // 目标接口 URL
+        "path=" + encodeURIComponent(currentPath), // 表单格式数据
+        true,
+        function (xhr) {
+            if (xhr.status === 200) {
+                var returnObject = JSON.parse(xhr.responseText);
+                if(window.console) {
+                    console.log(returnObject);
+                }
+                if(returnObject.success) {
+                    lastModified = returnObject.data.lastModifiedStr;
+                    if(returnObject.data.compressStatus === 'COMPRESSED') {
+                        compressStatus = returnObject.data.compressStatus;
+                        var compressedFileSize = returnObject.data.compressedFileSizeStr;
+                        var compressedFileLastModified = returnObject.data.compressedFileLastModifiedStr;
+                        var compressStartTime = returnObject.data.compressStartTimeStr;
+                        var compressFinishTime = returnObject.data.compressFinishTimeStr;
+                        var compressCostTime = returnObject.data.compressCostTimeStr;
+                        updateCompressingHint('压缩完成');
+                        removeElementById('download-zip', 'compressingDiv');
+                        removeElementById('deleteCompressFileButton', 'compressingDiv');
+                        var downloadZip = document.createElement('a');
+                        downloadZip.innerText = '下载压缩文件(zip)';
+                        downloadZip.setAttribute('id', 'download-zip');
+                        downloadZip.setAttribute('href', concatUrlDownload(returnObject.data.compressedFilePath));
+                        document.getElementById('compressingDiv').appendChild(downloadZip);
+                        var deleteCompressFileButton = document.createElement('button');
+                        deleteCompressFileButton.innerText = '删除压缩文件';
+                        deleteCompressFileButton.setAttribute('id', 'deleteCompressFileButton');
+                        deleteCompressFileButton.setAttribute('type', 'button');
+                        deleteCompressFileButton.onclick = deleteCompressFile;
+                        document.getElementById('compressingDiv').appendChild(deleteCompressFileButton);
+                        removeChildrenByIdAndTagName('compressInfoDiv','h4');
+                        if(lastModified !== null) {
+                            var infoTitle = document.createElement('h4');
+                            infoTitle.className = 'margin-0';
+                            infoTitle.innerText = '文件夹修改时间:' + lastModified;
+                            document.getElementById('compressInfoDiv').appendChild(infoTitle);
+                        }
+                        if(compressedFileLastModified !== null && compressedFileSize !== null) {
+                            var infoTitle = document.createElement('h4');
+                            infoTitle.className = 'margin-0';
+                            infoTitle.innerText = '压缩文件大小:' + compressedFileSize + ',修改时间:' + compressedFileLastModified;
+                            document.getElementById('compressInfoDiv').appendChild(infoTitle);
+                        }
+                        if(compressStartTime !== null && compressFinishTime !== null) {
+                            var infoTitle = document.createElement('h4');
+                            infoTitle.className = 'margin-0';
+                            infoTitle.innerText = '压缩任务开始时间:' + compressStartTime + ',压缩任务完成时间:' + compressFinishTime;
+                            document.getElementById('compressInfoDiv').appendChild(infoTitle);
+                        }
+                        if(compressCostTime !== null) {
+                            var infoTitle = document.createElement('h4');
+                            infoTitle.className = 'margin-0';
+                            infoTitle.innerText = '压缩任务耗时:' + compressCostTime;
+                            document.getElementById('compressInfoDiv').appendChild(infoTitle);
+                        }
+                        removeElementById('cancelCompressButton', 'compressingDiv');
+                    } else if(returnObject.data.compressStatus === 'COMPRESSING') {
+                        updateCompressingHint(compressingHintText);
+                        compressStatus = returnObject.data.compressStatus;
+                        removeChildrenByIdAndTagName('compressInfoDiv','h4');
+                        if(lastModified !== null) {
+                            var infoTitle = document.createElement('h4');
+                            infoTitle.className = 'margin-0';
+                            infoTitle.innerText = '文件夹修改时间:' + lastModified;
+                            document.getElementById('compressInfoDiv').appendChild(infoTitle);
+                        }
+                        var compressStartTime = returnObject.data.compressStartTimeStr;
+                        if(compressStartTime !== null) {
+                            var infoTitle = document.createElement('h4');
+                            infoTitle.className = 'margin-0';
+                            infoTitle.innerText = '压缩任务开始时间:' + compressStartTime;
+                            document.getElementById('compressInfoDiv').appendChild(infoTitle);
+                        }
+                    } else {
+                        updateCompressingHint('非法状态');
+                    }
+                } else {
+                    compressStatus = 'NOT_COMPRESSED';
+                    updateCompressingHint('压缩失败，原因：' + returnObject.message);
+                    removeElementById('cancelCompressButton', 'compressingDiv');
+                }
             } else {
-              updateCompressingHint('非法状态');
+                if(window.console) {
+                  console.error("请求失败，状态码：", xhr.status);
+                }
+                compressStatus = 'NOT_COMPRESSED';
+                updateCompressingHint('压缩失败，状态码：' + xhr.status);
+                removeElementById('cancelCompressButton', 'compressingDiv');
             }
-          } else {
+        }, function(e) {
             compressStatus = 'NOT_COMPRESSED';
-            updateCompressingHint('压缩失败，原因：' + returnObject.message);
-            removeElementById('cancelCompressButton', 'compressingDiv');
-          }
-        } else {
-          if(window.console) {
-            console.error("请求失败，状态码：", xhr.status);
-          }
-          compressStatus = 'NOT_COMPRESSED';
-          updateCompressingHint('压缩失败，状态码：' + xhr.status);
-          removeElementById('cancelCompressButton', 'compressingDiv');
+            var errorMsg = '压缩失败:连接服务器失败';
+            if(e) {
+                if(e.name) {
+                    errorMsg = errorMsg + '(' + e.name + ')';
+                } else if(e.message) {
+                    errorMsg = errorMsg + '(' + e.message + ')';
+                }
+            }
+            updateCompressingHint(errorMsg);
         }
-      }
-    }
-  );
+    );
 }
 </script>
 </html>

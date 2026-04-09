@@ -1,20 +1,155 @@
 package com.adam.localfts.webserver.util;
 
+import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.HttpRangeObject;
+import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import com.github.houbb.opencc4j.util.ZhSlimUtil;
+import com.github.promeg.pinyinhelper.Pinyin;
+import org.jetbrains.annotations.Contract;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.Stack;
-import java.util.TimeZone;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.adam.localfts.webserver.common.Constants.*;
 
-
 public class Util {
+
+    public static final Logger LOGGER = LoggerFactory.getLogger(Util.class);
+    private static final Map<String, Integer> METHOD_CALL_COUNTER = new ConcurrentHashMap<>();
+
+    static {
+        Pinyin.init(Pinyin.newConfig());
+    }
+
+    public static String convertToPinyin(String str) {
+        return convertToPinyin(str, false);
+    }
+    public static String convertToPinyin(String str, boolean lowercase) {
+        if(str == null) {
+            return null;
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        for(int i=0;i<str.length();i++) {
+            char c = str.charAt(i);
+            String cStr = Pinyin.toPinyin(c);
+            stringBuilder.append(cStr);
+        }
+        String newStr = stringBuilder.toString();
+        if(lowercase) {
+            return newStr.toLowerCase();
+        } else {
+            return newStr;
+        }
+    }
+
+    public static boolean isSingleArabicOrEnglish(String str) {
+        if(str == null) {
+            return false;
+        }
+        if(str.length() != 1) {
+            return false;
+        }
+        char chr = str.charAt(0);
+        chr = toLowerCase(chr);
+        return (chr >= '0' && chr <= '9') || (chr >= 'a' && chr <= 'z');
+    }
+
+    public static String reverseStr(String str) {
+        if(str == null || str.length() == 0) {
+            return str;
+        }
+        StringBuilder stringBuilder = new StringBuilder(str.length());
+        for(int i=str.length() - 1; i >= 0; i--) {
+            stringBuilder.append(str.charAt(i));
+        }
+        return stringBuilder.toString();
+    }
+
+    public static String toLowerCase(String str) {
+        if(str == null) {
+            return null;
+        } else {
+            return str.toLowerCase();
+        }
+    }
+
+    public static String toSC(String str) {
+        if(str == null) {
+            return null;
+        } else {
+            StringBuilder stringBuilder = new StringBuilder(str.length());
+            for(int i=0;i<str.length();i++) {
+                stringBuilder.append(ZhSlimUtil.toSimple(str.charAt(i)));
+            }
+            return stringBuilder.toString();
+        }
+    }
+
+    public static String toLowerCaseAndSC(String str) {
+        if(str == null) {
+            return null;
+        }
+        String lowerCasedStr = str.toLowerCase();
+        return toSC(lowerCasedStr);
+    }
+
+    public static Character toLowerCase(Character character) {
+        if(character == null) {
+            return null;
+        } else {
+            return character.toString().toLowerCase().charAt(0);
+        }
+    }
+
+    public static Character toSC(Character character) {
+        if(character == null) {
+            return null;
+        } else {
+            return ZhSlimUtil.toSimple(character);
+        }
+    }
+
+    public static String escapeHtmlChars(String htmlText) {
+        if(htmlText == null) {
+            return null;
+        }
+        return htmlText.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;")
+                .replace("\t", "&#9;")
+                .replace(System.lineSeparator(), "<br/>");
+    }
+
+    public static synchronized void incrementAndCheckMethodCallCount(String methodName, int threshold) {
+        int callCount = METHOD_CALL_COUNTER.getOrDefault(methodName, 0);
+        Assert.isTrue(++callCount <= threshold, "Method " + methodName + " call count exceeds limit " + threshold + "!");
+        METHOD_CALL_COUNTER.put(methodName, callCount);
+    }
+
+    public static boolean isValidFileSuffix(String suffix) {
+        Pattern pattern;
+        if(Util.isSystemWindows()) {
+            pattern = Constants.PATTERN_FILE_SUFFIX_WINDOWS;
+        } else if(Util.isSystemLinux() || Util.isSystemMacOS()) {
+            pattern = Constants.PATTERN_FILE_SUFFIX_LINUX_MACOS;
+        } else {
+            throw new LocalFtsRuntimeException("Unknown system");
+        }
+        return pattern.matcher(suffix).matches();
+    }
 
     public static SimpleDateFormat getSimpleDateFormat() {
         return new SimpleDateFormat(DATE_FORMAT_FILE_STANDARD);
@@ -125,6 +260,108 @@ public class Util {
         return httpRangeObject;
     }
 
+    public static int getAvailableProcessors() {
+        return Runtime.getRuntime().availableProcessors();
+    }
+
+    public static int getPhysicalProcessors() {
+        Process process = null;
+        BufferedReader reader = null;
+        int result = -1;
+        StringBuilder outputStringBuilder = new StringBuilder();
+        try {
+            if (isSystemLinux()) {
+                ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", "LANG=C lscpu");
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                Pattern pattern = Pattern.compile("^CPU(\\(s\\))?:\\s+(\\d+)$"); // 物理cpu核心数
+                Pattern socketPattern = Pattern.compile("^Socket(\\(s\\))?:\\s+(\\d+)$"); // cpu插槽数
+                Pattern corePerSocketPattern = Pattern.compile("^Core(\\(s\\))? per socket:\\s+(\\d+)$"); // 每插槽核心数
+
+                int physicalCores = -1;
+                int sockets = -1;
+                int coresPerSocket = -1;
+                while ((line = reader.readLine()) != null) {
+                    outputStringBuilder.append(line).append(System.lineSeparator());
+
+                    Matcher m = pattern.matcher(line);
+                    if (m.find()) {
+                        physicalCores = Integer.parseInt(m.group(2));
+                    }
+                    m = socketPattern.matcher(line);
+                    if (m.find()) {
+                        sockets = Integer.parseInt(m.group(2));
+                    }
+                    m = corePerSocketPattern.matcher(line);
+                    if (m.find()) {
+                        coresPerSocket = Integer.parseInt(m.group(2));
+                    }
+                }
+
+                if (sockets != -1 && coresPerSocket != -1) {
+                    result = sockets * coresPerSocket;
+                }
+                else if (physicalCores != -1) {
+                    result = physicalCores;
+                }
+            } else if (isSystemWindows()) {
+                ProcessBuilder processBuilder = new ProcessBuilder("cmd", "/C", "wmic", "cpu", "get", "NumberOfCores");
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "GBK"));
+                String line;
+                int lineNum = 0;
+                process.getOutputStream().close();
+                while ((line = reader.readLine()) != null) {
+                    outputStringBuilder.append(line);
+                    line = line.trim();
+                    /*if (lineNum == 1 && !line.isEmpty()) {
+                        result = Integer.parseInt(line);
+                        break;
+                    }
+                    lineNum++;*/
+                    if(line.isEmpty()) {
+                        continue;
+                    }
+                    try {
+                        result = Integer.parseInt(line);
+                        break;
+                    } catch (NumberFormatException e) {
+                    }
+                }
+            } else if (isSystemMacOS()) {
+                ProcessBuilder processBuilder = new ProcessBuilder("sysctl", "-n", "hw.physicalcpu");
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    outputStringBuilder.append(line).append(System.lineSeparator());
+                    if (!line.isEmpty()) {
+                        result = Integer.parseInt(line.trim());
+                        break;
+                    }
+                }
+
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Cannot get physical processors, error msg:{}", e.getMessage());
+            return 0;
+        }
+        if (result == -1) {
+            LOGGER.warn("Cannot get physical processors, output:{}", outputStringBuilder);
+            return 0;
+        }
+        //LOGGER.info("Physical processors={}", result);
+        return result;
+    }
+
+    public static String getWorkingDir() {
+        return System.getProperty("user.dir");
+    }
+
     public static String getOsName() {
         return System.getProperty("os.name");
     }
@@ -142,6 +379,38 @@ public class Util {
     public static boolean isSystemMacOS() {
         String osName = getOsName().toLowerCase();
         return osName.startsWith("mac");
+    }
+
+    @Contract("_, _ -> fail")
+    public static <T extends RuntimeException> void throwException(Class<T> exClass, String message) {
+        try {
+            Constructor<T> constructor = exClass.getConstructor(String.class);
+            throw constructor.newInstance(message);
+        } catch (NoSuchMethodException e) {
+            LOGGER.warn("error finding exception constructor {}: no such constructor", exClass.getName());
+            throw new RuntimeException(e.getMessage());
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            LOGGER.warn("error instantiating exception {}", exClass.getName());
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    public static boolean checkInterrupted() {
+        return Thread.currentThread().isInterrupted();
+    }
+
+    public static boolean checkAndClearInterrupted() {
+        return Thread.interrupted();
+    }
+
+    public static void clearInterruptedAndThrowException() throws InterruptedException{
+        if(Thread.interrupted()) {
+            throw new InterruptedException();
+        }
+    }
+
+    public static String getRandomUUIDString() {
+        return UUID.randomUUID().toString();
     }
 
     /**
@@ -235,9 +504,14 @@ public class Util {
     }
 
     public static void main(String[] args) {
-        testFileLengthToStringOld();
-        testFileLengthToStringNew();
+//        testFileLengthToStringOld();
+//        testFileLengthToStringNew();
+        System.out.println("Physical processors=" + getPhysicalProcessors());
+        System.out.println("Logical processors=" + getAvailableProcessors());
     }
+
+
+
     private static void testFileLengthToStringOld() {
         System.out.println("****Test fileLengthToStringOld start****");
         System.out.println(fileLengthToStringOld(83));
