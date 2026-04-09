@@ -9,7 +9,6 @@
  \___ \\  ___/|  | \/\   /\  ___/|  | \/
 /____  >\___  >__|    \_/  \___  >__|
      \/     \/                 \/
-${AnsiColor.YELLOW}
 Localfts-server version: 1.2.0
 Spring Boot version: ${spring-boot.version}
 Java version: ${java.version}

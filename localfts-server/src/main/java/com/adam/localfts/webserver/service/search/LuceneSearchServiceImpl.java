@@ -5,6 +5,8 @@ import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
 import com.adam.localfts.webserver.common.search.*;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
+import com.adam.localfts.webserver.config.properties.LocalFtsProperties;
+import com.adam.localfts.webserver.config.properties.SearchProperties;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
 import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.service.FtsServerConfigService;
@@ -31,6 +33,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -209,6 +212,16 @@ public class LuceneSearchServiceImpl implements SearchServiceInterface {
 
     public void setIndexPath(String indexPath) {
         this.indexPath = indexPath;
+    }
+
+    @PostConstruct
+    public void postConstruct() {
+        LocalFtsProperties localFtsProperties = ftsServerConfigService.getLocalFtsProperties();
+        SearchProperties searchProperties = localFtsProperties.getSearch();
+        if(searchProperties.getEnabled() && searchProperties.getMode() == SearchMode.INDEXED) {
+            String indexPath = searchProperties.getIndexPath();
+            this.indexPath = indexPath;
+        }
     }
 
     private Query constructDateRangeQuery(String field, Date lower, Date upper) {

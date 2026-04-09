@@ -48,7 +48,7 @@ public class LuceneIndexThread extends Thread{
     private final boolean useExistingIndex;
     private static volatile LuceneIndexThread INSTANCE = null;
 
-    private final Logger logger = LoggerFactory.getLogger(LuceneIndexThread.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LuceneIndexThread.class);
 
     private LuceneIndexThread(String indexPath, int maxStringLength, boolean useExistingIndex) {
         super("LI-Thread");
@@ -61,19 +61,23 @@ public class LuceneIndexThread extends Thread{
         Path path = Paths.get(indexPath);
         if(!Files.isReadable(path)) {
             if(!Files.exists(path)) {
+                if(useExistingIndex) {
+                    LOGGER.error("索引路径不存在：{}", indexPath);
+                    throw new LocalFtsStartupException("索引路径不存在：" + indexPath);
+                }
                 try {
                     boolean mkdirs = path.toFile().mkdirs();
                     com.adam.localfts.webserver.util.Assert.isTrue(mkdirs, "创建索引路径" + indexPath + "失败", LocalFtsStartupException.class);
                     if(!Files.isReadable(path)) {
-                        logger.error("索引路径无法读取：{}", indexPath);
+                        LOGGER.error("索引路径无法读取：{}", indexPath);
                         throw new LocalFtsStartupException("索引路径无法读取：" + indexPath);
                     }
                 } catch (SecurityException e) {
-                    logger.error("无法创建索引路径：{}", indexPath, e);
+                    LOGGER.error("无法创建索引路径：{}", indexPath, e);
                     throw new LocalFtsStartupException("索引路径无法创建：" + indexPath + ", msg:" + e.getMessage());
                 }
             } else {
-                logger.error("索引路径无法读取：{}", indexPath);
+                LOGGER.error("索引路径无法读取：{}", indexPath);
                 throw new LocalFtsStartupException("索引路径无法读取：" + indexPath);
             }
         }
@@ -85,7 +89,7 @@ public class LuceneIndexThread extends Thread{
             }
             indexWriter.commit();
         } catch (IOException e) {
-            logger.error("Error constructing instance", e);
+            LOGGER.error("Error constructing instance", e);
             throw new LocalFtsStartupException("无法实例化LuceneIndexThread:" + e.getMessage());
         }
     }
@@ -98,6 +102,7 @@ public class LuceneIndexThread extends Thread{
         synchronized (LuceneIndexThread.class) {
             if(INSTANCE == null) {
                 INSTANCE = new LuceneIndexThread(indexPath, maxStringLength, useExistingIndex);
+                LOGGER.info("Constructed LuceneIndexThread");
             }
         }
     }
@@ -108,7 +113,7 @@ public class LuceneIndexThread extends Thread{
 
     @Override
     public void run() {
-        logger.info("Prepare to create and update index");
+        LOGGER.info("Prepare to create and update index");
         while(running.get()) {
             try {
                 Util.clearInterruptedAndThrowException();
@@ -130,7 +135,7 @@ public class LuceneIndexThread extends Thread{
                         }
                     }
                     if(batchCommit) {
-                        logger.debug("Batch commit docs count {}", count);
+                        LOGGER.debug("Batch commit docs count {}", count);
                         commitDocs();
                         batchCount.set(0);
                     }
@@ -140,10 +145,10 @@ public class LuceneIndexThread extends Thread{
             } catch (InterruptedException e) {
                 running.set(false);
             } catch (Exception e) {
-                logger.error("Exception occurred", e);
+                LOGGER.error("Exception occurred", e);
             }
         }
-        logger.info("Prepare to close objects for write...");
+        LOGGER.info("Prepare to close objects for write...");
         try {
             this.indexWriter.commit();
             this.indexWriter.close();
@@ -154,7 +159,7 @@ public class LuceneIndexThread extends Thread{
         } catch (IOException e) {
         }
         this.analyzer.close();
-        logger.info("Thread is terminating...");
+        LOGGER.info("Thread is terminating...");
     }
 
     public void addOperation(IndexType indexType, SearchFileModel model) {
@@ -169,10 +174,10 @@ public class LuceneIndexThread extends Thread{
     public void setBatchMode(boolean enabled) {
         boolean prevEnabled = batchMode.get();
         if(prevEnabled != enabled) {
-            logger.info("Batch mode changed from {} to {}", prevEnabled, enabled);
+            LOGGER.info("Batch mode changed from {} to {}", prevEnabled, enabled);
             batchMode.set(enabled);
             if(!enabled) {
-                logger.debug("Batch commit docs count {}", batchCount);
+                LOGGER.debug("Batch commit docs count {}", batchCount);
                 commitDocs();
                 batchCount.set(0);
             }
@@ -189,7 +194,7 @@ public class LuceneIndexThread extends Thread{
         try {
             indexWriter.addDocument(document);
         } catch (IOException e) {
-            logger.error("Error adding document from model {}", model, e);
+            LOGGER.error("Error adding document from model {}", model, e);
             throw new LocalFtsRuntimeException("Error adding document from model:" + e.getMessage());
         }
     }
@@ -198,7 +203,7 @@ public class LuceneIndexThread extends Thread{
         try {
             indexWriter.commit();
         } catch (IOException e) {
-            logger.error("Cannot commit indexWriter", e);
+            LOGGER.error("Cannot commit indexWriter", e);
             throw new LocalFtsRuntimeException("Cannot commit indexWriter:" + e.getMessage());
         }
     }
@@ -310,7 +315,7 @@ public class LuceneIndexThread extends Thread{
         try {
             indexWriter.deleteDocuments(query);
         } catch (IOException e) {
-            logger.error("Error deleting directory documents with fileName {} and parentRelativePath {}", model.getFileName(), model.getParentRelativePath());
+            LOGGER.error("Error deleting directory documents with fileName {} and parentRelativePath {}", model.getFileName(), model.getParentRelativePath());
             throw new LocalFtsRuntimeException("Error deleting directory documents with fileName " + model.getFileName() + " and parentRelativePath " + model.getParentRelativePath());
         }
     }
@@ -327,7 +332,7 @@ public class LuceneIndexThread extends Thread{
         try {
             indexWriter.deleteDocuments(query);
         } catch (IOException e) {
-            logger.error("Error deleting document with fileName {} and parentRelativePath {}", model.getFileName(), model.getParentRelativePath());
+            LOGGER.error("Error deleting document with fileName {} and parentRelativePath {}", model.getFileName(), model.getParentRelativePath());
             throw new LocalFtsRuntimeException("Error deleting document with fileName " + model.getFileName() + " and parentRelativePath " + model.getParentRelativePath());
         }
     }

@@ -9,10 +9,13 @@ import com.adam.localfts.webserver.common.search.SearchMode;
 import com.adam.localfts.webserver.common.sort.CompressManagementColumn;
 import com.adam.localfts.webserver.common.sort.ListTableColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
+import com.adam.localfts.webserver.component.WebServerStartListener;
 import com.adam.localfts.webserver.config.properties.IndexFileContentProperties;
+import com.adam.localfts.webserver.config.properties.LocalFtsProperties;
 import com.adam.localfts.webserver.config.properties.SearchProperties;
 import com.adam.localfts.webserver.exception.InvalidRangeException;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
+import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.task.FileMonitorThread;
 import com.adam.localfts.webserver.task.LuceneIndexThread;
 import com.adam.localfts.webserver.util.IOUtil;
@@ -60,6 +63,8 @@ public class FtsService implements DisposableBean {
 
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
+    @Autowired
+    private WebServerStartListener webServerStartListener;
     @Value("${server.error.path:${error.path:/error}}")
     private String errorPath;
 
@@ -1478,12 +1483,49 @@ public class FtsService implements DisposableBean {
         }
     }
 
+    /**
+     * 创建索引
+     */
+    private void scanFilesAndCreateIndex(boolean indexHiddenFiles, Class<? extends RuntimeException> exClass) {
+        LOGGER.info("Prepare to scan files and create lucene index");
+        long startMillis = System.currentTimeMillis();
+        LuceneIndexThread.getInstance().setBatchMode(true);
+        scanAndApplySearchFileModel(indexHiddenFiles, model -> {
+            LuceneIndexThread.getInstance().addOperation(IndexType.CREATE, model);
+        });
+        LuceneIndexThread.getInstance().setBatchMode(false);
+        long endMillis = System.currentTimeMillis();
+        LOGGER.info("Finished creating lucene index, cost time {} ms", (endMillis - startMillis));
+    }
+
     @PostConstruct
     public void postConstruct() {
-        SearchProperties searchProperties = ftsServerConfigService.getLocalFtsProperties().getSearch();
+        LocalFtsProperties localFtsProperties = ftsServerConfigService.getLocalFtsProperties();
+        SearchProperties searchProperties = localFtsProperties.getSearch();
+        if(searchProperties.getEnabled() && searchProperties.getMode() == SearchMode.INDEXED) {
+            int physicalAvailableProcessors = Constants.PHYSICAL_AVAILABLE_PROCESSORS;
+            if(physicalAvailableProcessors == 1) {
+                LOGGER.warn("[Performance warning]LuceneIndexThread takes only 1 available physical processor! Requests may wait long.");
+            }
+            String indexPath = searchProperties.getIndexPath();
+            boolean indexHiddenFiles = localFtsProperties.getShowHidden();
+            boolean useExistingIndex = searchProperties.getUseExistingIndex();
+            LuceneIndexThread.constructOnce(indexPath, searchProperties.getIndexFileContent().getMaxStringLength(), useExistingIndex);
+            LuceneIndexThread.getInstance().start();
+            if(!useExistingIndex) {
+                if (searchProperties.getIndexBeforeStart()) {
+                    scanFilesAndCreateIndex(indexHiddenFiles, LocalFtsStartupException.class);
+                } else {
+                    webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(indexHiddenFiles, LocalFtsRuntimeException.class));
+                }
+            } else {
+                LOGGER.info("Using existing index");
+            }
+        }
         boolean workForIndex = searchProperties != null && searchProperties.getEnabled() && searchProperties.getMode() == SearchMode.INDEXED;
         FileMonitorThread.constructOnce(this, ftsServerConfigService, workForIndex);
         FileMonitorThread.getInstance().start();
+
         listTableComparatorMap.put(ListTableColumn.FILENAME, (fm1, fm2) ->
                 CHINESE_COLLATOR.compare(fm1.getFileName(), fm2.getFileName()));
         listTableComparatorMap.put(ListTableColumn.TYPE, (fm1, fm2) -> {
@@ -1526,6 +1568,9 @@ public class FtsService implements DisposableBean {
     public void destroy() throws Exception {
         if(FileMonitorThread.constructed()) {
             FileMonitorThread.getInstance().tryStop();
+        }
+        if(LuceneIndexThread.constructed()) {
+            LuceneIndexThread.getInstance().tryStop();
         }
     }
 

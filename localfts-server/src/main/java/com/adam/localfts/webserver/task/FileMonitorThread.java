@@ -144,6 +144,7 @@ public class FileMonitorThread extends Thread{
                 if(INSTANCE == null) {
                     try {
                         INSTANCE = new FileMonitorThread(ftsService, ftsServerConfigService, workForIndex);
+                        LOGGER.info("Constructed FileMonitorThread");
                     } catch (IOException e) {
                         LOGGER.error("IOException occurred when constructing FileMonitorThread instance", e);
                         throw new LocalFtsRuntimeException("IOException occurred when constructing FileMonitorThread instance, msg:" + e.getMessage());

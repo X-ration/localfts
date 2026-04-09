@@ -1,24 +1,21 @@
 package com.adam.localfts.webserver.service;
 
-import com.adam.localfts.webserver.common.Constants;
 import com.adam.localfts.webserver.common.PageObject;
 import com.adam.localfts.webserver.common.ReturnObject;
 import com.adam.localfts.webserver.common.compress.FolderCompressStatus;
-import com.adam.localfts.webserver.common.search.*;
+import com.adam.localfts.webserver.common.search.AdvancedSearchCondition;
+import com.adam.localfts.webserver.common.search.SearchDTO;
+import com.adam.localfts.webserver.common.search.SearchMode;
+import com.adam.localfts.webserver.common.search.SearchType;
 import com.adam.localfts.webserver.common.sort.SearchColumn;
 import com.adam.localfts.webserver.common.sort.SortOrder;
 import com.adam.localfts.webserver.component.ShutdownListener;
-import com.adam.localfts.webserver.component.WebServerStartListener;
-import com.adam.localfts.webserver.config.properties.SearchProperties;
 import com.adam.localfts.webserver.exception.LocalFtsRuntimeException;
-import com.adam.localfts.webserver.exception.LocalFtsStartupException;
 import com.adam.localfts.webserver.service.search.LuceneSearchServiceImpl;
 import com.adam.localfts.webserver.service.search.PlainSearchServiceImpl;
-import com.adam.localfts.webserver.task.LuceneIndexThread;
 import com.adam.localfts.webserver.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
@@ -26,7 +23,6 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,7 +32,7 @@ import java.util.stream.Collectors;
 
 @Service
 @DependsOn("ftsServerConfigService")
-public class FtsSearchService implements DisposableBean {
+public class FtsSearchService {
 
     @Autowired
     private FtsServerConfigService ftsServerConfigService;
@@ -46,8 +42,6 @@ public class FtsSearchService implements DisposableBean {
     private PlainSearchServiceImpl plainSearchService;
     @Autowired
     private LuceneSearchServiceImpl luceneSearchService;
-    @Autowired
-    private WebServerStartListener webServerStartListener;
     @Autowired
     private ShutdownListener shutdownListener;
     @Autowired
@@ -289,50 +283,4 @@ public class FtsSearchService implements DisposableBean {
         advancedSearchCondition.clean();
     }
 
-    /**
-     * 创建索引
-     */
-    private void scanFilesAndCreateIndex(boolean indexHiddenFiles, Class<? extends RuntimeException> exClass) {
-        logger.info("Prepare to scan files and create lucene index");
-        long startMillis = System.currentTimeMillis();
-        LuceneIndexThread.getInstance().setBatchMode(true);
-        ftsService.scanAndApplySearchFileModel(indexHiddenFiles, model -> {
-            LuceneIndexThread.getInstance().addOperation(IndexType.CREATE, model);
-        });
-        LuceneIndexThread.getInstance().setBatchMode(false);
-        long endMillis = System.currentTimeMillis();
-        logger.info("Finished creating lucene index, cost time {} ms", (endMillis - startMillis));
-    }
-
-    @PostConstruct
-    public void postConstruct() {
-        SearchProperties searchProperties = ftsServerConfigService.getLocalFtsProperties().getSearch();
-        if(searchProperties.getEnabled() && searchProperties.getMode() == SearchMode.INDEXED) {
-            int physicalAvailableProcessors = Constants.PHYSICAL_AVAILABLE_PROCESSORS;
-            if(physicalAvailableProcessors == 1) {
-                logger.warn("[Performance warning]LuceneIndexThread takes only 1 available physical processor! Requests may wait long.");
-            }
-            String indexPath = searchProperties.getIndexPath();
-            boolean indexHiddenFiles = ftsServerConfigService.getLocalFtsProperties().getShowHidden();
-            LuceneIndexThread.constructOnce(indexPath, searchProperties.getIndexFileContent().getMaxStringLength(), searchProperties.getUseExistingIndex());
-            LuceneIndexThread.getInstance().start();
-            luceneSearchService.setIndexPath(indexPath);
-            if(!searchProperties.getUseExistingIndex()) {
-                if (searchProperties.getIndexBeforeStart()) {
-                    scanFilesAndCreateIndex(indexHiddenFiles, LocalFtsStartupException.class);
-                } else {
-                    webServerStartListener.addAsyncTask(() -> scanFilesAndCreateIndex(indexHiddenFiles, LocalFtsRuntimeException.class));
-                }
-            } else {
-                logger.info("Using existing index");
-            }
-        }
-    }
-
-    @Override
-    public void destroy() throws Exception {
-        if(LuceneIndexThread.constructed()) {
-            LuceneIndexThread.getInstance().tryStop();
-        }
-    }
 }
