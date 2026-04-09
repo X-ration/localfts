@@ -916,7 +916,7 @@ public class FtsService implements DisposableBean {
 
         FolderCompressingContextHolder folderCompressingContextHolder = folderCompressingContextHolderMap.get(folderAbsolutePath);
         if(folderCompressingContextHolder == null) {
-            LOGGER.warn("FolderCompressingInfo not found for {}, no need to cancel", folderAbsolutePath);
+            LOGGER.warn("FolderCompressingContextHolder not found for {}, no need to cancel", folderAbsolutePath);
             if(searchMode == SearchMode.INDEXED) {
                 convertAndApplySearchFileModel(folderFile,
                         model -> LuceneIndexThread.getInstance().addOperation(IndexType.UPDATE, model));
