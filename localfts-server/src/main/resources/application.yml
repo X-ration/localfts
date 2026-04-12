@@ -2,22 +2,7 @@ server:
   port: 80  #服务器端口号
   servlet:
     context-path: /localfts  #服务器上下文路径
-  error:
-    includeException: true
-    includeStackTrace: ALWAYS
-    whitelabel:
-      enabled: false
 spring:
-  output:
-    ansi:
-      enabled: always
-  thymeleaf:
-    cache: false
-  mvc:
-    static-path-pattern: /static/**
-  web:
-    resources:
-      static-locations: classpath:/resources
   servlet:
     multipart:
       max-file-size: 2GB  #上传最大文件大小

@@ -22,10 +22,11 @@
         if(traceText) {
             var replacedText;
             var traceTextContent = traceText.textContent || traceText.innerText;
+            var targetText = '<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
             if(traceText.textContent.replaceAll != null) {
-                replacedText = traceText.textContent.replaceAll("\r\n","<br>").replaceAll("\n","<br>");
+                replacedText = traceText.textContent.replaceAll("\r\n",targetText).replaceAll("\n",targetText);
             } else {
-                replacedText = traceText.textContent.replace(new RegExp("\r\n","g"),"<br>").replace(new RegExp("\n","g"),"<br>");
+                replacedText = traceText.textContent.replace(new RegExp("\r\n","g"),targetText).replace(new RegExp("\n","g"),targetText);
             }
             if(traceText.setHTML != null) {
                 traceText.setHTML(replacedText);
