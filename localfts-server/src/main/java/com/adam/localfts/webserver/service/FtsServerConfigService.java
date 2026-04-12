@@ -402,6 +402,7 @@ public class FtsServerConfigService implements DisposableBean {
     }
 
     private void setPropertiesIfNull() {
+        setAutoOpenBrowserIfNull();
         setShowHiddenIfNull();
         setZipEnabledIfNull();
         if(localFtsProperties.getZip().getEnabled()) {
@@ -416,6 +417,13 @@ public class FtsServerConfigService implements DisposableBean {
                 setUseExistingIndexIfNull();
                 setIndexFileContentIfNull();
             }
+        }
+    }
+
+    private void setAutoOpenBrowserIfNull() {
+        Boolean autoOpenBrowser = localFtsProperties.getAutoOpenBrowser();
+        if(autoOpenBrowser == null) {
+            localFtsProperties.setAutoOpenBrowser(false);
         }
     }
 

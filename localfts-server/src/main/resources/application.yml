@@ -10,17 +10,18 @@ spring:
       #resolve-lazily: true
       #file-size-threshold: 0
 localfts:
-  root_path: D:\Users\Adam\Documents  #服务器根路径映射地址
-  show_hidden: false  #是否显示隐藏文件和文件夹，同步影响索引行为
+  root-path: D:\Users\Adam\Documents  #服务器根路径映射地址
+  show-hidden: false  #是否显示隐藏文件和文件夹，同步影响索引行为
+  auto-open-browser: true  #是否在启动完成后自动打开浏览器访问服务
   zip:
     enabled: true  #文件夹压缩功能开关
     path: localfts_zip  #文件夹压缩文件存储路径，对根路径的相对路径
-    delete_on_exit: true  #!!!退出服务器进程时是否清理压缩文件存储路径
+    delete-on-exit: true  #!!!退出服务器进程时是否清理压缩文件存储路径
     max-folder-size: 3GB  #限制压缩文件夹原文件夹的大小(超过此数值不能压缩)
     background-enabled: false  #后台压缩开关，不允许时关闭压缩管理页面(/compressFolder)时会结束正在进行的压缩任务
   log:
-    file_path: log  #日志文件存储相对路径(相对进程工作目录，而非相对根路径)
-    root_level: DEBUG  #日志默认级别
+    file-path: log  #日志文件存储相对路径(相对进程工作目录，而非相对根路径)
+    root-level: DEBUG  #日志默认级别
   upload:
     directory:
       pseudo-ua-contains: ["HuaweiBrowser/16.0.7.301 Mobile", "EdgiOS"]  #上传文件页面根据浏览器User-Agent标识和此字段对伪支持上传文件夹的浏览器不展示上传文件夹元素
@@ -40,5 +41,5 @@ localfts:
       max-string-length-memory-str: 20MB  #!!限制文件内容字符串所占据的最大内存空间，-1表示无限制。建议不超过20MB,对应10,485,760长度的字符串，值过大时既消耗内存也消耗CPU。
       try-read-all-files: false  #!!是否尝试读取所有类型的文件，影响性能
       default-encoding: UTF-8  #当无法检测文件编码时默认使用的编码格式
-  test_language:
+  test-language:
     Simplified_Chinese: true  #测试终端输出文字是否乱码(简体中文)

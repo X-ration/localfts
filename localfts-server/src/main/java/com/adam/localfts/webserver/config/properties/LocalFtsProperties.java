@@ -18,6 +18,7 @@ public class LocalFtsProperties {
 
     private String rootPath;
     private Boolean showHidden;
+    private Boolean autoOpenBrowser;
     @NestedConfigurationProperty
     private ZipProperties zip;
     @NestedConfigurationProperty

@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
+import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +20,7 @@ public class LocalFtsWebServer {
 	private static final Logger logger = LoggerFactory.getLogger(LocalFtsWebServer.class);
 
 	public static void main(String[] args) {
+		System.out.println("Support open browser:" + Desktop.isDesktopSupported());
 		SpringApplication springApplication = new SpringApplication(LocalFtsWebServer.class);
 		setDefaultProperties(springApplication);
 		springApplication.run(args);

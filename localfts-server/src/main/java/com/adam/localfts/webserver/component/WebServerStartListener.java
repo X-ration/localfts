@@ -1,7 +1,11 @@
 package com.adam.localfts.webserver.component;
 
+import com.adam.localfts.webserver.service.FtsServerConfigService;
+import com.adam.localfts.webserver.task.BrowseLocalftsRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.context.WebServerInitializedEvent;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.context.event.EventListener;
@@ -13,6 +17,11 @@ import java.util.List;
 
 @Component
 public class WebServerStartListener {
+
+    @Autowired
+    private FtsServerConfigService ftsServerConfigService;
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
 
     private boolean webServerStarted = false;
     private WebServer webServer;
@@ -26,6 +35,11 @@ public class WebServerStartListener {
             this.webServerStarted = true;
             this.webServer = event.getWebServer();
             logger.debug("WebServer {} started", event.getWebServer());
+            Boolean autoOpenBrowser = ftsServerConfigService.getLocalFtsProperties().getAutoOpenBrowser();
+            if(autoOpenBrowser != null && autoOpenBrowser) {
+                addSyncTask(new BrowseLocalftsRunnable(webServer.getPort(), contextPath));
+            }
+
             List<Thread> asyncTasks = Collections.unmodifiableList(this.asyncTasks);
             List<Runnable> syncTasks = Collections.unmodifiableList(this.syncTasks);
             if(!asyncTasks.isEmpty()) {
